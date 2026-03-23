@@ -1,0 +1,28 @@
+# Project docs (kept local only)
+CLAUDE.md
+docs/
+
+# macOS
+.DS_Store
+
+# Node
+node_modules/
+dist/
+
+# Rust / Cargo
+target/
+
+# Tauri
+src-tauri/target/
+src-tauri/binaries/
+
+# Environment
+.env
+.env.*
+
+# IDE
+.vscode/
+.idea/
+
+# Logs
+*.log
