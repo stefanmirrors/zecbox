@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Instant;
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use tokio::sync::Mutex;
 use tokio::task::JoinHandle;
 
@@ -11,12 +11,62 @@ pub const LOG_BUFFER_CAPACITY: usize = 5000;
 
 pub struct AppState {
     pub node: Arc<NodeState>,
+    pub storage: Arc<StorageState>,
+    pub default_data_dir: PathBuf,
 }
 
 impl AppState {
-    pub fn new(data_dir: PathBuf) -> Self {
+    pub fn new(data_dir: PathBuf, default_data_dir: PathBuf) -> Self {
         Self {
             node: Arc::new(NodeState::new(data_dir)),
+            storage: Arc::new(StorageState::new()),
+            default_data_dir,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct VolumeInfo {
+    pub name: String,
+    pub mount_point: String,
+    pub total_bytes: u64,
+    pub available_bytes: u64,
+    pub is_removable: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum StorageWarningLevel {
+    None,
+    Warning,
+    Critical,
+    Paused,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct StorageInfo {
+    pub data_dir: String,
+    pub volume_name: String,
+    pub total_bytes: u64,
+    pub available_bytes: u64,
+    pub is_external: bool,
+    pub warning_level: StorageWarningLevel,
+}
+
+pub struct StorageState {
+    pub monitor_task: Mutex<Option<JoinHandle<()>>>,
+    pub paused_low_space: Mutex<bool>,
+    pub drive_connected: Mutex<bool>,
+}
+
+impl StorageState {
+    pub fn new() -> Self {
+        Self {
+            monitor_task: Mutex::new(None),
+            paused_low_space: Mutex::new(false),
+            drive_connected: Mutex::new(true),
         }
     }
 }

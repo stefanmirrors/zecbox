@@ -15,6 +15,17 @@ export interface Volume {
   isRemovable: boolean;
 }
 
+export type StorageWarningLevel = "none" | "warning" | "critical" | "paused";
+
+export interface StorageInfo {
+  dataDir: string;
+  volumeName: string;
+  totalBytes: number;
+  availableBytes: number;
+  isExternal: boolean;
+  warningLevel: StorageWarningLevel;
+}
+
 export interface AppConfig {
   dataDir: string;
   firstRunComplete: boolean;
