@@ -1,4 +1,11 @@
-export type NodeStatus = "stopped" | "starting" | "running" | "stopping" | "error";
+export type NodeStatusTag = "stopped" | "starting" | "running" | "stopping" | "error";
+
+export interface NodeStatusInfo {
+  status: NodeStatusTag;
+  blockHeight?: number;
+  peerCount?: number;
+  message?: string;
+}
 
 export interface Volume {
   name: string;
