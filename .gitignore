@@ -24,5 +24,11 @@ src-tauri/binaries/
 .vscode/
 .idea/
 
+# Build artifacts
+tsconfig.tsbuildinfo
+
+# Claude Code
+.claude/
+
 # Logs
 *.log
