@@ -34,12 +34,10 @@ if [ ! -f "$ZAINO_PATH" ]; then
     if [ ! -d "$ZAINO_TMP" ]; then
         git clone --depth 1 --branch "$ZAINO_VERSION" https://github.com/zingolabs/zaino.git "$ZAINO_TMP"
     fi
-    cargo build --release --manifest-path "$ZAINO_TMP/Cargo.toml" -p zaino
-    # Find the built binary (could be zaino or zaino-serve depending on version)
-    if [ -f "$ZAINO_TMP/target/release/zaino" ]; then
-        cp "$ZAINO_TMP/target/release/zaino" "$ZAINO_PATH"
-    elif [ -f "$ZAINO_TMP/target/release/zaino-serve" ]; then
-        cp "$ZAINO_TMP/target/release/zaino-serve" "$ZAINO_PATH"
+    cargo build --release --manifest-path "$ZAINO_TMP/Cargo.toml" -p zainod
+    # Find the built binary
+    if [ -f "$ZAINO_TMP/target/release/zainod" ]; then
+        cp "$ZAINO_TMP/target/release/zainod" "$ZAINO_PATH"
     else
         echo "Warning: Could not find zaino binary, using mock"
         cargo build -p mock-zaino --release --manifest-path "$PROJECT_DIR/Cargo.toml"
