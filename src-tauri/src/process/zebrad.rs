@@ -48,7 +48,7 @@ pub async fn start_zebrad(
     if !binary_path.exists() {
         let mut status = node.status.lock().await;
         *status = NodeStatus::Error {
-            message: "Node binary not found. Try reinstalling ZecBox.".into(),
+            message: "Node binary not found. Try reinstalling zecbox.".into(),
         };
         let _ = app_handle.emit("node_status_changed", &*status);
         return Err(format!("zebrad binary not found at {:?}", binary_path));

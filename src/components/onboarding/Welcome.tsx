@@ -11,7 +11,7 @@ export function Welcome({ onContinue }: Props) {
             &#x1F6E1;
           </div>
           <h1 className="text-5xl font-bold text-zec-yellow tracking-tight">
-            ZecBox
+            zecbox
           </h1>
           <p className="text-zec-muted text-sm tracking-wide uppercase">
             Zcash Full Node
@@ -19,7 +19,7 @@ export function Welcome({ onContinue }: Props) {
         </div>
 
         <p className="text-zec-text text-lg leading-relaxed">
-          Run your own Zcash full node with zero configuration. ZecBox
+          Run your own Zcash full node with zero configuration. zecbox
           downloads, verifies, and syncs the Zcash blockchain automatically.
           Your node, your privacy.
         </p>

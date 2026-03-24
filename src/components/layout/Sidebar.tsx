@@ -76,7 +76,7 @@ export function Sidebar({ activeView, onNavigate }: Props) {
     <aside className="flex flex-col w-56 bg-zec-surface border-r border-zec-border h-screen shrink-0">
       <div className="px-5 py-5">
         <h1 className="text-xl font-bold text-zec-yellow tracking-tight">
-          ZecBox
+          zecbox
         </h1>
       </div>
 

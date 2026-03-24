@@ -48,7 +48,7 @@ pub async fn start_zaino(
     if !binary_path.exists() {
         let mut status = wallet.status.lock().await;
         *status = WalletStatus::Error {
-            message: "Wallet server binary not found. Try reinstalling ZecBox.".into(),
+            message: "Wallet server binary not found. Try reinstalling zecbox.".into(),
         };
         emit_wallet_status(&app_handle, wallet).await;
         return Err(format!("Zaino binary not found at {:?}", binary_path));

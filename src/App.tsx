@@ -25,7 +25,7 @@ function App() {
     return (
       <div className="flex min-h-screen items-center justify-center bg-zec-dark">
         <h1 className="text-4xl font-bold text-zec-yellow tracking-tight">
-          ZecBox
+          zecbox
         </h1>
       </div>
     );
@@ -59,7 +59,7 @@ function App() {
     return <Onboarding onComplete={() => setFirstRunComplete(true)} />;
   }
 
-  return <AppShell />;
+  return <AppShell onResetToOnboarding={() => setFirstRunComplete(false)} />;
 }
 
 export default App;

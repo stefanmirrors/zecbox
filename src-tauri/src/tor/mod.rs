@@ -50,7 +50,7 @@ pub async fn start_arti(
     if !binary_path.exists() {
         let mut status = shield.status.lock().await;
         *status = ShieldStatus::Error {
-            message: "Tor proxy binary not found. Try reinstalling ZecBox.".into(),
+            message: "Tor proxy binary not found. Try reinstalling zecbox.".into(),
         };
         emit_shield_status(&app_handle, &shield).await;
         return Err(format!("Arti binary not found at {:?}", binary_path));

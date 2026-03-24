@@ -140,7 +140,7 @@ pub fn firewall_status() -> Result<(bool, bool), String> {
 fn send_command(cmd: &str) -> Result<(), String> {
     let response = send_command_raw(cmd)?;
     let v: serde_json::Value =
-        serde_json::from_str(&response).map_err(|_| "Firewall helper returned an unexpected response. Try restarting ZecBox.".to_string())?;
+        serde_json::from_str(&response).map_err(|_| "Firewall helper returned an unexpected response. Try restarting zecbox.".to_string())?;
 
     if v["ok"].as_bool() == Some(true) {
         Ok(())

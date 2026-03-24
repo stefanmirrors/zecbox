@@ -39,7 +39,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
               onClick={() => window.location.reload()}
               className="px-6 py-2.5 rounded-lg font-medium bg-zec-yellow text-zec-dark hover:brightness-110 transition-colors"
             >
-              Restart ZecBox
+              Restart zecbox
             </button>
           </div>
         </div>

@@ -123,8 +123,8 @@ pub fn run() {
 
             // System tray
             let status_item_for_tray = MenuItem::with_id(app, "status", "Status: Stopped", false, None::<&str>)?;
-            let quit = MenuItem::with_id(app, "quit", "Quit ZecBox", true, None::<&str>)?;
-            let show = MenuItem::with_id(app, "show", "Show ZecBox", true, None::<&str>)?;
+            let quit = MenuItem::with_id(app, "quit", "Quit zecbox", true, None::<&str>)?;
+            let show = MenuItem::with_id(app, "show", "Show zecbox", true, None::<&str>)?;
             let menu = Menu::with_items(app, &[&status_item_for_tray, &show, &quit])?;
 
             // Store tray status item reference for dynamic updates
@@ -215,6 +215,7 @@ pub fn run() {
             commands::storage::set_data_dir,
             commands::onboarding::get_app_config,
             commands::onboarding::complete_onboarding,
+            commands::onboarding::reset_onboarding,
             commands::logs::get_logs,
             commands::shield::get_shield_status,
             commands::shield::enable_shield_mode,
@@ -236,5 +237,5 @@ pub fn run() {
             commands::shield::is_firewall_helper_installed,
         ])
         .run(tauri::generate_context!())
-        .expect("ZecBox failed to launch. Please reinstall the application.");
+        .expect("zecbox failed to launch. Please reinstall the application.");
 }
