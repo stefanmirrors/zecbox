@@ -21,6 +21,13 @@ for binary in zebrad arti zaino; do
     fi
 done
 
+# Build firewall helper binary
+HELPER_BINARY="$BINARIES_DIR/zecbox-firewall-helper-${TARGET_TRIPLE}"
+echo "Building firewall-helper..."
+cargo build -p firewall-helper --release --manifest-path "$PROJECT_DIR/Cargo.toml"
+cp "$PROJECT_DIR/target/release/zecbox-firewall-helper" "$HELPER_BINARY"
+chmod +x "$HELPER_BINARY"
+
 # If APPLE_SIGNING_IDENTITY is set, codesign sidecar binaries
 if [ -n "${APPLE_SIGNING_IDENTITY:-}" ]; then
     echo "Signing sidecar binaries..."
@@ -28,6 +35,8 @@ if [ -n "${APPLE_SIGNING_IDENTITY:-}" ]; then
         BINARY_PATH="$BINARIES_DIR/${binary}-${TARGET_TRIPLE}"
         codesign --force --options runtime --sign "$APPLE_SIGNING_IDENTITY" "$BINARY_PATH"
     done
+    echo "Signing firewall helper..."
+    codesign --force --options runtime --sign "$APPLE_SIGNING_IDENTITY" "$HELPER_BINARY"
 fi
 
 # Install frontend dependencies if needed

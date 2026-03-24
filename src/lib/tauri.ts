@@ -106,6 +106,14 @@ export async function rebuildDatabase(): Promise<void> {
   return invoke("rebuild_database");
 }
 
+export async function installFirewallHelper(): Promise<void> {
+  return invoke("install_firewall_helper");
+}
+
+export async function isFirewallHelperInstalled(): Promise<boolean> {
+  return invoke<boolean>("is_firewall_helper_installed");
+}
+
 export function parseNodeStatus(raw: Record<string, unknown>): NodeStatusInfo {
   const status = (raw.status as string) as NodeStatusInfo["status"];
   return {

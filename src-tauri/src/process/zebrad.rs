@@ -11,7 +11,6 @@ use tokio::io::{AsyncBufReadExt, BufReader};
 use crate::config::zebrad_config;
 use crate::health;
 use crate::state::{AppState, NodeState, NodeStatus, LOG_BUFFER_CAPACITY};
-use crate::tor;
 
 /// Start zebrad, spawn log readers and health monitor.
 pub async fn start_zebrad(
@@ -64,11 +63,7 @@ pub async fn start_zebrad(
         .kill_on_drop(false);
 
     if shield_active {
-        let proxy = tor::socks_proxy_addr();
-        cmd.env("ALL_PROXY", &proxy)
-            .env("SOCKS5_PROXY", &proxy)
-            .env("socks_proxy", &proxy);
-        log::info!("Starting zebrad with proxy: {}", proxy);
+        log::info!("Starting zebrad with Shield Mode active (PF firewall enforces Tor routing)");
     }
 
     let mut child = cmd.spawn().map_err(|e| {

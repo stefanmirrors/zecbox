@@ -6,6 +6,7 @@ use crate::config::app_config::AppConfig;
 use crate::process::zebrad;
 use crate::state::{AppState, ShieldStatus};
 use crate::tor;
+use crate::tor::firewall;
 
 #[derive(serde::Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -69,7 +70,11 @@ pub async fn enable_shield_mode(
     app_handle: AppHandle,
     state: State<'_, AppState>,
 ) -> Result<(), String> {
-    // Node must be running (or stopped) to enable shield mode
+    // Check if firewall helper is installed
+    if !firewall::is_helper_installed() {
+        return Err("Firewall helper not installed. Install it first to enable Shield Mode.".into());
+    }
+
     let node_was_running = {
         let status = state.node.status.lock().await;
         matches!(
@@ -80,6 +85,10 @@ pub async fn enable_shield_mode(
 
     // Start Arti SOCKS proxy
     tor::start_arti(app_handle.clone(), &state.shield).await?;
+
+    // Enable PF firewall rules + transparent redirector
+    firewall::enable_firewall()
+        .map_err(|e| format!("Failed to enable firewall: {}", e))?;
 
     // If node was running, restart it with shield config
     if node_was_running {
@@ -93,7 +102,7 @@ pub async fn enable_shield_mode(
     config.shield_mode = true;
     config.save(&state.default_data_dir)?;
 
-    log::info!("Shield Mode enabled");
+    log::info!("Shield Mode enabled (PF firewall active)");
     Ok(())
 }
 
@@ -115,6 +124,11 @@ pub async fn disable_shield_mode(
         zebrad::stop_zebrad(&app_handle, &state.node).await?;
     }
 
+    // Disable PF firewall rules + stop redirector
+    if let Err(e) = firewall::disable_firewall() {
+        log::error!("Failed to disable firewall: {}", e);
+    }
+
     // Stop Arti
     tor::stop_arti(&app_handle, &state.shield).await?;
 
@@ -129,6 +143,18 @@ pub async fn disable_shield_mode(
     config.shield_mode = false;
     config.save(&state.default_data_dir)?;
 
-    log::info!("Shield Mode disabled");
+    log::info!("Shield Mode disabled (PF firewall removed)");
     Ok(())
+}
+
+#[tauri::command]
+pub async fn install_firewall_helper(
+    app_handle: AppHandle,
+) -> Result<(), String> {
+    firewall::install_helper(&app_handle)
+}
+
+#[tauri::command]
+pub async fn is_firewall_helper_installed() -> Result<bool, String> {
+    Ok(firewall::is_helper_installed())
 }

@@ -5,6 +5,8 @@ import {
   getShieldStatus,
   enableShieldMode,
   disableShieldMode,
+  isFirewallHelperInstalled,
+  installFirewallHelper,
 } from "../lib/tauri";
 
 export function useShieldMode() {
@@ -14,11 +16,17 @@ export function useShieldMode() {
   });
   const [toggling, setToggling] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [helperInstalled, setHelperInstalled] = useState<boolean | null>(null);
+  const [installing, setInstalling] = useState(false);
 
   useEffect(() => {
     getShieldStatus()
       .then(setStatus)
       .catch((e) => setError(String(e)));
+
+    isFirewallHelperInstalled()
+      .then(setHelperInstalled)
+      .catch(() => setHelperInstalled(false));
 
     const unlisten = listen<ShieldStatusInfo>("shield_status_changed", (event) => {
       setStatus(event.payload);
@@ -45,6 +53,19 @@ export function useShieldMode() {
     };
   }, []);
 
+  const installHelper = useCallback(async () => {
+    setInstalling(true);
+    setError(null);
+    try {
+      await installFirewallHelper();
+      setHelperInstalled(true);
+    } catch (e) {
+      setError(String(e));
+    } finally {
+      setInstalling(false);
+    }
+  }, []);
+
   const toggle = useCallback(async () => {
     setToggling(true);
     setError(null);
@@ -55,12 +76,24 @@ export function useShieldMode() {
         await enableShieldMode();
       }
     } catch (e) {
-      setError(String(e));
+      const errMsg = String(e);
+      if (errMsg.includes("Firewall helper not installed")) {
+        setHelperInstalled(false);
+      }
+      setError(errMsg);
       setToggling(false);
-      // Refresh status after error
       getShieldStatus().then(setStatus).catch(() => {});
     }
   }, [status.enabled]);
 
-  return { status, toggling, error, toggle, clearError: () => setError(null) };
+  return {
+    status,
+    toggling,
+    error,
+    toggle,
+    clearError: () => setError(null),
+    helperInstalled,
+    installing,
+    installHelper,
+  };
 }

@@ -176,6 +176,8 @@ pub fn run() {
                                     .await;
                             // Stop Arti if running
                             let _ = tor::stop_arti(&app_handle, &shield).await;
+                            // Disable PF firewall rules if active
+                            let _ = tor::firewall::disable_firewall();
                         });
                         app.exit(0);
                     }
@@ -224,6 +226,8 @@ pub fn run() {
             commands::updates::check_app_update,
             commands::settings::get_auto_start_enabled,
             commands::settings::set_auto_start,
+            commands::shield::install_firewall_helper,
+            commands::shield::is_firewall_helper_installed,
         ])
         .run(tauri::generate_context!())
         .expect("error while running ZecBox");

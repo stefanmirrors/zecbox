@@ -2,12 +2,61 @@ import { useShieldMode } from "../../hooks/useShieldMode";
 import { useNodeStatus } from "../../hooks/useNodeStatus";
 
 export default function ShieldMode() {
-  const { status, toggling, error, toggle, clearError } = useShieldMode();
+  const {
+    status,
+    toggling,
+    error,
+    toggle,
+    clearError,
+    helperInstalled,
+    installing,
+    installHelper,
+  } = useShieldMode();
   const nodeStatus = useNodeStatus();
   const nodeRunning = nodeStatus.status === "running";
 
   return (
     <div className="max-w-2xl space-y-6">
+      {/* Helper installation prompt */}
+      {helperInstalled === false && (
+        <div className="bg-zec-yellow/10 border border-zec-yellow/30 rounded-lg p-5">
+          <div className="flex items-start gap-3">
+            <div className="w-8 h-8 rounded-lg bg-zec-yellow/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 18 18"
+                fill="none"
+                stroke="currentColor"
+                className="text-zec-yellow"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M9 1.5L2 4.5v4.5c0 4.1 3 7.3 7 8.5 4-1.2 7-4.4 7-8.5V4.5z" />
+              </svg>
+            </div>
+            <div className="flex-1">
+              <h3 className="text-sm font-semibold text-zec-text mb-1">
+                System Helper Required
+              </h3>
+              <p className="text-sm text-zec-muted mb-3">
+                Shield Mode uses macOS firewall rules to enforce Tor routing for
+                all node traffic. A one-time system helper installation is
+                needed. You will be prompted for your admin password.
+              </p>
+              <button
+                onClick={installHelper}
+                disabled={installing}
+                className="px-4 py-2 bg-zec-yellow text-zec-bg rounded-lg text-sm font-medium hover:bg-zec-yellow/90 disabled:opacity-50 disabled:cursor-wait transition-colors"
+              >
+                {installing ? "Installing..." : "Install System Helper"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Main toggle card */}
       <div className="bg-zec-surface border border-zec-border rounded-lg p-6">
         <div className="flex items-center justify-between mb-4">
@@ -43,13 +92,19 @@ export default function ShieldMode() {
           </div>
           <button
             onClick={toggle}
-            disabled={toggling || status.status === "bootstrapping"}
+            disabled={
+              toggling ||
+              status.status === "bootstrapping" ||
+              helperInstalled === false
+            }
             className={`relative w-12 h-7 rounded-full transition-colors ${
               toggling || status.status === "bootstrapping"
                 ? "bg-zec-border cursor-wait"
-                : status.enabled
-                  ? "bg-emerald-500"
-                  : "bg-zec-border hover:bg-zec-muted/30"
+                : helperInstalled === false
+                  ? "bg-zec-border cursor-not-allowed opacity-50"
+                  : status.enabled
+                    ? "bg-emerald-500"
+                    : "bg-zec-border hover:bg-zec-muted/30"
             }`}
           >
             <span
@@ -74,7 +129,7 @@ export default function ShieldMode() {
             }`}
           />
           <span className="text-zec-muted">
-            {status.status === "active" && "Connected via Tor"}
+            {status.status === "active" && "Connected via Tor — traffic enforced by firewall"}
             {status.status === "bootstrapping" &&
               `Connecting to Tor network... ${status.bootstrapProgress ?? 0}%`}
             {status.status === "disabled" && "Disabled"}
@@ -123,8 +178,12 @@ export default function ShieldMode() {
             description="Your ISP cannot see you are running a Zcash node. Peers cannot see your real IP address."
           />
           <InfoRow
+            title="Firewall enforcement"
+            description="macOS firewall rules redirect all node P2P traffic through Tor. No traffic can bypass Tor while Shield Mode is active."
+          />
+          <InfoRow
             title="Kill switch"
-            description="If the Tor connection drops, the node is immediately stopped to prevent clearnet exposure."
+            description="If the Tor connection or firewall rules drop, the node is immediately stopped to prevent clearnet exposure."
           />
           <InfoRow
             title="Performance"

@@ -2,6 +2,8 @@
 //! Manages Arti as a sidecar process, monitors bootstrap and health,
 //! implements kill switch logic (Arti crash while Shield ON → stop zebrad).
 
+pub mod firewall;
+
 use std::path::{Path, PathBuf};
 use std::process::Stdio;
 use std::sync::Arc;
@@ -214,7 +216,8 @@ pub async fn stop_arti(
     Ok(())
 }
 
-/// Kill switch: monitors Arti health. If Arti dies while Shield is ON,
+/// Kill switch: monitors Arti health and PF firewall status.
+/// If either Arti dies or PF firewall is disabled while Shield is ON,
 /// immediately stop zebrad to prevent clearnet fallback.
 fn spawn_kill_switch(
     app_handle: AppHandle,
@@ -233,7 +236,8 @@ fn spawn_kill_switch(
                 _ => break,
             }
 
-            let process_dead = {
+            // Check if Arti process is alive
+            let arti_dead = {
                 let mut proc = shield.process.lock().await;
                 if let Some(ref mut child) = *proc {
                     child.try_wait().ok().flatten().is_some()
@@ -242,10 +246,28 @@ fn spawn_kill_switch(
                 }
             };
 
-            if process_dead {
-                log::error!("KILL SWITCH: Arti died while Shield Mode active — stopping zebrad");
+            // Check if PF firewall is still active (only when Arti is alive and shield is Active)
+            let firewall_down = if !arti_dead && matches!(status, ShieldStatus::Active) {
+                match firewall::firewall_status() {
+                    Ok((enabled, _)) => !enabled,
+                    Err(_) => false, // Don't trip kill switch on transient query failures
+                }
+            } else {
+                false
+            };
 
-                {
+            let reason = if arti_dead {
+                Some("Tor proxy stopped unexpectedly. Node stopped to prevent clearnet exposure.")
+            } else if firewall_down {
+                Some("Firewall rules removed unexpectedly. Node stopped to prevent clearnet exposure.")
+            } else {
+                None
+            };
+
+            if let Some(msg) = reason {
+                log::error!("KILL SWITCH: {} — stopping zebrad", msg);
+
+                if arti_dead {
                     let mut proc = shield.process.lock().await;
                     *proc = None;
                 }
@@ -254,10 +276,7 @@ fn spawn_kill_switch(
                     *status = ShieldStatus::Interrupted;
                 }
 
-                let _ = app_handle.emit(
-                    "shield_interrupted",
-                    "Tor proxy stopped unexpectedly. Node stopped to prevent clearnet exposure.",
-                );
+                let _ = app_handle.emit("shield_interrupted", msg);
 
                 // Stop zebrad immediately
                 let state = app_handle.state::<AppState>();
@@ -378,11 +397,6 @@ async fn get_status_payload(shield: &ShieldState) -> serde_json::Value {
             "message": "Tor proxy stopped unexpectedly. Node stopped to prevent clearnet exposure.",
         }),
     }
-}
-
-/// Get the SOCKS proxy address for zebrad to use.
-pub fn socks_proxy_addr() -> String {
-    format!("socks5h://127.0.0.1:{}", ARTI_SOCKS_PORT)
 }
 
 // --- PID file management ---
