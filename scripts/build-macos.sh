@@ -8,18 +8,23 @@ TARGET_TRIPLE="aarch64-apple-darwin"
 
 mkdir -p "$BINARIES_DIR"
 
-# Build mock sidecar binaries if real ones are not present
-for binary in zebrad arti zaino; do
-    BINARY_PATH="$BINARIES_DIR/${binary}-${TARGET_TRIPLE}"
-    if [ ! -f "$BINARY_PATH" ]; then
-        echo "Building mock-${binary}..."
-        cargo build -p "mock-${binary}" --release --manifest-path "$PROJECT_DIR/Cargo.toml"
-        cp "$PROJECT_DIR/target/release/mock-${binary}" "$BINARY_PATH"
-        chmod +x "$BINARY_PATH"
-    else
-        echo "Using existing ${binary} binary at ${BINARY_PATH}"
-    fi
-done
+# Fetch real binaries or build mocks
+if [ "${REAL_BINARIES:-0}" = "1" ]; then
+    echo "Fetching real upstream binaries..."
+    "$SCRIPT_DIR/fetch-binaries.sh"
+else
+    for binary in zebrad arti zaino; do
+        BINARY_PATH="$BINARIES_DIR/${binary}-${TARGET_TRIPLE}"
+        if [ ! -f "$BINARY_PATH" ]; then
+            echo "Building mock-${binary}..."
+            cargo build -p "mock-${binary}" --release --manifest-path "$PROJECT_DIR/Cargo.toml"
+            cp "$PROJECT_DIR/target/release/mock-${binary}" "$BINARY_PATH"
+            chmod +x "$BINARY_PATH"
+        else
+            echo "Using existing ${binary} binary at ${BINARY_PATH}"
+        fi
+    done
+fi
 
 # Build firewall helper binary
 HELPER_BINARY="$BINARIES_DIR/zecbox-firewall-helper-${TARGET_TRIPLE}"
