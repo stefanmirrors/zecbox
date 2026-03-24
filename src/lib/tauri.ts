@@ -1,5 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
-import type { AppConfig, NodeStatusInfo, ShieldStatusInfo, StorageInfo, Volume } from "./types";
+import type { AppConfig, NodeStatusInfo, ShieldStatusInfo, StorageInfo, Volume, WalletStatusInfo } from "./types";
 
 export async function getNodeStatus(): Promise<NodeStatusInfo> {
   const raw = await invoke<Record<string, unknown>>("get_node_status");
@@ -48,6 +48,22 @@ export async function enableShieldMode(): Promise<void> {
 
 export async function disableShieldMode(): Promise<void> {
   return invoke("disable_shield_mode");
+}
+
+export async function getWalletStatus(): Promise<WalletStatusInfo> {
+  return invoke<WalletStatusInfo>("get_wallet_status");
+}
+
+export async function enableWalletServer(): Promise<void> {
+  return invoke("enable_wallet_server");
+}
+
+export async function disableWalletServer(): Promise<void> {
+  return invoke("disable_wallet_server");
+}
+
+export async function getWalletQr(): Promise<string> {
+  return invoke<string>("get_wallet_qr");
 }
 
 export function parseNodeStatus(raw: Record<string, unknown>): NodeStatusInfo {

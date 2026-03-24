@@ -65,11 +65,15 @@ pub fn run() {
                 *connected = drive_connected;
             });
 
-            // Check for orphaned zebrad process from a prior crash
+            // Check for orphaned processes from a prior crash
             let node = app_state.node.clone();
             tauri::async_runtime::block_on(async {
                 if let Err(e) = process::zebrad::check_orphan(&node).await {
-                    log::warn!("Orphan check failed: {}", e);
+                    log::warn!("zebrad orphan check failed: {}", e);
+                }
+                let node_data_dir = node.data_dir.lock().await.clone();
+                if let Err(e) = process::zaino::check_zaino_orphan(&node_data_dir).await {
+                    log::warn!("Zaino orphan check failed: {}", e);
                 }
             });
 
@@ -109,17 +113,23 @@ pub fn run() {
                 .show_menu_on_left_click(false)
                 .on_menu_event(|app, event| match event.id.as_ref() {
                     "quit" => {
-                        // Graceful shutdown: stop storage monitor, Arti, and zebrad before exiting
+                        // Graceful shutdown: stop Zaino, zebrad, Arti, storage monitor
                         let state = app.state::<AppState>();
                         let node = state.node.clone();
                         let storage = state.storage.clone();
                         let shield = state.shield.clone();
+                        let wallet = state.wallet.clone();
                         let app_handle = app.clone();
                         tauri::async_runtime::block_on(async {
                             // Abort storage monitor
                             if let Some(task) = storage.monitor_task.lock().await.take() {
                                 task.abort();
                             }
+                            // Stop Zaino first (depends on zebrad)
+                            let data_dir = node.data_dir.lock().await.clone();
+                            let _ =
+                                process::zaino::stop_zaino(&app_handle, &wallet, &data_dir)
+                                    .await;
                             // Stop zebrad
                             let _ =
                                 process::zebrad::stop_zebrad(&app_handle, &node)
@@ -160,6 +170,10 @@ pub fn run() {
             commands::shield::get_shield_status,
             commands::shield::enable_shield_mode,
             commands::shield::disable_shield_mode,
+            commands::wallet::get_wallet_status,
+            commands::wallet::enable_wallet_server,
+            commands::wallet::disable_wallet_server,
+            commands::wallet::get_wallet_qr,
         ])
         .run(tauri::generate_context!())
         .expect("error while running ZecBox");

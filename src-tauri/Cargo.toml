@@ -24,3 +24,5 @@ nix = { version = "0.29", features = ["signal", "process"] }
 sysinfo = "0.33"
 log = "0.4"
 env_logger = "0.11"
+qrcode = "0.14"
+base64 = "0.22"

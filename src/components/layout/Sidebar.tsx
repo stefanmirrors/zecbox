@@ -1,4 +1,4 @@
-export type View = "dashboard" | "shield" | "logs" | "settings";
+export type View = "dashboard" | "shield" | "wallet" | "logs" | "settings";
 
 interface NavItem {
   id: View | string;
@@ -36,6 +36,17 @@ const navItems: NavItem[] = [
     ),
   },
   {
+    id: "wallet",
+    label: "Wallet Server",
+    icon: (
+      <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="1.5" y="4" width="15" height="11" rx="2" />
+        <path d="M1.5 8h15" />
+        <circle cx="13" cy="11.5" r="1" />
+      </svg>
+    ),
+  },
+  {
     id: "logs",
     label: "Logs",
     icon: (
@@ -58,21 +69,7 @@ const navItems: NavItem[] = [
   },
 ];
 
-const comingSoonItems: NavItem[] = [
-  {
-    id: "wallet",
-    label: "Wallet Server",
-    disabled: true,
-    comingSoon: true,
-    icon: (
-      <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-        <rect x="1.5" y="4" width="15" height="11" rx="2" />
-        <path d="M1.5 8h15" />
-        <circle cx="13" cy="11.5" r="1" />
-      </svg>
-    ),
-  },
-];
+const comingSoonItems: NavItem[] = [];
 
 export function Sidebar({ activeView, onNavigate }: Props) {
   return (

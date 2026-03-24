@@ -13,6 +13,7 @@ pub struct AppState {
     pub node: Arc<NodeState>,
     pub storage: Arc<StorageState>,
     pub shield: Arc<ShieldState>,
+    pub wallet: Arc<WalletState>,
     pub default_data_dir: PathBuf,
     pub tray_status: Mutex<Option<tauri::menu::MenuItem<tauri::Wry>>>,
 }
@@ -23,6 +24,7 @@ impl AppState {
             node: Arc::new(NodeState::new(data_dir)),
             storage: Arc::new(StorageState::new()),
             shield: Arc::new(ShieldState::new()),
+            wallet: Arc::new(WalletState::new()),
             default_data_dir,
             tray_status: Mutex::new(None),
         }
@@ -208,5 +210,58 @@ impl ShieldState {
 
     pub async fn is_active(&self) -> bool {
         matches!(*self.status.lock().await, ShieldStatus::Active)
+    }
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(tag = "status", rename_all = "camelCase")]
+pub enum WalletStatus {
+    Stopped,
+    Starting,
+    #[serde(rename_all = "camelCase")]
+    Running {
+        endpoint: String,
+    },
+    Stopping,
+    Error {
+        message: String,
+    },
+}
+
+impl WalletStatus {
+    pub fn status_str(&self) -> &'static str {
+        match self {
+            WalletStatus::Stopped => "stopped",
+            WalletStatus::Starting => "starting",
+            WalletStatus::Running { .. } => "running",
+            WalletStatus::Stopping => "stopping",
+            WalletStatus::Error { .. } => "error",
+        }
+    }
+
+    pub fn is_stopped_or_error(&self) -> bool {
+        matches!(self, WalletStatus::Stopped | WalletStatus::Error { .. })
+    }
+}
+
+pub struct WalletState {
+    pub status: Mutex<WalletStatus>,
+    pub process: Mutex<Option<tokio::process::Child>>,
+    pub health_task: Mutex<Option<JoinHandle<()>>>,
+    pub log_reader_tasks: Mutex<Vec<JoinHandle<()>>>,
+    pub log_buffer: Mutex<VecDeque<String>>,
+    pub backoff: Mutex<BackoffState>,
+}
+
+impl WalletState {
+    pub fn new() -> Self {
+        Self {
+            status: Mutex::new(WalletStatus::Stopped),
+            process: Mutex::new(None),
+            health_task: Mutex::new(None),
+            log_reader_tasks: Mutex::new(Vec::new()),
+            log_buffer: Mutex::new(VecDeque::with_capacity(LOG_BUFFER_CAPACITY)),
+            backoff: Mutex::new(BackoffState::default()),
+        }
     }
 }

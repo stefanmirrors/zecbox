@@ -41,3 +41,12 @@ export interface ShieldStatusInfo {
   bootstrapProgress?: number;
   message?: string;
 }
+
+export type WalletStatusTag = "stopped" | "starting" | "running" | "stopping" | "error";
+
+export interface WalletStatusInfo {
+  enabled: boolean;
+  status: WalletStatusTag;
+  endpoint?: string;
+  message?: string;
+}

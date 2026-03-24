@@ -3,12 +3,14 @@ import { Sidebar, type View } from "./Sidebar";
 import { TitleBar } from "./TitleBar";
 import { Dashboard } from "../dashboard/Dashboard";
 import ShieldMode from "../shield/ShieldMode";
+import WalletServer from "../wallet/WalletServer";
 import { LogViewer } from "../logs/LogViewer";
 import { Settings } from "../settings/Settings";
 
 const titles: Record<View, string> = {
   dashboard: "Dashboard",
   shield: "Shield Mode",
+  wallet: "Wallet Server",
   logs: "Logs",
   settings: "Settings",
 };
@@ -24,6 +26,7 @@ export function AppShell() {
         <main className="flex-1 overflow-y-auto p-6">
           {activeView === "dashboard" && <Dashboard />}
           {activeView === "shield" && <ShieldMode />}
+          {activeView === "wallet" && <WalletServer />}
           {activeView === "logs" && <LogViewer />}
           {activeView === "settings" && <Settings />}
         </main>
