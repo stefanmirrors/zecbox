@@ -2,13 +2,16 @@ import { useEffect, useRef, useState } from "react";
 import { useLogs } from "../../hooks/useLogs";
 
 export function LogViewer() {
-  const { lines, clear } = useLogs();
+  const { lines, clear, loading } = useLogs();
   const containerRef = useRef<HTMLDivElement>(null);
   const [autoScroll, setAutoScroll] = useState(true);
 
   useEffect(() => {
     if (autoScroll && containerRef.current) {
-      containerRef.current.scrollTop = containerRef.current.scrollHeight;
+      containerRef.current.scrollTo({
+        top: containerRef.current.scrollHeight,
+        behavior: "smooth",
+      });
     }
   }, [lines, autoScroll]);
 
@@ -57,7 +60,9 @@ export function LogViewer() {
         onScroll={handleScroll}
         className="flex-1 overflow-y-auto rounded-lg bg-zec-dark border border-zec-border p-4 font-mono text-xs leading-5 min-h-0"
       >
-        {lines.length === 0 ? (
+        {loading ? (
+          <p className="text-zec-muted/60 animate-pulse">Loading logs...</p>
+        ) : lines.length === 0 ? (
           <p className="text-zec-muted/60">
             No log lines yet. Start the node to see logs.
           </p>

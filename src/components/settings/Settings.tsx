@@ -16,6 +16,7 @@ export function Settings() {
   const [rebuildConfirm, setRebuildConfirm] = useState(false);
   const [rebuilding, setRebuilding] = useState(false);
   const [recoveryNeeded, setRecoveryNeeded] = useState(false);
+  const [autoStartError, setAutoStartError] = useState<string | null>(null);
   const {
     versions,
     updateStatus,
@@ -35,7 +36,7 @@ export function Settings() {
     updateStatus.status === "rollingBack";
 
   useEffect(() => {
-    getAutoStartEnabled().then(setAutoStartEnabled).catch(() => {});
+    getAutoStartEnabled().then(setAutoStartEnabled).catch((e) => console.warn("Auto-start check failed:", e));
   }, []);
 
   useEffect(() => {
@@ -47,12 +48,13 @@ export function Settings() {
 
   const handleAutoStartToggle = async () => {
     setAutoStartLoading(true);
+    setAutoStartError(null);
     try {
       const newValue = !autoStartEnabled;
       await setAutoStart(newValue);
       setAutoStartEnabled(newValue);
     } catch {
-      // Revert on failure
+      setAutoStartError("Failed to change auto-start setting.");
     } finally {
       setAutoStartLoading(false);
     }
@@ -102,18 +104,24 @@ export function Settings() {
           <span className="text-sm text-zec-muted">Launch at Login</span>
           <button
             onClick={handleAutoStartToggle}
+            role="switch"
+            aria-label="Toggle Launch at Login"
+            aria-checked={autoStartEnabled}
             disabled={autoStartLoading}
             className={`relative w-10 h-5 rounded-full transition-colors ${
               autoStartEnabled ? "bg-amber-500" : "bg-zec-border"
             } ${autoStartLoading ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
           >
             <span
-              className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform ${
+              className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform duration-200 ${
                 autoStartEnabled ? "translate-x-5" : ""
               }`}
             />
           </button>
         </div>
+        {autoStartError && (
+          <p className="text-xs text-red-400">{autoStartError}</p>
+        )}
       </div>
 
       <div className="bg-zec-surface border border-zec-border rounded-lg p-6 space-y-4">
@@ -135,6 +143,12 @@ export function Settings() {
           <Row label="arti" value={versions?.arti ?? "..."} mono />
         </div>
       </div>
+
+      {availableUpdates.length === 0 && !checking && updateStatus.status === "idle" && (
+        <div className="bg-zec-surface border border-zec-border rounded-lg p-4">
+          <p className="text-sm text-zec-muted">All binaries are up to date.</p>
+        </div>
+      )}
 
       {availableUpdates.length > 0 && (
         <div className="bg-zec-surface border border-amber-500/30 rounded-lg p-6 space-y-4">

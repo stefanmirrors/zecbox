@@ -41,10 +41,16 @@ pub fn spawn_health_monitor(
     node: Arc<NodeState>,
 ) -> JoinHandle<()> {
     tokio::spawn(async move {
-        let client = reqwest::Client::builder()
+        let client = match reqwest::Client::builder()
             .timeout(REQUEST_TIMEOUT)
             .build()
-            .expect("failed to build HTTP client");
+        {
+            Ok(c) => c,
+            Err(e) => {
+                log::error!("Failed to initialize health monitor: {}", e);
+                return;
+            }
+        };
 
         let mut consecutive_failures: u32 = 0;
 
@@ -210,19 +216,19 @@ async fn poll_zebrad(client: &reqwest::Client) -> Result<(u64, u32), String> {
         .json(&body)
         .send()
         .await
-        .map_err(|e| format!("Connection failed: {}", e))?;
+        .map_err(|_| "Node is not responding".to_string())?;
 
     let json: serde_json::Value = resp
         .json()
         .await
-        .map_err(|e| format!("Invalid response: {}", e))?;
+        .map_err(|_| "Node returned an invalid response".to_string())?;
 
     if let Some(error) = json.get("error").and_then(|e| e.as_object()) {
         let msg = error
             .get("message")
             .and_then(|m| m.as_str())
             .unwrap_or("unknown error");
-        return Err(format!("RPC error: {}", msg));
+        return Err(format!("Node reported an issue: {}", msg));
     }
 
     let result = json

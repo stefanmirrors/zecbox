@@ -12,14 +12,17 @@ export function useStorage() {
   useEffect(() => {
     getVolumes()
       .then(setVolumes)
-      .catch(() => {});
+      .catch((e) => console.warn("Failed to load volumes:", e));
 
     getStorageInfo()
       .then((info) => {
         setStorageInfo(info);
         setLoading(false);
       })
-      .catch(() => setLoading(false));
+      .catch((e) => {
+        console.warn("Failed to load storage info:", e);
+        setLoading(false);
+      });
 
     const unlistenInfo = listen<StorageInfo>("storage_info_updated", (e) =>
       setStorageInfo(e.payload)

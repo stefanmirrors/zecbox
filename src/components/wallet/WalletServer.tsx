@@ -38,6 +38,7 @@ export default function WalletServer() {
                   ? "bg-emerald-500/10 text-emerald-400"
                   : "bg-zec-border text-zec-muted"
               }`}
+              aria-hidden="true"
             >
               <svg
                 width="22"
@@ -65,6 +66,9 @@ export default function WalletServer() {
           </div>
           <button
             onClick={toggle}
+            role="switch"
+            aria-label="Toggle Wallet Server"
+            aria-checked={status.enabled}
             disabled={toggling || !nodeRunning || status.status === "starting"}
             className={`relative w-12 h-7 rounded-full transition-colors ${
               toggling || status.status === "starting"
@@ -77,7 +81,7 @@ export default function WalletServer() {
             }`}
           >
             <span
-              className={`absolute top-1 left-1 w-5 h-5 rounded-full bg-white transition-transform ${
+              className={`absolute top-1 left-1 w-5 h-5 rounded-full bg-white transition-transform duration-200 ${
                 status.enabled ? "translate-x-5" : ""
               }`}
             />

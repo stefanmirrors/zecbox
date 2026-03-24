@@ -6,6 +6,7 @@ const MAX_LINES = 5000;
 
 export function useLogs() {
   const [lines, setLines] = useState<string[]>([]);
+  const [loading, setLoading] = useState(true);
   const linesRef = useRef<string[]>([]);
 
   useEffect(() => {
@@ -13,8 +14,12 @@ export function useLogs() {
       .then((initial) => {
         linesRef.current = initial;
         setLines(initial);
+        setLoading(false);
       })
-      .catch(() => {});
+      .catch((e) => {
+        console.warn("Failed to load initial logs:", e);
+        setLoading(false);
+      });
 
     const unlisten = listen<string>("log_line", (event) => {
       const updated = [...linesRef.current, event.payload];
@@ -35,5 +40,5 @@ export function useLogs() {
     setLines([]);
   }, []);
 
-  return { lines, clear };
+  return { lines, clear, loading };
 }

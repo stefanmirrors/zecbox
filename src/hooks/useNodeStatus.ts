@@ -12,7 +12,7 @@ export function useNodeStatus() {
     // Fetch initial status
     getNodeStatus()
       .then(setNodeStatus)
-      .catch(() => {});
+      .catch((e) => console.warn("Initial node status fetch failed:", e));
 
     // Listen for status change events from the Rust backend
     const unlisten = listen<Record<string, unknown>>(

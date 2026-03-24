@@ -48,10 +48,18 @@ pub async fn start_zaino(
     if !binary_path.exists() {
         let mut status = wallet.status.lock().await;
         *status = WalletStatus::Error {
-            message: "Zaino binary not found".into(),
+            message: "Wallet server binary not found. Try reinstalling ZecBox.".into(),
         };
         emit_wallet_status(&app_handle, wallet).await;
         return Err(format!("Zaino binary not found at {:?}", binary_path));
+    }
+
+    // Check for port conflict before spawning
+    if let Err(msg) = check_port_available(GRPC_PORT).await {
+        let mut status = wallet.status.lock().await;
+        *status = WalletStatus::Error { message: msg.clone() };
+        emit_wallet_status(&app_handle, wallet).await;
+        return Err(msg);
     }
 
     let mut child = tokio::process::Command::new(&binary_path)
@@ -496,6 +504,16 @@ fn spawn_zaino_health_monitor(
             }
         }
     })
+}
+
+async fn check_port_available(port: u16) -> Result<(), String> {
+    match tokio::net::TcpListener::bind(format!("127.0.0.1:{}", port)).await {
+        Ok(_) => Ok(()),
+        Err(_) => Err(format!(
+            "Port {} is already in use. Another instance may be running.",
+            port
+        )),
+    }
 }
 
 async fn emit_wallet_status(app_handle: &AppHandle, wallet: &WalletState) {

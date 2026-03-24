@@ -29,9 +29,9 @@ pub fn run() {
             let default_data_dir = app
                 .path()
                 .app_data_dir()
-                .expect("failed to resolve app data directory");
+                .map_err(|e| format!("Could not determine application data directory: {}", e))?;
             std::fs::create_dir_all(&default_data_dir)
-                .expect("failed to create app data directory");
+                .map_err(|e| format!("Could not create application data directory at {:?}: {}", default_data_dir, e))?;
 
             log::info!("Default data directory: {:?}", default_data_dir);
 
@@ -81,6 +81,9 @@ pub fn run() {
                     log::warn!("Arti orphan check failed: {}", e);
                 }
             });
+
+            // Clean up orphaned update files from interrupted binary swaps
+            updates::cleanup_orphaned_update_files(&app.handle());
 
             // Spawn storage monitor task
             let storage_arc = app_state.storage.clone();
@@ -133,9 +136,12 @@ pub fn run() {
                 });
             }
 
-            let _tray = TrayIconBuilder::new()
-                .icon(app.default_window_icon().unwrap().clone())
-                .menu(&menu)
+            let mut tray_builder = TrayIconBuilder::new()
+                .menu(&menu);
+            if let Some(icon) = app.default_window_icon() {
+                tray_builder = tray_builder.icon(icon.clone());
+            }
+            let _tray = tray_builder
                 .show_menu_on_left_click(false)
                 .on_menu_event(|app, event| match event.id.as_ref() {
                     "quit" => {
@@ -230,5 +236,5 @@ pub fn run() {
             commands::shield::is_firewall_helper_installed,
         ])
         .run(tauri::generate_context!())
-        .expect("error while running ZecBox");
+        .expect("ZecBox failed to launch. Please reinstall the application.");
 }

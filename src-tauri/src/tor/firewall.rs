@@ -99,7 +99,10 @@ launchctl bootstrap system '{}'
         if stderr.contains("User canceled") || stderr.contains("(-128)") {
             return Err("Installation canceled by user".into());
         }
-        return Err(format!("Installation failed: {}", stderr));
+        return Err(format!(
+            "System helper installation failed. You may need to grant administrator access. Details: {}",
+            stderr.lines().next().unwrap_or("Unknown error")
+        ));
     }
 
     // Wait briefly for daemon to start
@@ -137,7 +140,7 @@ pub fn firewall_status() -> Result<(bool, bool), String> {
 fn send_command(cmd: &str) -> Result<(), String> {
     let response = send_command_raw(cmd)?;
     let v: serde_json::Value =
-        serde_json::from_str(&response).map_err(|e| format!("Invalid response: {}", e))?;
+        serde_json::from_str(&response).map_err(|_| "Firewall helper returned an unexpected response. Try restarting ZecBox.".to_string())?;
 
     if v["ok"].as_bool() == Some(true) {
         Ok(())

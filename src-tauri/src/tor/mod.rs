@@ -29,7 +29,14 @@ pub async fn start_arti(
     {
         let status = shield.status.lock().await;
         if !matches!(*status, ShieldStatus::Disabled) {
-            return Err(format!("Cannot start Arti: currently {:?}", *status));
+            let desc = match &*status {
+                ShieldStatus::Bootstrapping { .. } => "currently connecting",
+                ShieldStatus::Active => "already active",
+                ShieldStatus::Error { .. } => "in an error state",
+                ShieldStatus::Interrupted => "interrupted",
+                _ => "busy",
+            };
+            return Err(format!("Cannot enable Shield Mode: {}", desc));
         }
     }
 
@@ -43,10 +50,20 @@ pub async fn start_arti(
     if !binary_path.exists() {
         let mut status = shield.status.lock().await;
         *status = ShieldStatus::Error {
-            message: "Arti binary not found".into(),
+            message: "Tor proxy binary not found. Try reinstalling ZecBox.".into(),
         };
         emit_shield_status(&app_handle, &shield).await;
         return Err(format!("Arti binary not found at {:?}", binary_path));
+    }
+
+    // Check for port conflict before spawning
+    if let Err(_) = tokio::net::TcpListener::bind(format!("127.0.0.1:{}", ARTI_SOCKS_PORT)).await {
+        let mut status = shield.status.lock().await;
+        *status = ShieldStatus::Error {
+            message: format!("Port {} is already in use. Another Tor instance may be running.", ARTI_SOCKS_PORT),
+        };
+        emit_shield_status(&app_handle, shield).await;
+        return Err(format!("Port {} is already in use", ARTI_SOCKS_PORT));
     }
 
     let mut child = tokio::process::Command::new(&binary_path)

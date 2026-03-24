@@ -80,20 +80,21 @@ export function Sidebar({ activeView, onNavigate }: Props) {
         </h1>
       </div>
 
-      <nav className="flex-1 px-3 space-y-1">
+      <nav className="flex-1 px-3 space-y-1" role="navigation" aria-label="Main">
         {navItems.map((item) => {
           const isActive = activeView === item.id;
           return (
             <button
               key={item.id}
               onClick={() => onNavigate(item.id as View)}
+              aria-current={isActive ? "page" : undefined}
               className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                 isActive
                   ? "bg-zec-yellow/10 text-zec-yellow"
                   : "text-zec-muted hover:text-zec-text hover:bg-zec-dark/50"
               }`}
             >
-              {item.icon}
+              <span aria-hidden="true">{item.icon}</span>
               {item.label}
             </button>
           );

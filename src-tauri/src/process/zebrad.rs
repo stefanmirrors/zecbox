@@ -48,10 +48,20 @@ pub async fn start_zebrad(
     if !binary_path.exists() {
         let mut status = node.status.lock().await;
         *status = NodeStatus::Error {
-            message: "zebrad binary not found".into(),
+            message: "Node binary not found. Try reinstalling ZecBox.".into(),
         };
         let _ = app_handle.emit("node_status_changed", &*status);
         return Err(format!("zebrad binary not found at {:?}", binary_path));
+    }
+
+    // Check for port conflicts before spawning
+    for port in [8232u16, 8233] {
+        if let Err(msg) = check_port_available(port).await {
+            let mut status = node.status.lock().await;
+            *status = NodeStatus::Error { message: msg.clone() };
+            let _ = app_handle.emit("node_status_changed", &*status);
+            return Err(msg);
+        }
     }
 
     // Spawn zebrad process (with proxy env vars if shield mode active)
@@ -299,6 +309,16 @@ fn remove_pid_file(data_dir: &Path) -> Result<(), std::io::Error> {
         fs::remove_file(pid_path)?;
     }
     Ok(())
+}
+
+async fn check_port_available(port: u16) -> Result<(), String> {
+    match tokio::net::TcpListener::bind(format!("127.0.0.1:{}", port)).await {
+        Ok(_) => Ok(()),
+        Err(_) => Err(format!(
+            "Port {} is already in use. Another instance may be running.",
+            port
+        )),
+    }
 }
 
 async fn read_log_stream<R: tokio::io::AsyncRead + Unpin>(

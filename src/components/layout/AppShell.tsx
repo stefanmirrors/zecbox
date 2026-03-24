@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Sidebar, type View } from "./Sidebar";
 import { TitleBar } from "./TitleBar";
 import { Dashboard } from "../dashboard/Dashboard";
@@ -17,13 +17,37 @@ const titles: Record<View, string> = {
 
 export function AppShell() {
   const [activeView, setActiveView] = useState<View>("dashboard");
+  const [visible, setVisible] = useState(true);
+  const pendingView = useRef<View | null>(null);
+
+  const handleNavigate = (view: View) => {
+    if (view === activeView) return;
+    setVisible(false);
+    pendingView.current = view;
+  };
+
+  useEffect(() => {
+    if (!visible && pendingView.current) {
+      const timer = setTimeout(() => {
+        setActiveView(pendingView.current!);
+        pendingView.current = null;
+        setVisible(true);
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [visible]);
 
   return (
     <div className="flex h-screen bg-zec-dark overflow-hidden">
-      <Sidebar activeView={activeView} onNavigate={setActiveView} />
+      <Sidebar activeView={activeView} onNavigate={handleNavigate} />
       <div className="flex-1 flex flex-col min-w-0">
         <TitleBar title={titles[activeView]} />
-        <main className="flex-1 overflow-y-auto p-6">
+        <main
+          role="main"
+          className={`flex-1 overflow-y-auto p-6 transition-opacity duration-150 ease-out ${
+            visible ? "opacity-100" : "opacity-0"
+          }`}
+        >
           {activeView === "dashboard" && <Dashboard />}
           {activeView === "shield" && <ShieldMode />}
           {activeView === "wallet" && <WalletServer />}

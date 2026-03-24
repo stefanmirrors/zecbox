@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useNodeStatus } from "../../hooks/useNodeStatus";
 import { startNode, stopNode } from "../../lib/tauri";
 
@@ -6,8 +7,12 @@ export function NodeStatus() {
   const isRunning = nodeStatus.status === "running";
   const isBusy =
     nodeStatus.status === "starting" || nodeStatus.status === "stopping";
+  const [toggling, setToggling] = useState(false);
+  const [toggleError, setToggleError] = useState<string | null>(null);
 
   const handleToggle = async () => {
+    setToggleError(null);
+    setToggling(true);
     try {
       if (isRunning) {
         await stopNode();
@@ -15,7 +20,11 @@ export function NodeStatus() {
         await startNode();
       }
     } catch (e) {
-      console.error("Node toggle failed:", e);
+      setToggleError(
+        typeof e === "string" ? e : "Failed to toggle node. Please try again."
+      );
+    } finally {
+      setToggling(false);
     }
   };
 
@@ -62,21 +71,25 @@ export function NodeStatus() {
           {nodeStatus.status === "error" && nodeStatus.message && (
             <p className="text-sm text-red-400">{nodeStatus.message}</p>
           )}
+
+          {toggleError && (
+            <p className="text-sm text-red-400">{toggleError}</p>
+          )}
         </div>
 
         <button
           onClick={handleToggle}
-          disabled={isBusy}
+          disabled={isBusy || toggling}
           className={`px-6 py-2.5 rounded-lg font-medium transition-colors ${
-            isBusy
+            isBusy || toggling
               ? "bg-zec-border text-zec-muted cursor-not-allowed"
               : isRunning
                 ? "bg-red-600 hover:bg-red-700 text-white"
                 : "bg-zec-yellow hover:brightness-110 text-zec-dark"
           }`}
         >
-          {isBusy
-            ? nodeStatus.status === "starting"
+          {isBusy || toggling
+            ? nodeStatus.status === "starting" || (!isRunning && toggling)
               ? "Starting..."
               : "Stopping..."
             : isRunning

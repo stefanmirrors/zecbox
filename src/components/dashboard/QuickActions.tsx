@@ -75,6 +75,9 @@ function FeatureToggle({
       </div>
       <button
         onClick={onToggle}
+        role="switch"
+        aria-label={`Toggle ${label}`}
+        aria-checked={enabled}
         disabled={disabled || loading}
         className={`relative w-10 h-6 rounded-full transition-colors ${
           disabled || loading
@@ -87,7 +90,7 @@ function FeatureToggle({
         }`}
       >
         <span
-          className={`absolute top-1 left-1 w-4 h-4 rounded-full bg-white transition-transform ${
+          className={`absolute top-1 left-1 w-4 h-4 rounded-full bg-white transition-transform duration-200 ${
             enabled ? "translate-x-4" : ""
           }`}
         />

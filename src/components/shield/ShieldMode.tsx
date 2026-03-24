@@ -67,6 +67,7 @@ export default function ShieldMode() {
                   ? "bg-emerald-500/10 text-emerald-400"
                   : "bg-zec-border text-zec-muted"
               }`}
+              aria-hidden="true"
             >
               <svg
                 width="22"
@@ -92,6 +93,9 @@ export default function ShieldMode() {
           </div>
           <button
             onClick={toggle}
+            role="switch"
+            aria-label="Toggle Shield Mode"
+            aria-checked={status.enabled}
             disabled={
               toggling ||
               status.status === "bootstrapping" ||
@@ -108,7 +112,7 @@ export default function ShieldMode() {
             }`}
           >
             <span
-              className={`absolute top-1 left-1 w-5 h-5 rounded-full bg-white transition-transform ${
+              className={`absolute top-1 left-1 w-5 h-5 rounded-full bg-white transition-transform duration-200 ${
                 status.enabled ? "translate-x-5" : ""
               }`}
             />

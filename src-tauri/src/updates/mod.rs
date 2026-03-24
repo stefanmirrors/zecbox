@@ -134,6 +134,21 @@ pub fn resolve_binary_dir(app_handle: &AppHandle) -> PathBuf {
     exe_dir.unwrap_or_default()
 }
 
+/// Remove orphaned .update and .new files left by interrupted binary swaps.
+pub fn cleanup_orphaned_update_files(app_handle: &AppHandle) {
+    let binary_dir = resolve_binary_dir(app_handle);
+    for name in &["zebrad", "zaino", "arti"] {
+        let filename = format!("{}-{}", name, TARGET_PLATFORM);
+        for suffix in &["update", "new"] {
+            let path = binary_dir.join(format!("{}.{}", filename, suffix));
+            if path.exists() {
+                log::warn!("Cleaning up orphaned file: {:?}", path);
+                let _ = std::fs::remove_file(&path);
+            }
+        }
+    }
+}
+
 fn binary_filename(name: &str) -> String {
     format!("{}-{}", name, TARGET_PLATFORM)
 }
@@ -200,7 +215,15 @@ async fn fetch_manifest(data_dir: &Path) -> Result<UpdateManifest, String> {
         .timeout(std::time::Duration::from_secs(30))
         .send()
         .await
-        .map_err(|e| format!("Failed to fetch manifest: {}", e))?;
+        .map_err(|e| {
+            if e.is_timeout() {
+                "Update check timed out. Check your internet connection.".to_string()
+            } else if e.is_connect() {
+                "Cannot reach update server. Check your internet connection.".to_string()
+            } else {
+                format!("Update check failed: {}", e)
+            }
+        })?;
 
     if !response.status().is_success() {
         return Err(format!("Manifest fetch returned {}", response.status()));
