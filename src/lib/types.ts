@@ -31,6 +31,7 @@ export interface AppConfig {
   firstRunComplete: boolean;
   shieldMode: boolean;
   walletServer: boolean;
+  autoStart: boolean;
 }
 
 export type ShieldStatusTag = "disabled" | "bootstrapping" | "active" | "error" | "interrupted";

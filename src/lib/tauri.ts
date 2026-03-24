@@ -94,6 +94,18 @@ export async function checkAppUpdate(): Promise<boolean> {
   return invoke<boolean>("check_app_update");
 }
 
+export async function getAutoStartEnabled(): Promise<boolean> {
+  return invoke<boolean>("get_auto_start_enabled");
+}
+
+export async function setAutoStart(enabled: boolean): Promise<void> {
+  return invoke("set_auto_start", { enabled });
+}
+
+export async function rebuildDatabase(): Promise<void> {
+  return invoke("rebuild_database");
+}
+
 export function parseNodeStatus(raw: Record<string, unknown>): NodeStatusInfo {
   const status = (raw.status as string) as NodeStatusInfo["status"];
   return {

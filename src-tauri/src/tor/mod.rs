@@ -2,9 +2,10 @@
 //! Manages Arti as a sidecar process, monitors bootstrap and health,
 //! implements kill switch logic (Arti crash while Shield ON → stop zebrad).
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::Stdio;
 use std::sync::Arc;
+use std::time::Duration;
 
 use nix::sys::signal::{self, Signal};
 use nix::unistd::Pid;
@@ -57,6 +58,15 @@ pub async fn start_arti(
 
     let pid = child.id().unwrap_or(0);
     log::info!("Arti started with PID {}", pid);
+
+    // Write PID file
+    {
+        let state = app_handle.state::<AppState>();
+        let data_dir = state.node.data_dir.lock().await.clone();
+        if let Err(e) = write_pid_file(&data_dir, pid) {
+            log::warn!("Failed to write Arti PID file: {}", e);
+        }
+    }
 
     // Monitor stderr for bootstrap progress
     if let Some(stderr) = child.stderr.take() {
@@ -186,6 +196,12 @@ pub async fn stop_arti(
             }
         }
         *proc = None;
+    }
+
+    // Remove PID file
+    if let Some(state) = app_handle.try_state::<AppState>() {
+        let data_dir = state.node.data_dir.lock().await.clone();
+        let _ = remove_pid_file(&data_dir);
     }
 
     {
@@ -355,4 +371,43 @@ async fn get_status_payload(shield: &ShieldState) -> serde_json::Value {
 /// Get the SOCKS proxy address for zebrad to use.
 pub fn socks_proxy_addr() -> String {
     format!("socks5h://127.0.0.1:{}", ARTI_SOCKS_PORT)
+}
+
+// --- PID file management ---
+
+fn write_pid_file(data_dir: &Path, pid: u32) -> Result<(), std::io::Error> {
+    std::fs::write(data_dir.join("arti.pid"), pid.to_string())
+}
+
+fn read_pid_file(data_dir: &Path) -> Option<u32> {
+    std::fs::read_to_string(data_dir.join("arti.pid"))
+        .ok()
+        .and_then(|s| s.trim().parse().ok())
+}
+
+fn remove_pid_file(data_dir: &Path) -> Result<(), std::io::Error> {
+    let path = data_dir.join("arti.pid");
+    if path.exists() {
+        std::fs::remove_file(path)?;
+    }
+    Ok(())
+}
+
+/// Check for and clean up orphaned Arti process from a prior crash.
+pub async fn check_arti_orphan(data_dir: &Path) -> Result<(), String> {
+    if let Some(pid) = read_pid_file(data_dir) {
+        let nix_pid = Pid::from_raw(pid as i32);
+        if signal::kill(nix_pid, None).is_ok() {
+            log::warn!("Found orphaned Arti process (PID {}), killing it", pid);
+            let _ = signal::kill(nix_pid, Signal::SIGTERM);
+
+            tokio::time::sleep(Duration::from_secs(3)).await;
+
+            if signal::kill(nix_pid, None).is_ok() {
+                let _ = signal::kill(nix_pid, Signal::SIGKILL);
+            }
+        }
+        let _ = remove_pid_file(data_dir);
+    }
+    Ok(())
 }

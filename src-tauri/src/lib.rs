@@ -1,6 +1,7 @@
 mod commands;
 mod config;
 mod health;
+mod power;
 mod process;
 pub mod state;
 mod storage;
@@ -76,6 +77,9 @@ pub fn run() {
                 if let Err(e) = process::zaino::check_zaino_orphan(&node_data_dir).await {
                     log::warn!("Zaino orphan check failed: {}", e);
                 }
+                if let Err(e) = tor::check_arti_orphan(&node_data_dir).await {
+                    log::warn!("Arti orphan check failed: {}", e);
+                }
             });
 
             // Spawn storage monitor task
@@ -92,6 +96,16 @@ pub fn run() {
             });
 
             app.manage(app_state);
+
+            // Spawn power monitor (sleep/wake handling)
+            {
+                let managed_state = app.state::<AppState>();
+                let (thread_handle, wake_task) = power::spawn_power_monitor(app.handle().clone());
+                tauri::async_runtime::block_on(async {
+                    *managed_state.power_thread.lock().await = Some(thread_handle);
+                    *managed_state.power_wake_task.lock().await = Some(wake_task);
+                });
+            }
 
             // Spawn periodic update checker
             {
@@ -142,6 +156,15 @@ pub fn run() {
                             if let Some(task) = storage.monitor_task.lock().await.take() {
                                 task.abort();
                             }
+                            // Stop power monitor
+                            power::stop_power_monitor();
+                            {
+                                let wake_task = app_handle.state::<AppState>()
+                                    .power_wake_task.lock().await.take();
+                                if let Some(task) = wake_task {
+                                    task.abort();
+                                }
+                            }
                             // Stop Zaino first (depends on zebrad)
                             let data_dir = node.data_dir.lock().await.clone();
                             let _ =
@@ -178,6 +201,7 @@ pub fn run() {
             commands::node::start_node,
             commands::node::stop_node,
             commands::node::get_node_status,
+            commands::node::rebuild_database,
             commands::storage::get_volumes,
             commands::storage::get_storage_info,
             commands::storage::set_data_dir,
@@ -198,6 +222,8 @@ pub fn run() {
             commands::updates::apply_all_updates,
             commands::updates::dismiss_updates,
             commands::updates::check_app_update,
+            commands::settings::get_auto_start_enabled,
+            commands::settings::set_auto_start,
         ])
         .run(tauri::generate_context!())
         .expect("error while running ZecBox");

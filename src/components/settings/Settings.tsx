@@ -1,13 +1,21 @@
+import { useEffect, useState } from "react";
+import { listen } from "@tauri-apps/api/event";
 import { useNodeStatus } from "../../hooks/useNodeStatus";
 import { useStorage } from "../../hooks/useStorage";
 import { useShieldMode } from "../../hooks/useShieldMode";
 import { useUpdates } from "../../hooks/useUpdates";
 import { formatBytes } from "../../lib/format";
+import { getAutoStartEnabled, setAutoStart, rebuildDatabase } from "../../lib/tauri";
 
 export function Settings() {
   const nodeStatus = useNodeStatus();
   const { storageInfo } = useStorage();
   const { status: shieldStatus } = useShieldMode();
+  const [autoStartEnabled, setAutoStartEnabled] = useState(false);
+  const [autoStartLoading, setAutoStartLoading] = useState(false);
+  const [rebuildConfirm, setRebuildConfirm] = useState(false);
+  const [rebuilding, setRebuilding] = useState(false);
+  const [recoveryNeeded, setRecoveryNeeded] = useState(false);
   const {
     versions,
     updateStatus,
@@ -25,6 +33,43 @@ export function Settings() {
     updateStatus.status === "downloading" ||
     updateStatus.status === "installing" ||
     updateStatus.status === "rollingBack";
+
+  useEffect(() => {
+    getAutoStartEnabled().then(setAutoStartEnabled).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    const unlisten = listen("node_recovery_needed", () => {
+      setRecoveryNeeded(true);
+    });
+    return () => { unlisten.then((f) => f()); };
+  }, []);
+
+  const handleAutoStartToggle = async () => {
+    setAutoStartLoading(true);
+    try {
+      const newValue = !autoStartEnabled;
+      await setAutoStart(newValue);
+      setAutoStartEnabled(newValue);
+    } catch {
+      // Revert on failure
+    } finally {
+      setAutoStartLoading(false);
+    }
+  };
+
+  const handleRebuild = async () => {
+    setRebuilding(true);
+    try {
+      await rebuildDatabase();
+      setRecoveryNeeded(false);
+      setRebuildConfirm(false);
+    } catch {
+      // Error handled by node status
+    } finally {
+      setRebuilding(false);
+    }
+  };
 
   return (
     <div className="max-w-2xl space-y-6">
@@ -46,6 +91,28 @@ export function Settings() {
           {storageInfo && (
             <Row label="Data Directory" value={storageInfo.dataDir} mono />
           )}
+        </div>
+      </div>
+
+      <div className="bg-zec-surface border border-zec-border rounded-lg p-6 space-y-4">
+        <h3 className="text-sm font-medium text-zec-muted uppercase tracking-wider">
+          System
+        </h3>
+        <div className="flex items-center justify-between">
+          <span className="text-sm text-zec-muted">Launch at Login</span>
+          <button
+            onClick={handleAutoStartToggle}
+            disabled={autoStartLoading}
+            className={`relative w-10 h-5 rounded-full transition-colors ${
+              autoStartEnabled ? "bg-amber-500" : "bg-zec-border"
+            } ${autoStartLoading ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
+          >
+            <span
+              className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform ${
+                autoStartEnabled ? "translate-x-5" : ""
+              }`}
+            />
+          </button>
         </div>
       </div>
 
@@ -161,6 +228,55 @@ export function Settings() {
           </div>
         </div>
       )}
+
+      {recoveryNeeded && (
+        <div className="bg-zec-surface border border-red-500/30 rounded-lg p-4">
+          <p className="text-sm text-red-400">
+            Node failed to start after multiple attempts. The database may be
+            corrupted and need to be rebuilt.
+          </p>
+        </div>
+      )}
+
+      <div className="bg-zec-surface border border-zec-border rounded-lg p-6 space-y-4">
+        <h3 className="text-sm font-medium text-zec-muted uppercase tracking-wider">
+          Advanced
+        </h3>
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm text-zec-text">Rebuild Database</p>
+            <p className="text-xs text-zec-muted">
+              Deletes all chain data and re-syncs from scratch.
+            </p>
+          </div>
+          {!rebuildConfirm ? (
+            <button
+              onClick={() => setRebuildConfirm(true)}
+              disabled={rebuilding}
+              className="text-xs px-3 py-1.5 rounded bg-red-500/20 text-red-400 hover:bg-red-500/30 disabled:opacity-50 transition-colors"
+            >
+              Rebuild
+            </button>
+          ) : (
+            <div className="flex gap-2">
+              <button
+                onClick={() => setRebuildConfirm(false)}
+                disabled={rebuilding}
+                className="text-xs px-3 py-1.5 rounded bg-zec-border text-zec-muted hover:bg-zec-border/80 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleRebuild}
+                disabled={rebuilding}
+                className="text-xs px-3 py-1.5 rounded bg-red-500 text-white hover:bg-red-600 disabled:opacity-50 transition-colors"
+              >
+                {rebuilding ? "Rebuilding..." : "Confirm Rebuild"}
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

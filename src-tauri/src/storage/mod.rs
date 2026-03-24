@@ -3,11 +3,12 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use sysinfo::Disks;
-use tauri::{AppHandle, Emitter};
+use tauri::{AppHandle, Emitter, Manager};
 use tokio::task::JoinHandle;
 
-use crate::process::zebrad;
-use crate::state::{NodeState, NodeStatus, StorageInfo, StorageState, StorageWarningLevel, VolumeInfo};
+use crate::process::{zebrad, zaino};
+use crate::state::{AppState, NodeState, NodeStatus, StorageInfo, StorageState, StorageWarningLevel, VolumeInfo};
+use crate::tor;
 
 const WARN_THRESHOLD: u64 = 50_000_000_000;
 const CRITICAL_THRESHOLD: u64 = 10_000_000_000;
@@ -174,6 +175,21 @@ pub fn spawn_storage_monitor(
                     *connected = false;
                     let _ = app_handle.emit("storage_drive_disconnected", ());
                     log::warn!("External drive disconnected: {:?}", data_dir);
+
+                    // Stop all running processes that depend on this drive
+                    let status = node.status.lock().await.clone();
+                    if matches!(status, NodeStatus::Running { .. } | NodeStatus::Starting) {
+                        log::warn!("Stopping zebrad due to drive disconnect");
+                        let _ = zebrad::stop_zebrad(&app_handle, &node).await;
+                    }
+                    if let Some(state) = app_handle.try_state::<AppState>() {
+                        if !state.wallet.status.lock().await.is_stopped_or_error() {
+                            let _ = zaino::stop_zaino(&app_handle, &state.wallet, &data_dir).await;
+                        }
+                        if state.shield.is_active().await {
+                            let _ = tor::stop_arti(&app_handle, &state.shield).await;
+                        }
+                    }
                 }
                 continue;
             } else {

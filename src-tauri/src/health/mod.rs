@@ -11,6 +11,7 @@ use crate::state::{AppState, NodeState, NodeStatus};
 const POLL_INTERVAL: Duration = Duration::from_secs(2);
 const REQUEST_TIMEOUT: Duration = Duration::from_secs(2);
 const MAX_CONSECUTIVE_FAILURES: u32 = 3;
+const RECOVERY_THRESHOLD: u32 = 5;
 
 async fn update_tray_status(app_handle: &AppHandle, status: &NodeStatus) {
     if let Some(state) = app_handle.try_state::<AppState>() {
@@ -112,6 +113,34 @@ pub fn spawn_health_monitor(
                                 let mut backoff = node.backoff.lock().await;
                                 backoff.next_delay()
                             };
+
+                            // Check if we've hit the recovery threshold
+                            let failures = {
+                                let backoff = node.backoff.lock().await;
+                                backoff.consecutive_failures
+                            };
+                            if failures >= RECOVERY_THRESHOLD {
+                                log::error!(
+                                    "zebrad failed {} consecutive restarts — possible DB corruption",
+                                    failures
+                                );
+                                {
+                                    let mut status = node.status.lock().await;
+                                    *status = NodeStatus::Error {
+                                        message: "Node failed to start repeatedly. Database may be corrupted. Consider rebuilding.".into(),
+                                    };
+                                }
+                                let error_status = node.status.lock().await.clone();
+                                let _ = app_handle.emit("node_status_changed", &error_status);
+                                let _ = app_handle.emit("node_recovery_needed", "Node failed to start after multiple attempts. The database may need to be rebuilt.");
+                                update_tray_status(&app_handle, &error_status).await;
+                                // Clean up dead process
+                                {
+                                    let mut proc = node.process.lock().await;
+                                    *proc = None;
+                                }
+                                break;
+                            }
 
                             {
                                 let mut status = node.status.lock().await;

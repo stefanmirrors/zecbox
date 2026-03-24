@@ -3,12 +3,13 @@ use std::path::{Path, PathBuf};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[serde(rename_all = "camelCase", default = "AppConfig::serde_default")]
 pub struct AppConfig {
     pub data_dir: PathBuf,
     pub first_run_complete: bool,
     pub shield_mode: bool,
     pub wallet_server: bool,
+    pub auto_start: bool,
 }
 
 impl AppConfig {
@@ -18,6 +19,17 @@ impl AppConfig {
             first_run_complete: false,
             shield_mode: false,
             wallet_server: false,
+            auto_start: false,
+        }
+    }
+
+    fn serde_default() -> Self {
+        Self {
+            data_dir: PathBuf::new(),
+            first_run_complete: false,
+            shield_mode: false,
+            wallet_server: false,
+            auto_start: false,
         }
     }
 

@@ -17,6 +17,8 @@ pub struct AppState {
     pub update: Arc<UpdateState>,
     pub default_data_dir: PathBuf,
     pub tray_status: Mutex<Option<tauri::menu::MenuItem<tauri::Wry>>>,
+    pub power_thread: Mutex<Option<std::thread::JoinHandle<()>>>,
+    pub power_wake_task: Mutex<Option<JoinHandle<()>>>,
 }
 
 impl AppState {
@@ -29,6 +31,8 @@ impl AppState {
             update: Arc::new(UpdateState::new()),
             default_data_dir,
             tray_status: Mutex::new(None),
+            power_thread: Mutex::new(None),
+            power_wake_task: Mutex::new(None),
         }
     }
 }
