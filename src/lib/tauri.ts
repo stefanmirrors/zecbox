@@ -34,6 +34,10 @@ export async function completeOnboarding(path: string): Promise<void> {
   return invoke("complete_onboarding", { path });
 }
 
+export async function resetOnboarding(): Promise<void> {
+  return invoke("reset_onboarding");
+}
+
 export async function getLogs(): Promise<string[]> {
   return invoke<string[]>("get_logs");
 }

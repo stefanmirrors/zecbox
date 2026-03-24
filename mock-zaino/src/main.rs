@@ -16,7 +16,7 @@ async fn main() {
         .and_then(|w| w[1].parse().ok())
         .unwrap_or(9067);
 
-    let addr = SocketAddr::from(([0, 0, 0, 1], port));
+    let addr = SocketAddr::from(([0, 0, 0, 0], port));
     let listener = TcpListener::bind(addr)
         .await
         .unwrap_or_else(|e| panic!("failed to bind to port {}: {}", port, e));

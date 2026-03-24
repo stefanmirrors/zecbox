@@ -15,7 +15,11 @@ const titles: Record<View, string> = {
   settings: "Settings",
 };
 
-export function AppShell() {
+interface AppShellProps {
+  onResetToOnboarding: () => void;
+}
+
+export function AppShell({ onResetToOnboarding }: AppShellProps) {
   const [activeView, setActiveView] = useState<View>("dashboard");
   const [visible, setVisible] = useState(true);
   const pendingView = useRef<View | null>(null);
@@ -52,7 +56,7 @@ export function AppShell() {
           {activeView === "shield" && <ShieldMode />}
           {activeView === "wallet" && <WalletServer />}
           {activeView === "logs" && <LogViewer />}
-          {activeView === "settings" && <Settings />}
+          {activeView === "settings" && <Settings onResetToOnboarding={onResetToOnboarding} />}
         </main>
       </div>
     </div>

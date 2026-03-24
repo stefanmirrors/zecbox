@@ -5,9 +5,13 @@ import { useStorage } from "../../hooks/useStorage";
 import { useShieldMode } from "../../hooks/useShieldMode";
 import { useUpdates } from "../../hooks/useUpdates";
 import { formatBytes } from "../../lib/format";
-import { getAutoStartEnabled, setAutoStart, rebuildDatabase } from "../../lib/tauri";
+import { getAutoStartEnabled, setAutoStart, rebuildDatabase, resetOnboarding } from "../../lib/tauri";
 
-export function Settings() {
+interface SettingsProps {
+  onResetToOnboarding: () => void;
+}
+
+export function Settings({ onResetToOnboarding }: SettingsProps) {
   const nodeStatus = useNodeStatus();
   const { storageInfo } = useStorage();
   const { status: shieldStatus } = useShieldMode();
@@ -15,6 +19,7 @@ export function Settings() {
   const [autoStartLoading, setAutoStartLoading] = useState(false);
   const [rebuildConfirm, setRebuildConfirm] = useState(false);
   const [rebuilding, setRebuilding] = useState(false);
+  const [resetting, setResetting] = useState(false);
   const [recoveryNeeded, setRecoveryNeeded] = useState(false);
   const [autoStartError, setAutoStartError] = useState<string | null>(null);
   const {
@@ -289,6 +294,29 @@ export function Settings() {
               </button>
             </div>
           )}
+        </div>
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm text-zec-text">Reset to Onboarding</p>
+            <p className="text-xs text-zec-muted">
+              Stops all processes and returns to the first-run setup screen.
+            </p>
+          </div>
+          <button
+            onClick={async () => {
+              setResetting(true);
+              try {
+                await resetOnboarding();
+                onResetToOnboarding();
+              } catch {
+                setResetting(false);
+              }
+            }}
+            disabled={resetting}
+            className="text-xs px-3 py-1.5 rounded bg-zec-border text-zec-text hover:bg-zec-border/80 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            {resetting ? "Resetting..." : "Reset"}
+          </button>
         </div>
       </div>
     </div>
