@@ -17,7 +17,7 @@ zecbox turns your computer into a Zcash full node. Download, install, click star
 
 ## What It Doesn't Do
 
-- It doesn't hold your keys. ZecBox is not a wallet.
+- It doesn't hold your keys. zecbox is not a wallet.
 - It doesn't mine.
 - It doesn't require you to know what a terminal is.
 
@@ -35,8 +35,8 @@ zecbox turns your computer into a Zcash full node. Download, install, click star
 ## Install
 
 1. Download the `.dmg` from [Releases](https://github.com/stefanmirrors/zecbox/releases)
-2. Open the `.dmg`, drag ZecBox to Applications
-3. Launch ZecBox
+2. Open the `.dmg`, drag zecbox to Applications
+3. Launch zecbox
 4. Pick your storage location (or accept the default)
 5. Click **Start**
 
@@ -46,9 +46,9 @@ Your node is running. That's it.
 
 Until official signed releases are available, macOS Gatekeeper will block the app. To open it:
 
-1. Try opening ZecBox normally (it will be blocked)
+1. Try opening zecbox normally (it will be blocked)
 2. Open **System Settings > Privacy & Security**
-3. Scroll down -- you'll see "ZecBox was blocked"
+3. Scroll down -- you'll see "zecbox was blocked"
 4. Click **Open Anyway**
 
 This is only needed once. Signed releases will not require this step.
@@ -67,7 +67,7 @@ shasum -a 256 -c SHA256SUMS
 
 ## Architecture
 
-ZecBox bundles three binaries as sidecars, managed as child processes:
+zecbox bundles three binaries as sidecars, managed as child processes:
 
 - **zebrad** -- Zcash full node ([Zebra](https://github.com/ZcashFoundation/zebra)). Syncs the blockchain, serves JSON-RPC on localhost.
 - **Zaino** -- Light wallet gRPC server. Reads from zebrad, serves compact blocks to wallets on port 9067.
@@ -95,6 +95,12 @@ npm install
 ./scripts/build-macos.sh
 ```
 
-The DMG will be at `src-tauri/target/release/bundle/dmg/ZecBox_<version>_aarch64.dmg`.
+The DMG will be at `src-tauri/target/release/bundle/dmg/zecbox_<version>_aarch64.dmg`.
 
 The build script automatically compiles mock sidecar binaries for development. For production builds with real zebrad/Zaino/Arti binaries, place them in `src-tauri/binaries/` before building.
+
+---
+
+## License
+
+MIT
