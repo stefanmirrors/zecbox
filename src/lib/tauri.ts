@@ -34,6 +34,10 @@ export async function completeOnboarding(path: string): Promise<void> {
   return invoke("complete_onboarding", { path });
 }
 
+export async function getLogs(): Promise<string[]> {
+  return invoke<string[]>("get_logs");
+}
+
 export function parseNodeStatus(raw: Record<string, unknown>): NodeStatusInfo {
   const status = (raw.status as string) as NodeStatusInfo["status"];
   return {

@@ -2,15 +2,37 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use serde_json::json;
-use tauri::{AppHandle, Emitter};
+use tauri::{AppHandle, Emitter, Manager};
 use tokio::task::JoinHandle;
 
 use crate::process::zebrad;
-use crate::state::{NodeState, NodeStatus};
+use crate::state::{AppState, NodeState, NodeStatus};
 
 const POLL_INTERVAL: Duration = Duration::from_secs(2);
 const REQUEST_TIMEOUT: Duration = Duration::from_secs(2);
 const MAX_CONSECUTIVE_FAILURES: u32 = 3;
+
+async fn update_tray_status(app_handle: &AppHandle, status: &NodeStatus) {
+    if let Some(state) = app_handle.try_state::<AppState>() {
+        if let Some(item) = state.tray_status.lock().await.as_ref() {
+            let text = match status {
+                NodeStatus::Running { block_height, .. } => {
+                    format!("Block: {}", block_height)
+                }
+                _ => format!("Status: {}", capitalize(status.status_str())),
+            };
+            let _ = item.set_text(text);
+        }
+    }
+}
+
+fn capitalize(s: &str) -> String {
+    let mut c = s.chars();
+    match c.next() {
+        None => String::new(),
+        Some(f) => f.to_uppercase().chain(c).collect(),
+    }
+}
 
 /// Spawn the health monitor task. Returns a handle that can be aborted to stop monitoring.
 pub fn spawn_health_monitor(
@@ -55,6 +77,7 @@ pub fn spawn_health_monitor(
                         *status = new_status.clone();
                     }
                     let _ = app_handle.emit("node_status_changed", &new_status);
+                    update_tray_status(&app_handle, &new_status).await;
 
                     // Track healthy duration for backoff reset
                     {
@@ -104,6 +127,7 @@ pub fn spawn_health_monitor(
                                 status.clone()
                             };
                             let _ = app_handle.emit("node_status_changed", &error_status);
+                            update_tray_status(&app_handle, &error_status).await;
 
                             // Clean up dead process
                             {
@@ -129,6 +153,7 @@ pub fn spawn_health_monitor(
                                         "node_status_changed",
                                         &*status,
                                     );
+                                    update_tray_status(&app_handle, &*status).await;
                                     break;
                                 }
                             }

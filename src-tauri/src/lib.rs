@@ -89,9 +89,19 @@ pub fn run() {
             app.manage(app_state);
 
             // System tray
+            let status_item_for_tray = MenuItem::with_id(app, "status", "Status: Stopped", false, None::<&str>)?;
             let quit = MenuItem::with_id(app, "quit", "Quit ZecBox", true, None::<&str>)?;
             let show = MenuItem::with_id(app, "show", "Show ZecBox", true, None::<&str>)?;
-            let menu = Menu::with_items(app, &[&show, &quit])?;
+            let menu = Menu::with_items(app, &[&status_item_for_tray, &show, &quit])?;
+
+            // Store tray status item reference for dynamic updates
+            {
+                let managed_state = app.state::<AppState>();
+                tauri::async_runtime::block_on(async {
+                    let mut tray = managed_state.tray_status.lock().await;
+                    *tray = Some(status_item_for_tray);
+                });
+            }
 
             let _tray = TrayIconBuilder::new()
                 .icon(app.default_window_icon().unwrap().clone())
@@ -128,6 +138,12 @@ pub fn run() {
 
             Ok(())
         })
+        .on_window_event(|window, event| {
+            if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                let _ = window.hide();
+                api.prevent_close();
+            }
+        })
         .invoke_handler(tauri::generate_handler![
             commands::node::start_node,
             commands::node::stop_node,
@@ -137,6 +153,7 @@ pub fn run() {
             commands::storage::set_data_dir,
             commands::onboarding::get_app_config,
             commands::onboarding::complete_onboarding,
+            commands::logs::get_logs,
         ])
         .run(tauri::generate_context!())
         .expect("error while running ZecBox");

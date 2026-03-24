@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { getAppConfig } from "./lib/tauri";
 import { Onboarding } from "./components/onboarding/Onboarding";
-import { Dashboard } from "./components/dashboard/Dashboard";
+import { AppShell } from "./components/layout/AppShell";
 
 function App() {
   const [loading, setLoading] = useState(true);
@@ -33,7 +33,7 @@ function App() {
     return <Onboarding onComplete={() => setFirstRunComplete(true)} />;
   }
 
-  return <Dashboard />;
+  return <AppShell />;
 }
 
 export default App;

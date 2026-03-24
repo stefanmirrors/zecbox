@@ -13,6 +13,7 @@ pub struct AppState {
     pub node: Arc<NodeState>,
     pub storage: Arc<StorageState>,
     pub default_data_dir: PathBuf,
+    pub tray_status: Mutex<Option<tauri::menu::MenuItem<tauri::Wry>>>,
 }
 
 impl AppState {
@@ -21,6 +22,7 @@ impl AppState {
             node: Arc::new(NodeState::new(data_dir)),
             storage: Arc::new(StorageState::new()),
             default_data_dir,
+            tray_status: Mutex::new(None),
         }
     }
 }

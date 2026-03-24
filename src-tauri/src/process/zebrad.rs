@@ -1,6 +1,7 @@
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Stdio;
+use std::sync::Arc;
 
 use nix::sys::signal::{self, Signal};
 use nix::unistd::Pid;
@@ -9,7 +10,7 @@ use tokio::io::{AsyncBufReadExt, BufReader};
 
 use crate::config::zebrad_config;
 use crate::health;
-use crate::state::{AppState, NodeState, NodeStatus};
+use crate::state::{AppState, NodeState, NodeStatus, LOG_BUFFER_CAPACITY};
 
 /// Start zebrad, spawn log readers and health monitor.
 pub async fn start_zebrad(
@@ -68,18 +69,24 @@ pub async fn start_zebrad(
 
     // Spawn log reader tasks for stdout and stderr
     let mut log_tasks = Vec::new();
+    let state = app_handle.state::<AppState>();
+    let node_arc = state.node.clone();
 
     if let Some(stdout) = child.stdout.take() {
         let dir = data_dir.clone();
+        let node_ref = node_arc.clone();
+        let handle = app_handle.clone();
         log_tasks.push(tokio::spawn(async move {
-            read_log_stream(stdout, &dir, "stdout").await;
+            read_log_stream(stdout, &dir, "stdout", node_ref, handle).await;
         }));
     }
 
     if let Some(stderr) = child.stderr.take() {
         let dir = data_dir.clone();
+        let node_ref = node_arc.clone();
+        let handle = app_handle.clone();
         log_tasks.push(tokio::spawn(async move {
-            read_log_stream(stderr, &dir, "stderr").await;
+            read_log_stream(stderr, &dir, "stderr", node_ref, handle).await;
         }));
     }
 
@@ -94,8 +101,6 @@ pub async fn start_zebrad(
     }
 
     // Spawn health monitor
-    let state = app_handle.state::<AppState>();
-    let node_arc = state.node.clone();
     let health_handle = health::spawn_health_monitor(app_handle.clone(), node_arc);
     {
         let mut ht = node.health_task.lock().await;
@@ -178,6 +183,13 @@ pub async fn stop_zebrad(
         *status = NodeStatus::Stopped;
     }
     let _ = app_handle.emit("node_status_changed", NodeStatus::Stopped);
+
+    // Update tray status
+    if let Some(state) = app_handle.try_state::<AppState>() {
+        if let Some(item) = state.tray_status.lock().await.as_ref() {
+            let _ = item.set_text("Status: Stopped");
+        }
+    }
 
     // Reset backoff
     {
@@ -269,6 +281,8 @@ async fn read_log_stream<R: tokio::io::AsyncRead + Unpin>(
     reader: R,
     data_dir: &Path,
     label: &str,
+    node: Arc<NodeState>,
+    app_handle: AppHandle,
 ) {
     let log_path = data_dir.join("logs").join("zebrad.log");
     let mut file = match tokio::fs::OpenOptions::new()
@@ -286,7 +300,20 @@ async fn read_log_stream<R: tokio::io::AsyncRead + Unpin>(
 
     let mut lines = BufReader::new(reader).lines();
     while let Ok(Some(line)) = lines.next_line().await {
-        let formatted = format!("[{}] {}\n", label, line);
-        let _ = tokio::io::AsyncWriteExt::write_all(&mut file, formatted.as_bytes()).await;
+        let formatted = format!("[{}] {}", label, line);
+        let file_line = format!("{}\n", formatted);
+        let _ = tokio::io::AsyncWriteExt::write_all(&mut file, file_line.as_bytes()).await;
+
+        // Push to in-memory log buffer
+        {
+            let mut buffer = node.log_buffer.lock().await;
+            if buffer.len() >= LOG_BUFFER_CAPACITY {
+                buffer.pop_front();
+            }
+            buffer.push_back(formatted.clone());
+        }
+
+        // Emit to frontend
+        let _ = app_handle.emit("log_line", &formatted);
     }
 }
