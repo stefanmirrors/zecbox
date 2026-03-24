@@ -50,3 +50,36 @@ export interface WalletStatusInfo {
   endpoint?: string;
   message?: string;
 }
+
+export type UpdateStatusTag =
+  | "idle"
+  | "checking"
+  | "updateAvailable"
+  | "downloading"
+  | "installing"
+  | "rollingBack"
+  | "error"
+  | "complete";
+
+export interface UpdateStatusInfo {
+  status: UpdateStatusTag;
+  binary?: string;
+  progress?: number;
+  message?: string;
+}
+
+export interface BinaryUpdateInfo {
+  name: string;
+  currentVersion: string;
+  newVersion: string;
+  downloadUrl: string;
+  sha256: string;
+  sizeBytes: number;
+}
+
+export interface VersionInfo {
+  app: string;
+  zebrad: string;
+  zaino: string;
+  arti: string;
+}

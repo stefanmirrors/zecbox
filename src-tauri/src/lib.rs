@@ -22,6 +22,7 @@ pub fn run() {
 
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .setup(|app| {
             // Resolve default data directory (always fixed at app data dir)
             let default_data_dir = app
@@ -92,6 +93,17 @@ pub fn run() {
 
             app.manage(app_state);
 
+            // Spawn periodic update checker
+            {
+                let managed_state = app.state::<AppState>();
+                let update_arc = managed_state.update.clone();
+                let checker_handle = updates::spawn_update_checker(app.handle().clone());
+                tauri::async_runtime::block_on(async {
+                    let mut task = update_arc.check_task.lock().await;
+                    *task = Some(checker_handle);
+                });
+            }
+
             // System tray
             let status_item_for_tray = MenuItem::with_id(app, "status", "Status: Stopped", false, None::<&str>)?;
             let quit = MenuItem::with_id(app, "quit", "Quit ZecBox", true, None::<&str>)?;
@@ -119,8 +131,13 @@ pub fn run() {
                         let storage = state.storage.clone();
                         let shield = state.shield.clone();
                         let wallet = state.wallet.clone();
+                        let update = state.update.clone();
                         let app_handle = app.clone();
                         tauri::async_runtime::block_on(async {
+                            // Abort update checker
+                            if let Some(task) = update.check_task.lock().await.take() {
+                                task.abort();
+                            }
                             // Abort storage monitor
                             if let Some(task) = storage.monitor_task.lock().await.take() {
                                 task.abort();
@@ -174,6 +191,13 @@ pub fn run() {
             commands::wallet::enable_wallet_server,
             commands::wallet::disable_wallet_server,
             commands::wallet::get_wallet_qr,
+            commands::updates::get_versions,
+            commands::updates::get_update_status,
+            commands::updates::check_for_updates,
+            commands::updates::apply_update,
+            commands::updates::apply_all_updates,
+            commands::updates::dismiss_updates,
+            commands::updates::check_app_update,
         ])
         .run(tauri::generate_context!())
         .expect("error while running ZecBox");

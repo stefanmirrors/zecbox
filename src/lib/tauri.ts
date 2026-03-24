@@ -1,5 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
-import type { AppConfig, NodeStatusInfo, ShieldStatusInfo, StorageInfo, Volume, WalletStatusInfo } from "./types";
+import type { AppConfig, BinaryUpdateInfo, NodeStatusInfo, ShieldStatusInfo, StorageInfo, UpdateStatusInfo, VersionInfo, Volume, WalletStatusInfo } from "./types";
 
 export async function getNodeStatus(): Promise<NodeStatusInfo> {
   const raw = await invoke<Record<string, unknown>>("get_node_status");
@@ -64,6 +64,34 @@ export async function disableWalletServer(): Promise<void> {
 
 export async function getWalletQr(): Promise<string> {
   return invoke<string>("get_wallet_qr");
+}
+
+export async function getVersions(): Promise<VersionInfo> {
+  return invoke<VersionInfo>("get_versions");
+}
+
+export async function getUpdateStatus(): Promise<UpdateStatusInfo> {
+  return invoke<UpdateStatusInfo>("get_update_status");
+}
+
+export async function checkForUpdates(): Promise<BinaryUpdateInfo[]> {
+  return invoke<BinaryUpdateInfo[]>("check_for_updates");
+}
+
+export async function applyUpdate(name: string): Promise<void> {
+  return invoke("apply_update", { name });
+}
+
+export async function applyAllUpdates(): Promise<void> {
+  return invoke("apply_all_updates");
+}
+
+export async function dismissUpdates(): Promise<void> {
+  return invoke("dismiss_updates");
+}
+
+export async function checkAppUpdate(): Promise<boolean> {
+  return invoke<boolean>("check_app_update");
 }
 
 export function parseNodeStatus(raw: Record<string, unknown>): NodeStatusInfo {

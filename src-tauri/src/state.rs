@@ -14,6 +14,7 @@ pub struct AppState {
     pub storage: Arc<StorageState>,
     pub shield: Arc<ShieldState>,
     pub wallet: Arc<WalletState>,
+    pub update: Arc<UpdateState>,
     pub default_data_dir: PathBuf,
     pub tray_status: Mutex<Option<tauri::menu::MenuItem<tauri::Wry>>>,
 }
@@ -25,6 +26,7 @@ impl AppState {
             storage: Arc::new(StorageState::new()),
             shield: Arc::new(ShieldState::new()),
             wallet: Arc::new(WalletState::new()),
+            update: Arc::new(UpdateState::new()),
             default_data_dir,
             tray_status: Mutex::new(None),
         }
@@ -262,6 +264,65 @@ impl WalletState {
             log_reader_tasks: Mutex::new(Vec::new()),
             log_buffer: Mutex::new(VecDeque::with_capacity(LOG_BUFFER_CAPACITY)),
             backoff: Mutex::new(BackoffState::default()),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(tag = "status", rename_all = "camelCase")]
+pub enum UpdateStatus {
+    Idle,
+    Checking,
+    UpdateAvailable,
+    #[serde(rename_all = "camelCase")]
+    Downloading {
+        binary: String,
+        progress: u8,
+    },
+    Installing {
+        binary: String,
+    },
+    RollingBack {
+        binary: String,
+    },
+    Error {
+        message: String,
+    },
+    Complete,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BinaryUpdateInfo {
+    pub name: String,
+    pub current_version: String,
+    pub new_version: String,
+    pub download_url: String,
+    pub sha256: String,
+    pub size_bytes: u64,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct VersionInfo {
+    pub app: String,
+    pub zebrad: String,
+    pub zaino: String,
+    pub arti: String,
+}
+
+pub struct UpdateState {
+    pub status: Mutex<UpdateStatus>,
+    pub available_updates: Mutex<Vec<BinaryUpdateInfo>>,
+    pub check_task: Mutex<Option<JoinHandle<()>>>,
+}
+
+impl UpdateState {
+    pub fn new() -> Self {
+        Self {
+            status: Mutex::new(UpdateStatus::Idle),
+            available_updates: Mutex::new(Vec::new()),
+            check_task: Mutex::new(None),
         }
     }
 }
