@@ -26,8 +26,12 @@ pub async fn apply_data_dir(
         return Err("Selected volume needs at least 10GB of free space".into());
     }
 
-    // Create subdirectory structure
-    let zecbox_dir = new_path.join("zecbox-data");
+    // For the root volume ("/"), use the default app data dir instead of creating /zecbox-data
+    let zecbox_dir = if new_path == Path::new("/") {
+        default_data_dir.to_path_buf()
+    } else {
+        new_path.join("zecbox-data")
+    };
     for sub in &["zebra", "zaino", "config", "logs"] {
         std::fs::create_dir_all(zecbox_dir.join(sub))
             .map_err(|e| format!("Failed to create directory: {}", e))?;

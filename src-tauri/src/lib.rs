@@ -88,12 +88,12 @@ pub fn run() {
             // Spawn storage monitor task
             let storage_arc = app_state.storage.clone();
             let node_arc = app_state.node.clone();
-            let monitor_handle = storage::spawn_storage_monitor(
-                app.handle().clone(),
-                node_arc,
-                storage_arc.clone(),
-            );
             tauri::async_runtime::block_on(async {
+                let monitor_handle = storage::spawn_storage_monitor(
+                    app.handle().clone(),
+                    node_arc,
+                    storage_arc.clone(),
+                );
                 let mut task = storage_arc.monitor_task.lock().await;
                 *task = Some(monitor_handle);
             });
@@ -103,8 +103,8 @@ pub fn run() {
             // Spawn power monitor (sleep/wake handling)
             {
                 let managed_state = app.state::<AppState>();
-                let (thread_handle, wake_task) = power::spawn_power_monitor(app.handle().clone());
                 tauri::async_runtime::block_on(async {
+                    let (thread_handle, wake_task) = power::spawn_power_monitor(app.handle().clone());
                     *managed_state.power_thread.lock().await = Some(thread_handle);
                     *managed_state.power_wake_task.lock().await = Some(wake_task);
                 });
@@ -114,8 +114,8 @@ pub fn run() {
             {
                 let managed_state = app.state::<AppState>();
                 let update_arc = managed_state.update.clone();
-                let checker_handle = updates::spawn_update_checker(app.handle().clone());
                 tauri::async_runtime::block_on(async {
+                    let checker_handle = updates::spawn_update_checker(app.handle().clone());
                     let mut task = update_arc.check_task.lock().await;
                     *task = Some(checker_handle);
                 });
