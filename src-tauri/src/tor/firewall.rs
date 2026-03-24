@@ -10,6 +10,13 @@ use std::time::Duration;
 use tauri::{AppHandle, Manager};
 
 const SOCKET_PATH: &str = "/var/run/com.zecbox.firewall.sock";
+
+/// Escape a string for safe use inside a single-quoted shell argument.
+/// Wraps in single quotes and escapes embedded single quotes with the
+/// standard '\'' idiom (end quote, escaped quote, start quote).
+fn shell_escape(s: &str) -> String {
+    format!("'{}'", s.replace('\'', "'\\''"))
+}
 const HELPER_BIN_NAME: &str = "zecbox-firewall-helper";
 const HELPER_INSTALL_PATH: &str = "/Library/PrivilegedHelperTools/com.zecbox.firewall-helper";
 const PLIST_INSTALL_PATH: &str = "/Library/LaunchDaemons/com.zecbox.firewall.plist";
@@ -51,48 +58,68 @@ pub fn install_helper(app_handle: &AppHandle) -> Result<(), String> {
 
     let plist_content = generate_plist();
 
-    // Write plist to a temp file
-    let plist_tmp = "/tmp/com.zecbox.firewall.plist";
-    std::fs::write(plist_tmp, &plist_content)
+    // Write plist to a temp file with unpredictable name
+    let plist_tmp = format!(
+        "{}/com.zecbox.firewall.{}.plist",
+        std::env::temp_dir().display(),
+        std::process::id()
+    );
+    std::fs::write(&plist_tmp, &plist_content)
         .map_err(|e| format!("Failed to write plist: {}", e))?;
 
-    // Build the installation script
+    // Build the installation script with proper shell escaping
+    let esc_helper_src = shell_escape(&helper_src.display().to_string());
+    let esc_install_path = shell_escape(HELPER_INSTALL_PATH);
+    let esc_plist_tmp = shell_escape(&plist_tmp);
+    let esc_plist_install = shell_escape(PLIST_INSTALL_PATH);
     let script = format!(
         r#"
 mkdir -p /Library/PrivilegedHelperTools
-cp '{}' '{}'
-chown root:wheel '{}'
-chmod 755 '{}'
-cp '{}' '{}'
-chown root:wheel '{}'
-chmod 644 '{}'
-launchctl bootout system/{} 2>/dev/null || true
-launchctl bootstrap system '{}'
+cp {src} {dst}
+chown root:wheel {dst}
+chmod 755 {dst}
+cp {plist_src} {plist_dst}
+chown root:wheel {plist_dst}
+chmod 644 {plist_dst}
+launchctl bootout system/{label_raw} 2>/dev/null || true
+launchctl bootstrap system {plist_dst}
 "#,
-        helper_src.display(),
-        HELPER_INSTALL_PATH,
-        HELPER_INSTALL_PATH,
-        HELPER_INSTALL_PATH,
-        plist_tmp,
-        PLIST_INSTALL_PATH,
-        PLIST_INSTALL_PATH,
-        PLIST_INSTALL_PATH,
-        PLIST_LABEL,
-        PLIST_INSTALL_PATH,
+        src = esc_helper_src,
+        dst = esc_install_path,
+        plist_src = esc_plist_tmp,
+        plist_dst = esc_plist_install,
+        label_raw = PLIST_LABEL,
     );
 
-    // Execute with admin privileges via osascript
+    // Write the script to a temp file and execute that, avoiding inline shell expansion
+    let script_tmp = format!(
+        "{}/com.zecbox.install.{}.sh",
+        std::env::temp_dir().display(),
+        std::process::id()
+    );
+    std::fs::write(&script_tmp, &script)
+        .map_err(|e| format!("Failed to write install script: {}", e))?;
+
+    // Make script executable
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let _ = std::fs::set_permissions(&script_tmp, std::fs::Permissions::from_mode(0o700));
+    }
+
+    // Execute the script file with admin privileges via osascript
     let output = Command::new("osascript")
         .arg("-e")
         .arg(format!(
-            "do shell script \"{}\" with administrator privileges",
-            script.replace('\\', "\\\\").replace('"', "\\\"")
+            "do shell script {} with administrator privileges",
+            shell_escape(&script_tmp)
         ))
         .output()
         .map_err(|e| format!("Failed to run osascript: {}", e))?;
 
-    // Clean up temp plist
-    let _ = std::fs::remove_file(plist_tmp);
+    // Clean up temp files
+    let _ = std::fs::remove_file(&plist_tmp);
+    let _ = std::fs::remove_file(&script_tmp);
 
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);

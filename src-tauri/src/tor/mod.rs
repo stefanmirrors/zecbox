@@ -419,7 +419,14 @@ async fn get_status_payload(shield: &ShieldState) -> serde_json::Value {
 // --- PID file management ---
 
 fn write_pid_file(data_dir: &Path, pid: u32) -> Result<(), std::io::Error> {
-    std::fs::write(data_dir.join("arti.pid"), pid.to_string())
+    let pid_path = data_dir.join("arti.pid");
+    std::fs::write(&pid_path, pid.to_string())?;
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        std::fs::set_permissions(&pid_path, std::fs::Permissions::from_mode(0o600))?;
+    }
+    Ok(())
 }
 
 fn read_pid_file(data_dir: &Path) -> Option<u32> {
@@ -441,6 +448,13 @@ pub async fn check_arti_orphan(data_dir: &Path) -> Result<(), String> {
     if let Some(pid) = read_pid_file(data_dir) {
         let nix_pid = Pid::from_raw(pid as i32);
         if signal::kill(nix_pid, None).is_ok() {
+            // Verify the process is actually arti before killing
+            if !crate::process::is_process_named(pid, "arti") {
+                log::warn!("PID {} from arti.pid is not an arti process, removing stale PID file", pid);
+                let _ = remove_pid_file(data_dir);
+                return Ok(());
+            }
+
             log::warn!("Found orphaned Arti process (PID {}), killing it", pid);
             let _ = signal::kill(nix_pid, Signal::SIGTERM);
 

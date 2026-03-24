@@ -214,6 +214,13 @@ pub async fn check_zaino_orphan(data_dir: &Path) -> Result<(), String> {
     if let Some(pid) = read_pid_file(data_dir) {
         let nix_pid = Pid::from_raw(pid as i32);
         if signal::kill(nix_pid, None).is_ok() {
+            // Verify the process is actually zaino before killing
+            if !super::is_process_named(pid, "zaino") {
+                log::warn!("PID {} from zaino.pid is not a zaino process, removing stale PID file", pid);
+                let _ = remove_pid_file(data_dir);
+                return Ok(());
+            }
+
             log::warn!("Found orphaned Zaino process (PID {}), killing it", pid);
             let _ = signal::kill(nix_pid, Signal::SIGTERM);
 
@@ -274,8 +281,7 @@ pub fn grpc_endpoint() -> String {
 }
 
 fn write_pid_file(data_dir: &Path, pid: u32) -> Result<(), std::io::Error> {
-    let pid_path = data_dir.join("zaino.pid");
-    fs::write(pid_path, pid.to_string())
+    super::write_pid_file(data_dir, "zaino.pid", pid)
 }
 
 fn read_pid_file(data_dir: &Path) -> Option<u32> {

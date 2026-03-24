@@ -135,10 +135,26 @@ pub fn resolve_binary_dir(app_handle: &AppHandle) -> PathBuf {
 }
 
 /// Remove orphaned .update and .new files left by interrupted binary swaps.
+/// Also recovers from interrupted swaps where active binary is missing but backup exists.
 pub fn cleanup_orphaned_update_files(app_handle: &AppHandle) {
     let binary_dir = resolve_binary_dir(app_handle);
     for name in &["zebrad", "zaino", "arti"] {
         let filename = format!("{}-{}", name, TARGET_PLATFORM);
+
+        // Recovery: if active binary missing but backup exists, restore it
+        let active = binary_dir.join(&filename);
+        let backup = binary_dir.join(format!("{}.backup", filename));
+        if !active.exists() && backup.exists() {
+            log::warn!(
+                "Active binary {} missing, restoring from backup",
+                filename
+            );
+            if let Err(e) = std::fs::rename(&backup, &active) {
+                log::error!("Failed to restore backup for {}: {}", filename, e);
+            }
+        }
+
+        // Clean up orphaned temp files
         for suffix in &["update", "new"] {
             let path = binary_dir.join(format!("{}.{}", filename, suffix));
             if path.exists() {
@@ -195,7 +211,7 @@ pub async fn check_manifest(
 }
 
 async fn fetch_manifest(data_dir: &Path) -> Result<UpdateManifest, String> {
-    // In dev mode, check for local mock manifest first
+    // In dev mode, check for local mock manifest first (signature not required)
     if cfg!(debug_assertions) {
         let mock_path = data_dir.join("config").join("mock_update_manifest.json");
         if mock_path.exists() {
@@ -203,7 +219,7 @@ async fn fetch_manifest(data_dir: &Path) -> Result<UpdateManifest, String> {
                 .map_err(|e| format!("Failed to read mock manifest: {}", e))?;
             let manifest: UpdateManifest = serde_json::from_str(&contents)
                 .map_err(|e| format!("Failed to parse mock manifest: {}", e))?;
-            log::info!("Using mock update manifest from {:?}", mock_path);
+            log::info!("Using mock update manifest from {:?} (signature check skipped)", mock_path);
             return Ok(manifest);
         }
     }
@@ -229,6 +245,9 @@ async fn fetch_manifest(data_dir: &Path) -> Result<UpdateManifest, String> {
         return Err(format!("Manifest fetch returned {}", response.status()));
     }
 
+    // TODO: Add Ed25519 manifest signature verification before launch.
+    // The manifest should include a `signature` field verified against a pinned
+    // public key to prevent MITM attacks beyond TLS.
     response
         .json::<UpdateManifest>()
         .await
@@ -267,10 +286,19 @@ pub async fn download_binary(url: &str, dest_path: &Path) -> Result<(), String> 
     let tmp_path = dest_path.with_extension("new");
 
     if url.starts_with("file://") {
-        // Mock/local file copy for testing
-        let source = url.strip_prefix("file://").unwrap();
-        std::fs::copy(source, &tmp_path)
-            .map_err(|e| format!("Failed to copy mock binary: {}", e))?;
+        #[cfg(debug_assertions)]
+        {
+            // Mock/local file copy for testing (debug builds only)
+            let source = url.strip_prefix("file://").unwrap();
+            std::fs::copy(source, &tmp_path)
+                .map_err(|e| format!("Failed to copy mock binary: {}", e))?;
+        }
+        #[cfg(not(debug_assertions))]
+        {
+            return Err("Local file URLs are not supported".into());
+        }
+    } else if !url.starts_with("https://") {
+        return Err("Unsupported URL scheme: only HTTPS is allowed".into());
     } else {
         let client = reqwest::Client::new();
         let response = client
@@ -421,7 +449,7 @@ pub async fn apply_binary_update(
     )
     .await;
 
-    // Step 2: Verify SHA256
+    // Step 2: Early SHA256 check (fail fast before stopping processes)
     verify_sha256(&download_dest, &update_info.sha256)?;
 
     // Step 3: Stop the relevant process
@@ -436,7 +464,10 @@ pub async fn apply_binary_update(
 
     let was_running = stop_binary_process(&app_handle, &update_info.name, state).await?;
 
-    // Step 4: Swap binary
+    // Step 4: Re-verify SHA256 immediately before swap to close TOCTOU window
+    verify_sha256(&download_dest, &update_info.sha256)?;
+
+    // Step 5: Swap binary
     if let Err(e) = swap_binary(&update_info.name, &binary_dir) {
         // Swap failed — try to restart old binary if it was running
         if was_running {

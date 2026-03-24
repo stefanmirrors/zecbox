@@ -14,10 +14,12 @@ pub async fn apply_data_dir(
     default_data_dir: &Path,
     path: &str,
 ) -> Result<PathBuf, String> {
-    let new_path = PathBuf::from(path);
+    // Canonicalize to resolve symlinks and prevent path traversal
+    let new_path = std::fs::canonicalize(PathBuf::from(path))
+        .map_err(|_| "Selected path does not exist or is not accessible".to_string())?;
 
-    if !new_path.exists() || !new_path.is_dir() {
-        return Err("Selected path does not exist or is not a directory".into());
+    if !new_path.is_dir() {
+        return Err("Selected path is not a directory".into());
     }
 
     // Check minimum free space

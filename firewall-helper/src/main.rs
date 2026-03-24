@@ -16,6 +16,7 @@ mod socks5;
 
 use std::fs;
 use std::os::unix::fs::PermissionsExt;
+use std::os::unix::io::AsRawFd;
 use std::path::Path;
 use std::sync::Arc;
 
@@ -180,9 +181,15 @@ async fn main() {
         }
     };
 
-    // Make socket accessible to the user running ZecBox
-    if let Err(e) = fs::set_permissions(SOCKET_PATH, fs::Permissions::from_mode(0o666)) {
+    // Restrict socket to root and staff group (standard macOS interactive users)
+    if let Err(e) = fs::set_permissions(SOCKET_PATH, fs::Permissions::from_mode(0o660)) {
         log::warn!("Failed to set socket permissions: {}", e);
+    }
+    // Set socket group to 'staff' so the unprivileged ZecBox app can connect
+    let staff_gid = get_staff_gid().unwrap_or(20); // 20 is default staff GID on macOS
+    unsafe {
+        let c_path = std::ffi::CString::new(SOCKET_PATH).unwrap();
+        libc::chown(c_path.as_ptr(), 0, staff_gid);
     }
 
     log::info!("Listening on {}", SOCKET_PATH);
@@ -203,6 +210,12 @@ async fn main() {
     loop {
         match listener.accept().await {
             Ok((stream, _)) => {
+                // Verify peer credentials: only allow root or staff group members
+                if let Err(e) = verify_peer_credentials(&stream) {
+                    log::warn!("Rejected connection: {}", e);
+                    continue;
+                }
+
                 let state = Arc::clone(&state);
                 tokio::spawn(async move {
                     let (reader, mut writer) = stream.into_split();
@@ -234,5 +247,87 @@ async fn main() {
                 log::error!("Accept error: {}", e);
             }
         }
+    }
+}
+
+/// Resolve the GID of the 'staff' group on macOS.
+fn get_staff_gid() -> Option<u32> {
+    unsafe {
+        let name = std::ffi::CString::new("staff").ok()?;
+        let grp = libc::getgrnam(name.as_ptr());
+        if grp.is_null() {
+            None
+        } else {
+            Some((*grp).gr_gid)
+        }
+    }
+}
+
+/// Verify the connecting peer is root or a member of the staff group.
+fn verify_peer_credentials(stream: &tokio::net::UnixStream) -> Result<(), String> {
+    let raw_fd = stream.as_raw_fd();
+    let mut uid: libc::uid_t = 0;
+    let mut gid: libc::gid_t = 0;
+
+    let ret = unsafe { libc::getpeereid(raw_fd, &mut uid, &mut gid) };
+    if ret != 0 {
+        return Err(format!(
+            "getpeereid failed: {}",
+            std::io::Error::last_os_error()
+        ));
+    }
+
+    // Allow root
+    if uid == 0 {
+        return Ok(());
+    }
+
+    // Allow members of the staff group
+    let staff_gid = get_staff_gid().unwrap_or(20);
+    if gid == staff_gid {
+        return Ok(());
+    }
+
+    // Also check supplementary groups — the user's primary GID might not be staff
+    // but they may still be a member
+    if is_uid_in_group(uid, staff_gid) {
+        return Ok(());
+    }
+
+    Err(format!(
+        "Unauthorized: uid={} gid={} is not root or staff",
+        uid, gid
+    ))
+}
+
+/// Check if a UID belongs to a given group (including supplementary groups).
+fn is_uid_in_group(uid: libc::uid_t, target_gid: libc::gid_t) -> bool {
+    unsafe {
+        let pw = libc::getpwuid(uid);
+        if pw.is_null() {
+            return false;
+        }
+
+        let mut ngroups: libc::c_int = 32;
+        let mut groups = vec![0i32; ngroups as usize];
+        let ret = libc::getgrouplist(
+            (*pw).pw_name,
+            (*pw).pw_gid as i32,
+            groups.as_mut_ptr(),
+            &mut ngroups,
+        );
+
+        if ret < 0 {
+            // Buffer too small, resize and retry
+            groups.resize(ngroups as usize, 0);
+            libc::getgrouplist(
+                (*pw).pw_name,
+                (*pw).pw_gid as i32,
+                groups.as_mut_ptr(),
+                &mut ngroups,
+            );
+        }
+
+        groups[..ngroups as usize].contains(&(target_gid as i32))
     }
 }

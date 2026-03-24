@@ -228,6 +228,13 @@ pub async fn check_orphan(node: &NodeState) -> Result<(), String> {
         let nix_pid = Pid::from_raw(pid as i32);
         // Check if process is alive (signal 0 = check existence)
         if signal::kill(nix_pid, None).is_ok() {
+            // Verify the process is actually zebrad before killing
+            if !super::is_process_named(pid, "zebrad") {
+                log::warn!("PID {} from zebrad.pid is not a zebrad process, removing stale PID file", pid);
+                let _ = remove_pid_file(&data_dir);
+                return Ok(());
+            }
+
             log::warn!("Found orphaned zebrad process (PID {}), killing it", pid);
             let _ = signal::kill(nix_pid, Signal::SIGTERM);
 
@@ -292,8 +299,7 @@ pub fn resolve_binary_path(app_handle: &AppHandle) -> PathBuf {
 }
 
 fn write_pid_file(data_dir: &Path, pid: u32) -> Result<(), std::io::Error> {
-    let pid_path = data_dir.join("zebrad.pid");
-    fs::write(pid_path, pid.to_string())
+    super::write_pid_file(data_dir, "zebrad.pid", pid)
 }
 
 fn read_pid_file(data_dir: &Path) -> Option<u32> {

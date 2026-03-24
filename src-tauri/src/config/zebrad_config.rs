@@ -7,6 +7,9 @@ pub fn generate_zebrad_toml(data_dir: &Path, shield_mode: bool) -> String {
     let cache_dir = data_dir.join("zebra");
 
     if shield_mode {
+        // Shield Mode: use only IP-based seed peers to prevent DNS leaks.
+        // All TCP 8233 traffic is PF-redirected through Tor, so peer discovery
+        // will happen over Tor. No hostname resolution occurs.
         format!(
             r#"[consensus]
 checkpoint_sync = true
@@ -20,11 +23,7 @@ miner_address = ""
 [network]
 network = "Mainnet"
 listen_addr = "127.0.0.1:8233"
-initial_mainnet_peers = [
-    "zcash.mysweetcoin.org:8233",
-    "mainnet.z.cash:8233",
-    "mainnet.is.yolo.money:8233",
-]
+initial_mainnet_peers = []
 
 [rpc]
 listen_addr = "127.0.0.1:8232"

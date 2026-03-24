@@ -2,9 +2,17 @@
 //! Loads/flushes rules in the `com.zecbox.shield` anchor.
 
 use std::fs;
+use std::os::unix::fs::PermissionsExt;
 use std::process::Command;
 
 const ANCHOR_NAME: &str = "com.zecbox.shield";
+/// Root-owned directory for temp PF config files (avoids symlink attacks in /tmp)
+const SECURE_TMPDIR: &str = "/var/run/com.zecbox";
+
+fn ensure_secure_tmpdir() {
+    let _ = fs::create_dir_all(SECURE_TMPDIR);
+    let _ = fs::set_permissions(SECURE_TMPDIR, fs::Permissions::from_mode(0o700));
+}
 
 /// Generate PF rules that redirect outbound Zcash P2P traffic through the transparent proxy.
 fn generate_rules(redir_port: u16) -> String {
@@ -59,16 +67,17 @@ fn ensure_anchor_registered() -> Result<(), String> {
         rules.trim()
     );
 
-    let main_path = "/tmp/zecbox-pf-main.conf";
-    fs::write(main_path, &main_rules)
+    ensure_secure_tmpdir();
+    let main_path = format!("{}/pf-main.conf", SECURE_TMPDIR);
+    fs::write(&main_path, &main_rules)
         .map_err(|e| format!("Failed to write main PF rules: {}", e))?;
 
     let output = Command::new("pfctl")
-        .args(["-f", main_path])
+        .args(["-f", &main_path])
         .output()
         .map_err(|e| format!("Failed to load main PF rules: {}", e))?;
 
-    let _ = fs::remove_file(main_path);
+    let _ = fs::remove_file(&main_path);
 
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
@@ -93,9 +102,10 @@ fn ensure_anchor_registered() -> Result<(), String> {
 pub fn enable(redir_port: u16) -> Result<(), String> {
     let rules = generate_rules(redir_port);
 
-    // Write rules to a temp file
-    let rules_path = "/tmp/zecbox-pf-shield.conf";
-    fs::write(rules_path, &rules)
+    // Write rules to a secure temp file
+    ensure_secure_tmpdir();
+    let rules_path = format!("{}/pf-shield.conf", SECURE_TMPDIR);
+    fs::write(&rules_path, &rules)
         .map_err(|e| format!("Failed to write PF rules: {}", e))?;
 
     // Ensure PF is enabled
@@ -106,12 +116,12 @@ pub fn enable(redir_port: u16) -> Result<(), String> {
 
     // Load rules into our anchor
     let output = Command::new("pfctl")
-        .args(["-a", ANCHOR_NAME, "-f", rules_path])
+        .args(["-a", ANCHOR_NAME, "-f", &rules_path])
         .output()
         .map_err(|e| format!("Failed to run pfctl: {}", e))?;
 
     // Clean up temp file
-    let _ = fs::remove_file(rules_path);
+    let _ = fs::remove_file(&rules_path);
 
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
