@@ -1,0 +1,59 @@
+---
+const features = [
+  {
+    title: "Zero Configuration",
+    description:
+      "Install, pick your storage, click start. No terminal commands, no Docker, no config files. Ever.",
+    icon: `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />`,
+  },
+  {
+    title: "Shield Mode",
+    description:
+      "Route all node traffic through Tor with one toggle. Built-in kill switch ensures you never leak to clearnet.",
+    icon: `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />`,
+  },
+  {
+    title: "Wallet Server",
+    description:
+      "Serve light wallets via Zaino gRPC. Toggle on, point your wallet app at the endpoint, and sync privately.",
+    icon: `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 12a2.25 2.25 0 00-2.25-2.25H15a3 3 0 11-6 0H5.25A2.25 2.25 0 003 12m18 0v6a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 18v-6m18 0V9M3 12V9m18 0a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 013 9m18 0V6a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 013 6v3" />`,
+  },
+  {
+    title: "Always Running",
+    description:
+      "Auto-restart on crash, sleep/wake recovery, launch at login. Close the window and your node keeps running in the tray.",
+    icon: `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182" />`,
+  },
+];
+---
+
+<section class="px-6 py-20 max-w-5xl mx-auto">
+  <h2 class="text-3xl font-bold text-center text-zec-text mb-4">
+    How it works
+  </h2>
+  <p class="text-center text-zec-muted mb-14 max-w-2xl mx-auto">
+    Download, install, and you're running a full Zcash node. Three clicks from
+    zero to syncing.
+  </p>
+  <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+    {
+      features.map((f) => (
+        <div class="bg-zec-surface border border-zec-border rounded-xl p-6 space-y-3 hover:border-zec-muted transition-colors">
+          <div class="w-10 h-10 rounded-lg bg-zec-yellow/10 flex items-center justify-center">
+            <svg
+              class="w-5 h-5 text-zec-yellow"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              set:html={f.icon}
+            />
+          </div>
+          <h3 class="text-lg font-semibold text-zec-text">{f.title}</h3>
+          <p class="text-sm text-zec-muted leading-relaxed">
+            {f.description}
+          </p>
+        </div>
+      ))
+    }
+  </div>
+</section>

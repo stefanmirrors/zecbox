@@ -1,0 +1,33 @@
+---
+interface Props {
+  title?: string;
+  description?: string;
+}
+
+const {
+  title = "zecbox — One-Click Zcash Full Node",
+  description = "Run your own Zcash full node with zero configuration. Private, secure, and fully automated.",
+} = Astro.props;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content={description} />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://zecbox.io" />
+    <link rel="icon" type="image/png" href="/zecbox-icon.png" />
+    <title>{title}</title>
+  </head>
+  <body>
+    <slot />
+  </body>
+</html>
+
+<style>
+  @import "../styles/globals.css";
+</style>
