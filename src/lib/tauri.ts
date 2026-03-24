@@ -1,5 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
-import type { NodeStatusInfo, StorageInfo, Volume } from "./types";
+import type { AppConfig, NodeStatusInfo, StorageInfo, Volume } from "./types";
 
 export async function getNodeStatus(): Promise<NodeStatusInfo> {
   const raw = await invoke<Record<string, unknown>>("get_node_status");
@@ -24,6 +24,14 @@ export async function getStorageInfo(): Promise<StorageInfo> {
 
 export async function setDataDir(path: string): Promise<void> {
   return invoke("set_data_dir", { path });
+}
+
+export async function getAppConfig(): Promise<AppConfig> {
+  return invoke<AppConfig>("get_app_config");
+}
+
+export async function completeOnboarding(path: string): Promise<void> {
+  return invoke("complete_onboarding", { path });
 }
 
 export function parseNodeStatus(raw: Record<string, unknown>): NodeStatusInfo {

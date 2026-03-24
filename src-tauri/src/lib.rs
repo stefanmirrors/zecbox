@@ -135,6 +135,8 @@ pub fn run() {
             commands::storage::get_volumes,
             commands::storage::get_storage_info,
             commands::storage::set_data_dir,
+            commands::onboarding::get_app_config,
+            commands::onboarding::complete_onboarding,
         ])
         .run(tauri::generate_context!())
         .expect("error while running ZecBox");
