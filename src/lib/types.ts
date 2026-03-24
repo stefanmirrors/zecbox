@@ -32,3 +32,12 @@ export interface AppConfig {
   shieldMode: boolean;
   walletServer: boolean;
 }
+
+export type ShieldStatusTag = "disabled" | "bootstrapping" | "active" | "error" | "interrupted";
+
+export interface ShieldStatusInfo {
+  enabled: boolean;
+  status: ShieldStatusTag;
+  bootstrapProgress?: number;
+  message?: string;
+}

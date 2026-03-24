@@ -109,10 +109,11 @@ pub fn run() {
                 .show_menu_on_left_click(false)
                 .on_menu_event(|app, event| match event.id.as_ref() {
                     "quit" => {
-                        // Graceful shutdown: stop storage monitor and zebrad before exiting
+                        // Graceful shutdown: stop storage monitor, Arti, and zebrad before exiting
                         let state = app.state::<AppState>();
                         let node = state.node.clone();
                         let storage = state.storage.clone();
+                        let shield = state.shield.clone();
                         let app_handle = app.clone();
                         tauri::async_runtime::block_on(async {
                             // Abort storage monitor
@@ -123,6 +124,8 @@ pub fn run() {
                             let _ =
                                 process::zebrad::stop_zebrad(&app_handle, &node)
                                     .await;
+                            // Stop Arti if running
+                            let _ = tor::stop_arti(&app_handle, &shield).await;
                         });
                         app.exit(0);
                     }
@@ -154,6 +157,9 @@ pub fn run() {
             commands::onboarding::get_app_config,
             commands::onboarding::complete_onboarding,
             commands::logs::get_logs,
+            commands::shield::get_shield_status,
+            commands::shield::enable_shield_mode,
+            commands::shield::disable_shield_mode,
         ])
         .run(tauri::generate_context!())
         .expect("error while running ZecBox");

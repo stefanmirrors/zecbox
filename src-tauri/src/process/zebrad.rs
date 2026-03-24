@@ -11,6 +11,7 @@ use tokio::io::{AsyncBufReadExt, BufReader};
 use crate::config::zebrad_config;
 use crate::health;
 use crate::state::{AppState, NodeState, NodeStatus, LOG_BUFFER_CAPACITY};
+use crate::tor;
 
 /// Start zebrad, spawn log readers and health monitor.
 pub async fn start_zebrad(
@@ -33,8 +34,14 @@ pub async fn start_zebrad(
 
     let data_dir = node.data_dir.lock().await.clone();
 
+    // Check if shield mode is active to generate appropriate config
+    let shield_active = {
+        let state = app_handle.state::<AppState>();
+        state.shield.is_active().await
+    };
+
     // Generate config
-    let config_path = zebrad_config::write_zebrad_config(&data_dir, None)
+    let config_path = zebrad_config::write_zebrad_config(&data_dir, shield_active)
         .map_err(|e| format!("Failed to write zebrad config: {}", e))?;
 
     // Resolve binary path
@@ -48,17 +55,25 @@ pub async fn start_zebrad(
         return Err(format!("zebrad binary not found at {:?}", binary_path));
     }
 
-    // Spawn zebrad process
-    let mut child = tokio::process::Command::new(&binary_path)
-        .arg("--config")
+    // Spawn zebrad process (with proxy env vars if shield mode active)
+    let mut cmd = tokio::process::Command::new(&binary_path);
+    cmd.arg("--config")
         .arg(&config_path)
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
-        .kill_on_drop(false)
-        .spawn()
-        .map_err(|e| {
-            format!("Failed to spawn zebrad: {}", e)
-        })?;
+        .kill_on_drop(false);
+
+    if shield_active {
+        let proxy = tor::socks_proxy_addr();
+        cmd.env("ALL_PROXY", &proxy)
+            .env("SOCKS5_PROXY", &proxy)
+            .env("socks_proxy", &proxy);
+        log::info!("Starting zebrad with proxy: {}", proxy);
+    }
+
+    let mut child = cmd.spawn().map_err(|e| {
+        format!("Failed to spawn zebrad: {}", e)
+    })?;
 
     // Write PID file
     let pid = child.id().unwrap_or(0);

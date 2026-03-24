@@ -12,6 +12,7 @@ pub const LOG_BUFFER_CAPACITY: usize = 5000;
 pub struct AppState {
     pub node: Arc<NodeState>,
     pub storage: Arc<StorageState>,
+    pub shield: Arc<ShieldState>,
     pub default_data_dir: PathBuf,
     pub tray_status: Mutex<Option<tauri::menu::MenuItem<tauri::Wry>>>,
 }
@@ -21,6 +22,7 @@ impl AppState {
         Self {
             node: Arc::new(NodeState::new(data_dir)),
             storage: Arc::new(StorageState::new()),
+            shield: Arc::new(ShieldState::new()),
             default_data_dir,
             tray_status: Mutex::new(None),
         }
@@ -169,5 +171,42 @@ impl BackoffState {
                 self.reset();
             }
         }
+    }
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(tag = "status", rename_all = "camelCase")]
+pub enum ShieldStatus {
+    Disabled,
+    #[serde(rename_all = "camelCase")]
+    Bootstrapping {
+        progress: u8,
+    },
+    Active,
+    Error {
+        message: String,
+    },
+    Interrupted,
+}
+
+pub struct ShieldState {
+    pub status: Mutex<ShieldStatus>,
+    pub process: Mutex<Option<tokio::process::Child>>,
+    pub bootstrap_task: Mutex<Option<JoinHandle<()>>>,
+    pub kill_switch_task: Mutex<Option<JoinHandle<()>>>,
+}
+
+impl ShieldState {
+    pub fn new() -> Self {
+        Self {
+            status: Mutex::new(ShieldStatus::Disabled),
+            process: Mutex::new(None),
+            bootstrap_task: Mutex::new(None),
+            kill_switch_task: Mutex::new(None),
+        }
+    }
+
+    pub async fn is_active(&self) -> bool {
+        matches!(*self.status.lock().await, ShieldStatus::Active)
     }
 }

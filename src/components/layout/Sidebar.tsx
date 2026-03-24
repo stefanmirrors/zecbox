@@ -1,4 +1,4 @@
-export type View = "dashboard" | "logs" | "settings";
+export type View = "dashboard" | "shield" | "logs" | "settings";
 
 interface NavItem {
   id: View | string;
@@ -27,6 +27,15 @@ const navItems: NavItem[] = [
     ),
   },
   {
+    id: "shield",
+    label: "Shield Mode",
+    icon: (
+      <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M9 1.5L2 4.5v4.5c0 4.1 3 7.3 7 8.5 4-1.2 7-4.4 7-8.5V4.5z" />
+      </svg>
+    ),
+  },
+  {
     id: "logs",
     label: "Logs",
     icon: (
@@ -50,17 +59,6 @@ const navItems: NavItem[] = [
 ];
 
 const comingSoonItems: NavItem[] = [
-  {
-    id: "shield",
-    label: "Shield Mode",
-    disabled: true,
-    comingSoon: true,
-    icon: (
-      <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M9 1.5L2 4.5v4.5c0 4.1 3 7.3 7 8.5 4-1.2 7-4.4 7-8.5V4.5z" />
-      </svg>
-    ),
-  },
   {
     id: "wallet",
     label: "Wallet Server",
@@ -104,21 +102,25 @@ export function Sidebar({ activeView, onNavigate }: Props) {
           );
         })}
 
-        <div className="pt-4 pb-2">
-          <p className="px-3 text-xs text-zec-muted/60 uppercase tracking-wider">
-            Coming Soon
-          </p>
-        </div>
+        {comingSoonItems.length > 0 && (
+          <>
+            <div className="pt-4 pb-2">
+              <p className="px-3 text-xs text-zec-muted/60 uppercase tracking-wider">
+                Coming Soon
+              </p>
+            </div>
 
-        {comingSoonItems.map((item) => (
-          <div
-            key={item.id}
-            className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-zec-muted/40 cursor-default"
-          >
-            {item.icon}
-            {item.label}
-          </div>
-        ))}
+            {comingSoonItems.map((item) => (
+              <div
+                key={item.id}
+                className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-zec-muted/40 cursor-default"
+              >
+                {item.icon}
+                {item.label}
+              </div>
+            ))}
+          </>
+        )}
       </nav>
 
       <div className="px-5 py-4 border-t border-zec-border">

@@ -1,4 +1,8 @@
+import { useShieldMode } from "../../hooks/useShieldMode";
+
 export function QuickActions() {
+  const { status, toggling, toggle } = useShieldMode();
+
   return (
     <div className="bg-zec-surface border border-zec-border rounded-lg p-6">
       <h3 className="text-sm font-medium text-zec-muted uppercase tracking-wider mb-4">
@@ -8,8 +12,14 @@ export function QuickActions() {
         <FeatureToggle
           label="Shield Mode"
           description="Route traffic through Tor"
-          enabled={false}
-          disabled
+          enabled={status.enabled}
+          loading={toggling || status.status === "bootstrapping"}
+          statusText={
+            status.status === "bootstrapping"
+              ? `${status.bootstrapProgress ?? 0}%`
+              : undefined
+          }
+          onToggle={toggle}
         />
         <FeatureToggle
           label="Wallet Server"
@@ -27,11 +37,17 @@ function FeatureToggle({
   description,
   enabled,
   disabled,
+  loading,
+  statusText,
+  onToggle,
 }: {
   label: string;
   description: string;
   enabled: boolean;
   disabled?: boolean;
+  loading?: boolean;
+  statusText?: string;
+  onToggle?: () => void;
 }) {
   return (
     <div
@@ -49,17 +65,25 @@ function FeatureToggle({
               Coming Soon
             </span>
           )}
+          {loading && statusText && (
+            <span className="text-[10px] px-1.5 py-0.5 rounded bg-zec-yellow/20 text-zec-yellow">
+              {statusText}
+            </span>
+          )}
         </div>
         <p className="text-xs text-zec-muted mt-0.5">{description}</p>
       </div>
       <button
-        disabled={disabled}
+        onClick={onToggle}
+        disabled={disabled || loading}
         className={`relative w-10 h-6 rounded-full transition-colors ${
-          disabled
-            ? "bg-zec-border cursor-not-allowed"
+          disabled || loading
+            ? loading
+              ? "bg-zec-yellow/30 cursor-wait"
+              : "bg-zec-border cursor-not-allowed"
             : enabled
-              ? "bg-zec-yellow"
-              : "bg-zec-border"
+              ? "bg-emerald-500"
+              : "bg-zec-border hover:bg-zec-muted/30"
         }`}
       >
         <span

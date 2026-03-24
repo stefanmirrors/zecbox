@@ -1,5 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
-import type { AppConfig, NodeStatusInfo, StorageInfo, Volume } from "./types";
+import type { AppConfig, NodeStatusInfo, ShieldStatusInfo, StorageInfo, Volume } from "./types";
 
 export async function getNodeStatus(): Promise<NodeStatusInfo> {
   const raw = await invoke<Record<string, unknown>>("get_node_status");
@@ -36,6 +36,18 @@ export async function completeOnboarding(path: string): Promise<void> {
 
 export async function getLogs(): Promise<string[]> {
   return invoke<string[]>("get_logs");
+}
+
+export async function getShieldStatus(): Promise<ShieldStatusInfo> {
+  return invoke<ShieldStatusInfo>("get_shield_status");
+}
+
+export async function enableShieldMode(): Promise<void> {
+  return invoke("enable_shield_mode");
+}
+
+export async function disableShieldMode(): Promise<void> {
+  return invoke("disable_shield_mode");
 }
 
 export function parseNodeStatus(raw: Record<string, unknown>): NodeStatusInfo {
