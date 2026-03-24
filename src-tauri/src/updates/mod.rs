@@ -116,14 +116,22 @@ pub fn resolve_binary_dir(app_handle: &AppHandle) -> PathBuf {
         }
     }
 
+    // Production: Tauri bundles externalBin in Contents/MacOS/
+    let exe_dir = std::env::current_exe()
+        .ok()
+        .and_then(|p| p.parent().map(|p| p.to_path_buf()));
+
+    if let Some(ref dir) = exe_dir {
+        if dir.exists() {
+            return dir.clone();
+        }
+    }
+
     if let Ok(resource_dir) = app_handle.path().resource_dir() {
         return resource_dir;
     }
 
-    std::env::current_exe()
-        .ok()
-        .and_then(|p| p.parent().map(|p| p.to_path_buf()))
-        .unwrap_or_default()
+    exe_dir.unwrap_or_default()
 }
 
 fn binary_filename(name: &str) -> String {

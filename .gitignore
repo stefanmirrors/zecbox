@@ -1,6 +1,7 @@
 # Project docs (kept local only)
 CLAUDE.md
 docs/
+SIGNING.md
 
 # macOS
 .DS_Store

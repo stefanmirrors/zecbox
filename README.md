@@ -1,8 +1,8 @@
-# ZecBox (Under Development)
+# zecbox (Under Development)
 
 **One click. Full node.**
 
-ZecBox turns your computer into a Zcash full node. Download, install, click start. No terminal. No Docker. No configuration files.
+zecbox turns your computer into a Zcash full node. Download, install, click start. No terminal. No Docker. No configuration files.
 
 ---
 
@@ -42,6 +42,17 @@ ZecBox turns your computer into a Zcash full node. Download, install, click star
 
 Your node is running. That's it.
 
+### First Launch (Unsigned Builds)
+
+Until official signed releases are available, macOS Gatekeeper will block the app. To open it:
+
+1. Try opening ZecBox normally (it will be blocked)
+2. Open **System Settings > Privacy & Security**
+3. Scroll down -- you'll see "ZecBox was blocked"
+4. Click **Open Anyway**
+
+This is only needed once. Signed releases will not require this step.
+
 ---
 
 ## Verify Your Download
@@ -51,3 +62,39 @@ Every release includes a `SHA256SUMS` file. To verify:
 ```bash
 shasum -a 256 -c SHA256SUMS
 ```
+
+---
+
+## Architecture
+
+ZecBox bundles three binaries as sidecars, managed as child processes:
+
+- **zebrad** -- Zcash full node ([Zebra](https://github.com/ZcashFoundation/zebra)). Syncs the blockchain, serves JSON-RPC on localhost.
+- **Zaino** -- Light wallet gRPC server. Reads from zebrad, serves compact blocks to wallets on port 9067.
+- **Arti** -- Tor SOCKS5 proxy (Shield Mode). Routes zebrad traffic through the Tor network.
+
+No Docker. No external dependencies. Everything runs as native processes managed by the Rust backend.
+
+---
+
+## Build from Source
+
+### Requirements
+
+- macOS 12+ (Monterey or later)
+- Rust toolchain ([rustup.rs](https://rustup.rs))
+- Node.js 18+
+- Xcode Command Line Tools (`xcode-select --install`)
+
+### Steps
+
+```bash
+git clone https://github.com/stefanmirrors/zecbox.git
+cd zecbox
+npm install
+./scripts/build-macos.sh
+```
+
+The DMG will be at `src-tauri/target/release/bundle/dmg/ZecBox_<version>_aarch64.dmg`.
+
+The build script automatically compiles mock sidecar binaries for development. For production builds with real zebrad/Zaino/Arti binaries, place them in `src-tauri/binaries/` before building.
