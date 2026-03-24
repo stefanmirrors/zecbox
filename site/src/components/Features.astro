@@ -1,59 +1,177 @@
 ---
-const features = [
+const cards = [
   {
-    title: "Zero Configuration",
+    title: "100% Open Source",
     description:
-      "Install, pick your storage, click start. No terminal commands, no Docker, no config files. Ever.",
-    icon: `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />`,
+      "Every line of code is on GitHub. Rust backend, React frontend, config generators, build scripts — all of it. Fork it, audit it, build it yourself.",
+    icon: `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17.25 6.75L22.5 12l-5.25 5.25m-10.5 0L1.5 12l5.25-5.25m7.5-3l-4.5 16.5" />`,
   },
   {
-    title: "Shield Mode",
+    title: "Verified Binaries",
     description:
-      "Route all node traffic through Tor with one toggle. Built-in kill switch ensures you never leak to clearnet.",
-    icon: `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />`,
+      "Every sidecar binary is SHA-256 verified before install. Failed hash means rejected, no exceptions. If a new binary fails health checks within 10 seconds, the previous version is automatically restored.",
+    icon: `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />`,
   },
   {
-    title: "Wallet Server",
+    title: "Zero Telemetry",
     description:
-      "Serve light wallets via Zaino gRPC. Toggle on, point your wallet app at the endpoint, and sync privately.",
-    icon: `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 12a2.25 2.25 0 00-2.25-2.25H15a3 3 0 11-6 0H5.25A2.25 2.25 0 003 12m18 0v6a2.25 2.25 0 01-2.25 2.25H5.25A2.25 2.25 0 013 18v-6m18 0V9M3 12V9m18 0a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 013 9m18 0V6a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 013 6v3" />`,
+      "No analytics. No tracking. No phoning home. Health checks are local JSON-RPC between processes on your machine. Update checks fetch a version manifest — nothing else leaves your computer.",
+    icon: `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.242 4.242L9.88 9.88" />`,
   },
   {
-    title: "Always Running",
+    title: "Local-Only Operation",
     description:
-      "Auto-restart on crash, sleep/wake recovery, launch at login. Close the window and your node keeps running in the tray.",
-    icon: `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182" />`,
+      "All config files generated locally, never exposed. Chain data, indexes, logs — everything stays in your data directory. No external servers beyond Zcash P2P peers and the update manifest.",
+    icon: `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25" />`,
+  },
+  {
+    title: "Shield Mode Kill Switch",
+    description:
+      "Route all traffic through Tor with one toggle. If Arti crashes while Shield Mode is active, zebrad stops immediately — no silent fallback to clearnet. Enforced at the OS level via macOS PF firewall rules.",
+    icon: `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 9v3.75m0-10.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.75c0 5.592 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.57-.598-3.75h-.152c-3.196 0-6.1-1.249-8.25-3.286zm0 13.036h.008v.008H12v-.008z" />`,
+  },
+  {
+    title: "Hardened Runtime",
+    description:
+      "macOS notarized with hardened runtime entitlements. Signed DMG with SHA-256 checksums published alongside every release. Minimal permissions: network access only.",
+    icon: `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />`,
   },
 ];
 ---
 
-<section class="px-6 py-20 max-w-5xl mx-auto">
-  <h2 class="text-3xl font-bold text-center text-zec-text mb-4">
-    How it works
+<section id="verify" class="px-6 py-24 max-w-5xl mx-auto">
+  <!-- Header -->
+  <h2 class="text-4xl sm:text-5xl font-black text-center text-zec-text mb-3" style="font-family: 'Montserrat', sans-serif;">
+    Don't Trust, Verify
   </h2>
-  <p class="text-center text-zec-muted mb-14 max-w-2xl mx-auto">
-    Download, install, and you're running a full Zcash node. Three clicks from
-    zero to syncing.
+  <p class="text-center text-zec-muted mb-16 max-w-2xl mx-auto text-lg leading-relaxed">
+    Every component is open source. Every binary is verifiable. Here's exactly what runs on your machine and why you don't have to take our word for it.
   </p>
-  <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+
+  <!-- Architecture Diagram -->
+  <div class="mb-16 bg-zec-surface border border-zec-border rounded-2xl p-8 sm:p-10">
+    <p class="text-xs uppercase tracking-widest text-zec-muted mb-6 font-semibold">What's inside</p>
+
+    <!-- Main architecture flow -->
+    <div class="flex flex-col items-center gap-6">
+      <!-- ZecBox App -->
+      <div class="text-center">
+        <div class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-zec-yellow/10 border border-zec-yellow/30">
+          <span class="font-bold text-zec-yellow text-lg">zecbox</span>
+        </div>
+        <p class="text-xs text-zec-muted mt-2">Tauri v2 &middot; Rust + React</p>
+      </div>
+
+      <!-- Arrow -->
+      <div class="flex flex-col items-center text-zec-border">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+        </svg>
+        <span class="text-[10px] text-zec-muted mt-0.5">spawns &amp; monitors</span>
+      </div>
+
+      <!-- Three sidecars -->
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 w-full max-w-3xl">
+        <!-- zebrad -->
+        <div class="text-center p-4 rounded-xl border border-zec-border bg-zec-dark/50">
+          <p class="font-semibold text-zec-text mb-1">zebrad</p>
+          <p class="text-xs text-zec-muted leading-relaxed">Zcash full node</p>
+          <p class="text-xs text-zec-muted leading-relaxed">JSON-RPC :8232 &middot; P2P :8233</p>
+          <div class="mt-3 pt-3 border-t border-zec-border">
+            <a
+              href="https://github.com/ZcashFoundation/zebra"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="text-[11px] text-zec-yellow hover:underline"
+            >
+              ZcashFoundation/zebra &nearr;
+            </a>
+          </div>
+        </div>
+
+        <!-- Zaino -->
+        <div class="text-center p-4 rounded-xl border border-zec-border bg-zec-dark/50">
+          <p class="font-semibold text-zec-text mb-1">Zaino</p>
+          <p class="text-xs text-zec-muted leading-relaxed">Light wallet server</p>
+          <p class="text-xs text-zec-muted leading-relaxed">gRPC :9067</p>
+          <div class="mt-3 pt-3 border-t border-zec-border">
+            <a
+              href="https://github.com/zingolabs/zaino"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="text-[11px] text-zec-yellow hover:underline"
+            >
+              zingolabs/zaino &nearr;
+            </a>
+          </div>
+        </div>
+
+        <!-- Arti -->
+        <div class="text-center p-4 rounded-xl border border-zec-border bg-zec-dark/50">
+          <p class="font-semibold text-zec-text mb-1">Arti</p>
+          <p class="text-xs text-zec-muted leading-relaxed">Tor SOCKS5 proxy</p>
+          <p class="text-xs text-zec-muted leading-relaxed">SOCKS :9150</p>
+          <div class="mt-3 pt-3 border-t border-zec-border">
+            <a
+              href="https://gitlab.torproject.org/tpo/core/arti"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="text-[11px] text-zec-yellow hover:underline"
+            >
+              torproject/arti &nearr;
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Data directory -->
+    <div class="mt-8 pt-6 border-t border-zec-border">
+      <div class="flex flex-col sm:flex-row items-start sm:items-center gap-3 text-xs text-zec-muted">
+        <span class="shrink-0 font-semibold uppercase tracking-widest text-[10px]">Data stays local</span>
+        <code class="text-zec-text/70 bg-zec-dark px-3 py-1.5 rounded-md border border-zec-border font-mono text-[11px]">
+          ~/Library/Application Support/com.zecbox.app/{'{zebra, zaino, config, logs}'}
+        </code>
+      </div>
+    </div>
+  </div>
+
+  <!-- Transparency Cards -->
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
     {
-      features.map((f) => (
-        <div class="bg-zec-surface border border-zec-border rounded-xl p-6 space-y-3 hover:border-zec-muted transition-colors">
+      cards.map((card) => (
+        <div class="bg-zec-surface border border-zec-border rounded-xl p-6 space-y-3 hover:border-zec-muted/60 transition-colors">
           <div class="w-10 h-10 rounded-lg bg-zec-yellow/10 flex items-center justify-center">
             <svg
               class="w-5 h-5 text-zec-yellow"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
-              set:html={f.icon}
+              set:html={card.icon}
             />
           </div>
-          <h3 class="text-lg font-semibold text-zec-text">{f.title}</h3>
-          <p class="text-sm text-zec-muted leading-relaxed">
-            {f.description}
-          </p>
+          <h3 class="text-base font-semibold text-zec-text">{card.title}</h3>
+          <p class="text-sm text-zec-muted leading-relaxed">{card.description}</p>
         </div>
       ))
     }
+  </div>
+
+  <!-- Bottom CTA -->
+  <div class="mt-12 text-center">
+    <a
+      href="https://github.com/stefanmirrors/zecbox"
+      target="_blank"
+      rel="noopener noreferrer"
+      class="inline-flex items-center gap-2 text-sm text-zec-muted hover:text-zec-yellow transition-colors"
+    >
+      <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+        <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z" />
+      </svg>
+      Read the full source on GitHub
+      <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25" />
+      </svg>
+    </a>
   </div>
 </section>
