@@ -1,0 +1,333 @@
+---
+---
+
+<section class="py-20 px-6" aria-label="Interactive demo">
+  <div class="text-center mb-10">
+    <h2 class="text-3xl sm:text-4xl font-bold text-zec-text mb-3" style="font-family: 'Montserrat', sans-serif;">See it in action</h2>
+    <p class="text-zec-muted text-lg">Click Start Node to watch it boot up</p>
+  </div>
+
+  <div id="demo-frame" class="max-w-[1100px] mx-auto rounded-2xl border border-zec-border shadow-2xl overflow-hidden bg-zec-dark">
+    <!-- macOS title bar -->
+    <div class="flex items-center h-10 px-4 border-b border-zec-border bg-zec-surface">
+      <div class="flex gap-2">
+        <span class="w-3 h-3 rounded-full bg-[#ff5f57]"></span>
+        <span class="w-3 h-3 rounded-full bg-[#febc2e]"></span>
+        <span class="w-3 h-3 rounded-full bg-[#28c840]"></span>
+      </div>
+      <span class="flex-1 text-center text-xs text-zec-muted/60 font-medium">zecbox</span>
+      <div class="w-[52px]"></div>
+    </div>
+
+    <div class="flex h-screen bg-zec-dark overflow-hidden" style="max-height:540px;">
+      <!-- Sidebar: copied from Sidebar.tsx -->
+      <aside class="hidden sm:flex flex-col w-48 border-r border-zec-border h-full shrink-0">
+        <div class="px-5 pt-6 pb-8">
+          <span class="text-lg font-semibold text-zec-yellow tracking-tight">zecbox</span>
+        </div>
+        <nav class="flex-1 px-3 space-y-0.5" role="navigation" aria-label="Main">
+          <button data-nav="dashboard" class="demo-nav relative w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13px] font-medium transition-colors text-zec-yellow">
+            <span class="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-4 rounded-r-full bg-zec-yellow demo-indicator"></span>
+            <span class="opacity-80" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="8" height="8" rx="2"/><rect x="13" y="3" width="8" height="8" rx="2"/><rect x="3" y="13" width="8" height="8" rx="2"/><rect x="13" y="13" width="8" height="8" rx="2"/></svg></span>
+            Dashboard
+          </button>
+          <button data-nav="shield" class="demo-nav relative w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13px] font-medium transition-colors text-zec-muted hover:text-zec-text">
+            <span class="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-4 rounded-r-full bg-zec-yellow demo-indicator hidden"></span>
+            <span class="opacity-80" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L3 7v5c0 5.5 3.8 10.7 9 12 5.2-1.3 9-6.5 9-12V7z"/></svg></span>
+            Shield Mode
+          </button>
+          <button data-nav="wallet" class="demo-nav relative w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13px] font-medium transition-colors text-zec-muted hover:text-zec-text">
+            <span class="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-4 rounded-r-full bg-zec-yellow demo-indicator hidden"></span>
+            <span class="opacity-80" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="15" rx="2"/><path d="M2 10h20"/><circle cx="17" cy="15" r="1.5"/></svg></span>
+            Wallet Server
+          </button>
+          <button data-nav="logs" class="demo-nav relative w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13px] font-medium transition-colors text-zec-muted hover:text-zec-text">
+            <span class="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-4 rounded-r-full bg-zec-yellow demo-indicator hidden"></span>
+            <span class="opacity-80" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16"/><path d="M4 12h16"/><path d="M4 18h10"/></svg></span>
+            Logs
+          </button>
+          <button data-nav="settings" class="demo-nav relative w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13px] font-medium transition-colors text-zec-muted hover:text-zec-text">
+            <span class="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-4 rounded-r-full bg-zec-yellow demo-indicator hidden"></span>
+            <span class="opacity-80" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 01-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09a1.65 1.65 0 00-1.08-1.51 1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09a1.65 1.65 0 001.51-1.08 1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001.08 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9c.26.604.852.997 1.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1.08z"/></svg></span>
+            Settings
+          </button>
+        </nav>
+        <div class="px-5 py-4">
+          <p class="text-[11px] text-zec-muted/40">v0.1.0</p>
+        </div>
+      </aside>
+
+      <!-- Main: copied from AppShell.tsx layout -->
+      <div class="flex-1 flex flex-col min-w-0">
+        <!-- TitleBar: copied from TitleBar.tsx -->
+        <div class="h-10 flex items-center px-6 shrink-0 select-none">
+          <h2 id="demo-title" class="text-xs font-medium text-zec-muted/50">Dashboard</h2>
+        </div>
+        <main class="flex-1 overflow-y-auto px-8 py-6">
+          <!-- Dashboard view: copied from Dashboard.tsx layout -->
+          <div id="demo-dashboard" class="space-y-6">
+
+            <!-- NodeStatus: copied from NodeStatus.tsx -->
+            <div class="border border-zec-border rounded-xl p-6 space-y-5">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2.5">
+                  <span id="demo-dot" class="w-2 h-2 rounded-full bg-zec-muted/50"></span>
+                  <span id="demo-status-label" class="text-sm font-medium text-zec-text capitalize">Stopped</span>
+                </div>
+                <div class="flex items-center gap-4">
+                  <div id="demo-toggles" class="hidden items-center gap-4">
+                    <!-- MiniToggle Shield: copied from MiniToggle -->
+                    <div class="flex items-center gap-2">
+                      <span class="text-xs text-zec-muted flex items-center gap-1">Shield <span class="inline-flex"><span class="itip">?</span></span></span>
+                      <button id="demo-shield-toggle" role="switch" aria-label="Toggle Shield" class="relative w-7 h-4 rounded-full transition-colors shrink-0 bg-zec-border hover:bg-zec-muted/20">
+                        <span id="demo-shield-knob" class="absolute top-0.5 left-0.5 w-3 h-3 rounded-full bg-white transition-transform duration-200"></span>
+                      </button>
+                    </div>
+                    <!-- MiniToggle Wallet: copied from MiniToggle (disabled) -->
+                    <div class="flex items-center gap-2 opacity-40">
+                      <span class="text-xs text-zec-muted flex items-center gap-1">Wallet <span class="inline-flex"><span class="itip">?</span></span></span>
+                      <button disabled class="relative w-7 h-4 rounded-full transition-colors shrink-0 bg-zec-border/50 cursor-not-allowed">
+                        <span class="absolute top-0.5 left-0.5 w-3 h-3 rounded-full bg-white transition-transform duration-200"></span>
+                      </button>
+                    </div>
+                    <div class="w-px h-5 bg-zec-border"></div>
+                  </div>
+                  <button id="demo-btn" class="px-4 py-1.5 rounded-lg text-sm font-medium transition-colors bg-zec-yellow text-zec-dark hover:brightness-110">Start Node</button>
+                </div>
+              </div>
+
+              <!-- UnifiedProgress: copied from UnifiedProgress -->
+              <div id="demo-progress" class="hidden space-y-4">
+                <div class="space-y-2">
+                  <div class="flex items-baseline justify-between">
+                    <span id="demo-pct" class="text-3xl font-bold text-zec-text tabular-nums">0%</span>
+                    <span id="demo-blocks-counter" class="text-xs text-zec-muted tabular-nums hidden"></span>
+                  </div>
+                  <div class="h-1.5 rounded-full bg-zec-border overflow-hidden">
+                    <div id="demo-bar" class="h-full rounded-full bg-zec-yellow transition-all duration-700" style="width:0.5%"></div>
+                  </div>
+                  <p id="demo-msg" class="text-xs text-zec-muted">Initializing node...</p>
+                </div>
+                <div id="demo-steps" class="space-y-1.5">
+                  <div class="flex items-center gap-2.5" data-step="0">
+                    <div class="w-4 h-4 flex items-center justify-center shrink-0"><div class="w-3.5 h-3.5 border-2 border-zec-yellow border-t-transparent rounded-full animate-spin"></div></div>
+                    <span class="text-xs text-zec-text">Preparing node</span>
+                  </div>
+                  <div class="flex items-center gap-2.5" data-step="1">
+                    <div class="w-4 h-4 rounded-full border border-zec-border shrink-0"></div>
+                    <span class="text-xs text-zec-muted/25">Setting up storage</span>
+                  </div>
+                  <div class="flex items-center gap-2.5" data-step="2">
+                    <div class="w-4 h-4 rounded-full border border-zec-border shrink-0"></div>
+                    <span class="text-xs text-zec-muted/25">Connecting to network</span>
+                  </div>
+                  <div class="flex items-center gap-2.5" data-step="3">
+                    <div class="w-4 h-4 rounded-full border border-zec-border shrink-0"></div>
+                    <span class="text-xs text-zec-muted/25">Finding peers</span>
+                  </div>
+                  <div class="flex items-center gap-2.5" data-step="4">
+                    <div class="w-4 h-4 rounded-full border border-zec-border shrink-0"></div>
+                    <span class="text-xs text-zec-muted/25">Verifying blockchain</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Synced: copied from NodeStatus isSynced block -->
+              <div id="demo-synced" class="hidden space-y-4">
+                <div class="flex items-center gap-8">
+                  <div>
+                    <p class="text-xs text-zec-muted mb-1 flex items-center gap-1.5">Block Height <span class="inline-flex"><span class="itip">?</span></span></p>
+                    <p class="text-2xl font-bold text-zec-text tabular-nums">3,304,456</p>
+                  </div>
+                  <div>
+                    <p class="text-xs text-zec-muted mb-1 flex items-center gap-1.5">Peers <span class="inline-flex"><span class="itip">?</span></span></p>
+                    <p class="text-2xl font-bold text-zec-text tabular-nums">8</p>
+                  </div>
+                </div>
+                <p class="text-xs text-zec-muted">Your node is fully synced — verifying new blocks as they arrive</p>
+                <div>
+                  <p class="text-xs text-zec-muted mb-1 flex items-center gap-1.5">Latest Block <span class="inline-flex"><span class="itip">?</span></span></p>
+                  <p class="text-xs font-mono text-zec-muted/60 truncate">0000000000b84f2c7d35de0e5fb2c0a7d9e06fb81bc2e5a8c3d7b4f1a2e6c9d3</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- NodeStatsPanel: copied from NodeStatsPanel.tsx -->
+            <div id="demo-stats" class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div class="border border-zec-border rounded-xl p-4">
+                <p class="text-xs text-zec-muted flex items-center gap-1.5 mb-2">Uptime <span class="inline-flex"><span class="itip">?</span></span></p>
+                <p class="text-xl font-bold text-zec-text tabular-nums">2h 6m</p>
+              </div>
+              <div class="border border-zec-border rounded-xl p-4">
+                <p class="text-xs text-zec-muted flex items-center gap-1.5 mb-2">Blocks Verified <span class="inline-flex"><span class="itip">?</span></span></p>
+                <p class="text-xl font-bold text-zec-text tabular-nums">215.6M</p>
+              </div>
+              <div class="border border-zec-border rounded-xl p-4">
+                <p class="text-xs text-zec-muted flex items-center gap-1.5 mb-2">Streak <span class="inline-flex"><span class="itip">?</span></span></p>
+                <p class="text-xl font-bold text-zec-text tabular-nums">1d</p>
+              </div>
+              <div class="border border-zec-border rounded-xl p-4">
+                <p class="text-xs text-zec-muted flex items-center gap-1.5 mb-2">Wallets Served <span class="inline-flex"><span class="itip">?</span></span></p>
+                <p class="text-xl font-bold text-zec-text tabular-nums">0</p>
+              </div>
+            </div>
+
+            <!-- StorageBar: copied from StorageBar.tsx -->
+            <div class="border border-zec-border rounded-xl px-5 py-3 space-y-2">
+              <div class="flex items-center justify-between">
+                <span class="text-xs text-zec-muted flex items-center gap-1.5">Storage <span class="inline-flex"><span class="itip">?</span></span></span>
+                <span class="text-xs text-zec-muted tabular-nums">772.5 GB free of 994.7 GB</span>
+              </div>
+              <div class="h-1 rounded-full bg-zec-border overflow-hidden">
+                <div class="h-full rounded-full transition-all bg-zec-muted/30" style="width:22%"></div>
+              </div>
+            </div>
+
+            <!-- LiveLogPreview: copied from LiveLogPreview.tsx -->
+            <div id="demo-logs-panel" class="border border-zec-border rounded-xl p-4 space-y-3">
+              <div class="flex items-center justify-between">
+                <h3 class="text-xs font-medium text-zec-muted">Live Activity</h3>
+                <button class="text-[11px] text-zec-muted/50 hover:text-zec-yellow transition-colors">View all logs →</button>
+              </div>
+              <div id="demo-log-lines" class="space-y-1">
+                <div class="demo-log-line hidden flex items-start gap-2 px-2 py-0.5 rounded text-[11px] leading-5 text-zec-muted/60"><span class="w-1.5 h-1.5 rounded-full mt-2 shrink-0 bg-emerald-400/50"></span><span class="text-zec-muted/25 shrink-0 font-mono tabular-nums">14:32:01</span><span class="truncate">sync:checkpoint: zebra_consensus::checkpoint: verified checkpoint range block_count=400 current_range=(Excluded(Height(2599600)), Included(Height(2600000)))</span></div>
+                <div class="demo-log-line hidden flex items-start gap-2 px-2 py-0.5 rounded text-[11px] leading-5 text-zec-muted/60"><span class="w-1.5 h-1.5 rounded-full mt-2 shrink-0 bg-emerald-400/50"></span><span class="text-zec-muted/25 shrink-0 font-mono tabular-nums">14:32:04</span><span class="truncate">progress: Sync: 90.909% — block 3,000,000 — 300,000 remaining</span></div>
+                <div class="demo-log-line hidden flex items-start gap-2 px-2 py-0.5 rounded text-[11px] leading-5 text-zec-muted/60"><span class="w-1.5 h-1.5 rounded-full mt-2 shrink-0 bg-emerald-400/50"></span><span class="text-zec-muted/25 shrink-0 font-mono tabular-nums">14:32:06</span><span class="truncate">sync:checkpoint: zebra_consensus::checkpoint: verified checkpoint range block_count=400 current_range=(Excluded(Height(3199600)), Included(Height(3200000)))</span></div>
+                <div class="demo-log-line hidden flex items-start gap-2 px-2 py-0.5 rounded text-[11px] leading-5 text-zec-muted/60"><span class="w-1.5 h-1.5 rounded-full mt-2 shrink-0 bg-emerald-400/50"></span><span class="text-zec-muted/25 shrink-0 font-mono tabular-nums">14:32:07</span><span class="truncate">progress: Sync: 96.970% — block 3,200,000 — 100,000 remaining</span></div>
+                <div class="demo-log-line hidden flex items-start gap-2 px-2 py-0.5 rounded text-[11px] leading-5 text-zec-muted/60"><span class="w-1.5 h-1.5 rounded-full mt-2 shrink-0 bg-emerald-400/50"></span><span class="text-zec-muted/25 shrink-0 font-mono tabular-nums">14:32:09</span><span class="truncate">progress: Sync: 100.000% — block 3,300,000 — 0 remaining</span></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Placeholder views -->
+          <div id="demo-placeholder" class="hidden space-y-6">
+            <div class="border border-zec-border rounded-xl p-8 flex flex-col items-center justify-center min-h-[300px] text-center space-y-4">
+              <div id="demo-placeholder-icon" class="w-12 h-12 rounded-full bg-zec-yellow/10 flex items-center justify-center text-zec-yellow text-2xl"></div>
+              <h3 id="demo-placeholder-title" class="text-lg font-semibold text-zec-text"></h3>
+              <p id="demo-placeholder-desc" class="text-sm text-zec-muted max-w-sm"></p>
+              <span class="text-[11px] px-3 py-1 rounded-full border border-zec-yellow/20 text-zec-yellow/70">Available in the app</span>
+            </div>
+          </div>
+        </main>
+      </div>
+    </div>
+  </div>
+</section>
+
+<style is:global>
+  @layer base {
+    #demo-frame button {
+      appearance: none;
+      background: transparent;
+      border: 0;
+      outline: none;
+      cursor: pointer;
+      color: inherit;
+      font: inherit;
+      padding: 0;
+      margin: 0;
+    }
+  }
+  #demo-frame {
+    --color-zec-dark: #0a0c10;
+    --color-zec-surface: #0f1318;
+    --color-zec-surface-hover: #141a21;
+    --color-zec-border: #1c2128;
+    --color-zec-muted: #7a828a;
+    -webkit-font-smoothing: antialiased;
+  }
+  .itip {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 14px;
+    height: 14px;
+    border-radius: 9999px;
+    border: 1px solid rgba(122, 130, 138, 0.3);
+    color: rgba(122, 130, 138, 0.5);
+    font-size: 9px;
+    font-weight: 500;
+    line-height: 1;
+    cursor: default;
+    flex-shrink: 0;
+  }
+</style>
+
+<script>
+(function() {
+  const TARGET = 3_304_456;
+  const STEPS = ['Preparing node','Setting up storage','Connecting to network','Finding peers','Verifying blockchain'];
+  const PH: Record<string,{t:string;d:string;i:string}> = {
+    shield:{t:'Shield Mode',d:'Route all node traffic through Tor for maximum privacy. One toggle — no configuration.',i:'🛡️'},
+    wallet:{t:'Wallet Server',d:'Serve light wallets via gRPC so mobile wallets can connect directly to your node.',i:'💳'},
+    logs:{t:'Log Viewer',d:'Real-time log stream from zebrad with search, filtering, and auto-scroll.',i:'📋'},
+    settings:{t:'Settings',d:'Auto-start, data directory, auto-updates, database management, and more.',i:'⚙️'},
+  };
+  let state='stopped', stepIdx=0, syncPct=0, shieldOn=false, walletOn=false;
+  let timers: number[] = [];
+  const $=(s:string)=>document.querySelector(s) as HTMLElement;
+  const $$=(s:string)=>document.querySelectorAll(s);
+  const dot=$('#demo-dot'), lbl=$('#demo-status-label'), btn=$('#demo-btn');
+  const prog=$('#demo-progress'), steps=$('#demo-steps'), pct=$('#demo-pct');
+  const bar=$('#demo-bar'), msg=$('#demo-msg'), bc=$('#demo-blocks-counter');
+  const synced=$('#demo-synced'), stats=$('#demo-stats'), tgl=$('#demo-toggles');
+  const logs=$$('.demo-log-line'), dv=$('#demo-dashboard'), pv=$('#demo-placeholder');
+  function clear(){timers.forEach(clearTimeout);timers=[];}
+  function showLogs(n:number){logs.forEach((e,i)=>{const el=e as HTMLElement;el.classList.toggle('hidden',i>=n);el.classList.toggle('flex',i<n);});}
+  function setStep(idx:number){
+    $$('[data-step]').forEach((el,i)=>{
+      const ic=el.querySelector('div:first-child') as HTMLElement;
+      const lb=el.querySelector('span') as HTMLElement;
+      if(i<idx){ic.innerHTML='<div class="w-4 h-4 rounded-full bg-emerald-400/20 flex items-center justify-center"><svg class="w-2.5 h-2.5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg></div>';lb.className='text-xs text-zec-muted/40';}
+      else if(i===idx){ic.innerHTML='<div class="w-4 h-4 flex items-center justify-center"><div class="w-3.5 h-3.5 border-2 border-zec-yellow border-t-transparent rounded-full animate-spin"></div></div>';lb.className='text-xs text-zec-text';}
+      else{ic.innerHTML='<div class="w-4 h-4 rounded-full border border-zec-border shrink-0"></div>';lb.className='text-xs text-zec-muted/25';}
+    });
+  }
+  function go(s:string){
+    clear(); state=s;
+    prog.classList.add('hidden'); synced.classList.add('hidden');
+    tgl.classList.remove('flex'); tgl.classList.add('hidden');
+    steps.classList.remove('hidden'); bc.classList.add('hidden');
+    if(s==='stopped'){
+      dot.className='w-2 h-2 rounded-full bg-zec-muted/50'; lbl.textContent='Stopped';
+      btn.textContent='Start Node'; btn.className='px-4 py-1.5 rounded-lg text-sm font-medium transition-colors bg-zec-yellow text-zec-dark hover:brightness-110'; btn.removeAttribute('disabled');
+      showLogs(0);
+    } else if(s==='starting'){
+      dot.className='w-2 h-2 rounded-full bg-zec-yellow animate-pulse'; lbl.textContent='Starting';
+      btn.textContent='Starting...'; btn.className='px-4 py-1.5 rounded-lg text-sm font-medium transition-colors bg-zec-border/50 text-zec-muted cursor-not-allowed'; btn.setAttribute('disabled','');
+      prog.classList.remove('hidden'); stepIdx=0; syncPct=0;
+      pct.textContent='0%'; bar.style.width='0.5%'; msg.textContent='Preparing node...'; setStep(0); showLogs(1);
+      for(let i=1;i<=5;i++){timers.push(window.setTimeout(()=>{if(state!=='starting')return;stepIdx=i;if(i<5){setStep(i);msg.textContent=STEPS[i]+'...';pct.textContent=Math.round((i/5)*5)+'%';bar.style.width=((i/5)*5)+'%';showLogs(Math.min(i+1,3));}else{go('syncing');}},i*800));}
+    } else if(s==='syncing'){
+      dot.className='w-2 h-2 rounded-full bg-zec-yellow animate-pulse'; lbl.textContent='Running';
+      btn.textContent='Stop'; btn.className='px-4 py-1.5 rounded-lg text-sm font-medium transition-colors border border-zec-border text-zec-muted hover:text-zec-text hover:border-red-400/50'; btn.removeAttribute('disabled');
+      prog.classList.remove('hidden'); steps.classList.add('hidden'); bc.classList.remove('hidden');
+      msg.textContent='Downloading and verifying every Zcash transaction since 2016'; showLogs(3); syncPct=5;
+      let t=0; const tot=40;
+      const iv=window.setInterval(()=>{if(state!=='syncing'){clearInterval(iv);return;}t++;syncPct=5+(t/tot)*95;if(syncPct>100)syncPct=100;
+        const cb=Math.round((syncPct/100)*TARGET);pct.textContent=syncPct.toFixed(1)+'%';bar.style.width=syncPct+'%';
+        bc.textContent=cb.toLocaleString()+' / '+TARGET.toLocaleString();showLogs(Math.min(3+Math.floor(t/10),5));
+        if(t>=tot){clearInterval(iv);go('synced');}},200);
+      timers.push(iv as unknown as number);
+    } else if(s==='synced'){
+      dot.className='w-2 h-2 rounded-full bg-emerald-400'; lbl.textContent='Running';
+      btn.textContent='Stop'; btn.className='px-4 py-1.5 rounded-lg text-sm font-medium transition-colors border border-zec-border text-zec-muted hover:text-zec-text hover:border-red-400/50'; btn.removeAttribute('disabled');
+      synced.classList.remove('hidden'); tgl.classList.remove('hidden'); tgl.classList.add('flex'); showLogs(5);
+    } else if(s==='stopping'){
+      dot.className='w-2 h-2 rounded-full bg-zec-yellow animate-pulse'; lbl.textContent='Stopping';
+      btn.textContent='Stopping...'; btn.className='px-4 py-1.5 rounded-lg text-sm font-medium transition-colors bg-zec-border/50 text-zec-muted cursor-not-allowed'; btn.setAttribute('disabled','');
+      timers.push(window.setTimeout(()=>go('stopped'),500));
+    }
+  }
+  btn.addEventListener('click',()=>{if(state==='stopped')go('starting');else if(state==='synced'||state==='syncing')go('stopping');});
+  $('#demo-shield-toggle').addEventListener('click',()=>{shieldOn=!shieldOn;const k=$('#demo-shield-knob'),t=$('#demo-shield-toggle');if(shieldOn){k.classList.add('translate-x-3');t.className='relative w-7 h-4 rounded-full transition-colors shrink-0 bg-emerald-400';}else{k.classList.remove('translate-x-3');t.className='relative w-7 h-4 rounded-full transition-colors shrink-0 bg-zec-border hover:bg-zec-muted/20';}});
+  $$('.demo-nav').forEach(b=>{b.addEventListener('click',()=>{
+    const v=(b as HTMLElement).dataset.nav!;
+    $$('.demo-nav').forEach(x=>{const a=(x as HTMLElement).dataset.nav===v;(x as HTMLElement).className=`demo-nav relative w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13px] font-medium transition-colors ${a?'text-zec-yellow':'text-zec-muted hover:text-zec-text'}`;const ind=(x as HTMLElement).querySelector('.demo-indicator') as HTMLElement;if(ind)ind.classList.toggle('hidden',!a);});
+    const title=$('#demo-title');
+    if(v==='dashboard'){dv.classList.remove('hidden');pv.classList.add('hidden');title.textContent='Dashboard';}
+    else{dv.classList.add('hidden');pv.classList.remove('hidden');const info=PH[v];if(info){$('#demo-placeholder-title').textContent=info.t;$('#demo-placeholder-desc').textContent=info.d;$('#demo-placeholder-icon').textContent=info.i;title.textContent=info.t;}}
+  });});
+  go('stopped');
+})();
+</script>
