@@ -119,6 +119,7 @@ pub enum NodeStatus {
     Stopped,
     Starting {
         message: Option<String>,
+        progress: Option<f64>,
     },
     #[serde(rename_all = "camelCase")]
     Running {

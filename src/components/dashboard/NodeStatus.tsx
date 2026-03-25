@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useNodeStatus } from "../../hooks/useNodeStatus";
 import { startNode, stopNode } from "../../lib/tauri";
 import { InfoTip } from "../shared/InfoTip";
@@ -70,42 +70,17 @@ export function NodeStatus() {
         </button>
       </div>
 
-      {/* Starting feedback */}
-      {isStarting && (
-        <div className="space-y-3">
-          <div className="flex items-center gap-3">
-            <div className="w-4 h-4 border-2 border-zec-yellow border-t-transparent rounded-full animate-spin" />
-            <span className="text-sm text-zec-muted">
-              {ns.message || "Initializing node..."}
-            </span>
-          </div>
-          <div className="h-1 rounded-full bg-zec-border overflow-hidden">
-            <div className="h-full rounded-full bg-zec-yellow/40 animate-pulse w-full" />
-          </div>
-        </div>
-      )}
-
-      {/* Sync progress */}
-      {isSyncing && (
-        <div className="space-y-3">
-          <div className="flex items-baseline justify-between">
-            <span className="text-3xl font-bold text-zec-text tabular-nums">
-              {ns.syncPercentage?.toFixed(1)}%
-            </span>
-            <span className="text-xs text-zec-muted">
-              {ns.blockHeight?.toLocaleString()} / {ns.estimatedHeight?.toLocaleString()}
-            </span>
-          </div>
-          <div className="h-1.5 rounded-full bg-zec-border overflow-hidden">
-            <div
-              className="h-full rounded-full bg-zec-yellow transition-all duration-500"
-              style={{ width: `${ns.syncPercentage ?? 0}%` }}
-            />
-          </div>
-          <p className="text-xs text-zec-muted">
-            Downloading and verifying every Zcash transaction since 2016
-          </p>
-        </div>
+      {/* Unified progress: startup steps → sync */}
+      {(isStarting || isSyncing) && (
+        <UnifiedProgress
+          isStarting={isStarting}
+          isSyncing={isSyncing}
+          message={ns.message}
+          startupProgress={ns.progress}
+          syncPercentage={ns.syncPercentage}
+          blockHeight={ns.blockHeight}
+          estimatedHeight={ns.estimatedHeight}
+        />
       )}
 
       {/* Synced state */}
@@ -171,6 +146,117 @@ export function NodeStatus() {
       )}
       {toggleError && (
         <p className="text-sm text-red-400/80">{toggleError}</p>
+      )}
+    </div>
+  );
+}
+
+const STARTUP_STEPS = [
+  { key: "prepare", label: "Preparing node" },
+  { key: "storage", label: "Setting up storage" },
+  { key: "network", label: "Connecting to network" },
+  { key: "peers", label: "Finding peers" },
+  { key: "verify", label: "Verifying blockchain" },
+];
+
+function messageToStep(message?: string): number {
+  if (!message) return 0;
+  if (message.includes("Preparing")) return 0;
+  if (message.includes("storage")) return 1;
+  if (message.includes("Connecting")) return 2;
+  if (message.includes("Finding") || message.includes("Connected to")) return 3;
+  if (message.includes("verify") || message.includes("Verifying") || message.includes("Downloading") || message.includes("Almost")) return 4;
+  return 0;
+}
+
+function UnifiedProgress({
+  isStarting,
+  isSyncing,
+  message,
+  startupProgress,
+  syncPercentage,
+  blockHeight,
+  estimatedHeight,
+}: {
+  isStarting: boolean;
+  isSyncing: boolean;
+  message?: string;
+  startupProgress?: number;
+  syncPercentage?: number;
+  blockHeight?: number;
+  estimatedHeight?: number;
+}) {
+  const rawStep = useMemo(() => messageToStep(message), [message]);
+  const [highestStep, setHighestStep] = useState(0);
+  if (rawStep > highestStep) setHighestStep(rawStep);
+  const currentStep = highestStep;
+
+  // Unified 0-100%: startup = 0-5%, sync = 5-100%
+  let totalProgress: number;
+  let statusText: string;
+
+  if (isStarting) {
+    totalProgress = (currentStep / STARTUP_STEPS.length) * 5;
+    statusText = message || "Initializing node...";
+  } else if (isSyncing && syncPercentage != null) {
+    totalProgress = 5 + (syncPercentage * 0.95);
+    statusText = `Downloading and verifying every Zcash transaction since 2016`;
+  } else {
+    totalProgress = 5;
+    statusText = "Starting sync...";
+  }
+
+  return (
+    <div className="space-y-4">
+      {/* Main progress */}
+      <div className="space-y-2">
+        <div className="flex items-baseline justify-between">
+          <span className="text-3xl font-bold text-zec-text tabular-nums">
+            {totalProgress < 5 ? `${totalProgress.toFixed(0)}%` : `${totalProgress.toFixed(1)}%`}
+          </span>
+          {isSyncing && blockHeight != null && estimatedHeight != null && (
+            <span className="text-xs text-zec-muted tabular-nums">
+              {blockHeight.toLocaleString()} / {estimatedHeight.toLocaleString()}
+            </span>
+          )}
+        </div>
+        <div className="h-1.5 rounded-full bg-zec-border overflow-hidden">
+          <div
+            className="h-full rounded-full bg-zec-yellow transition-all duration-700"
+            style={{ width: `${Math.max(totalProgress, 0.5)}%` }}
+          />
+        </div>
+        <p className="text-xs text-zec-muted">{statusText}</p>
+      </div>
+
+      {/* Step checklist — only during startup */}
+      {isStarting && (
+        <div className="space-y-1.5">
+          {STARTUP_STEPS.map((step, i) => {
+            const isDone = i < currentStep;
+            const isActive = i === currentStep;
+            return (
+              <div key={step.key} className="flex items-center gap-2.5">
+                {isDone ? (
+                  <div className="w-4 h-4 rounded-full bg-emerald-400/20 flex items-center justify-center shrink-0">
+                    <svg className="w-2.5 h-2.5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                    </svg>
+                  </div>
+                ) : isActive ? (
+                  <div className="w-4 h-4 flex items-center justify-center shrink-0">
+                    <div className="w-3.5 h-3.5 border-2 border-zec-yellow border-t-transparent rounded-full animate-spin" />
+                  </div>
+                ) : (
+                  <div className="w-4 h-4 rounded-full border border-zec-border shrink-0" />
+                )}
+                <span className={`text-xs ${isDone ? "text-zec-muted/40" : isActive ? "text-zec-text" : "text-zec-muted/25"}`}>
+                  {step.label}
+                </span>
+              </div>
+            );
+          })}
+        </div>
       )}
     </div>
   );

@@ -79,27 +79,31 @@ pub fn spawn_health_monitor(
                 }
             }
 
-            // Track startup polls to show feedback while waiting for RPC
+            // Track startup polls — only emit fallback if log parser hasn't set a message
             let is_starting = {
                 let status = node.status.lock().await;
                 matches!(*status, NodeStatus::Starting { .. })
             };
             if is_starting {
                 startup_polls += 1;
-                // Emit progress messages so the user sees something happening
-                let msg = match startup_polls {
-                    1..=3 => "Initializing node...",
-                    4..=8 => "Opening database...",
-                    9..=15 => "Connecting to peers...",
-                    16..=30 => "Waiting for RPC to become available...",
-                    _ => "Still starting up — this can take a few minutes on first launch...",
+                let current_msg = {
+                    let status = node.status.lock().await;
+                    if let NodeStatus::Starting { ref message, .. } = *status {
+                        message.clone()
+                    } else {
+                        None
+                    }
                 };
-                let starting_status = NodeStatus::Starting { message: Some(msg.to_string()) };
-                {
-                    let mut status = node.status.lock().await;
-                    *status = starting_status.clone();
+                // Only set a fallback message if the log parser hasn't provided one
+                if current_msg.is_none() && startup_polls > 3 {
+                    let msg = "Waiting for node to initialize...".to_string();
+                    let starting_status = NodeStatus::Starting { message: Some(msg), progress: None };
+                    {
+                        let mut status = node.status.lock().await;
+                        *status = starting_status.clone();
+                    }
+                    let _ = app_handle.emit("node_status_changed", &starting_status);
                 }
-                let _ = app_handle.emit("node_status_changed", &starting_status);
             }
 
             match poll_zebrad(&client).await {

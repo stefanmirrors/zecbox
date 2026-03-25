@@ -9,6 +9,7 @@ export interface NodeStatusInfo {
   syncPercentage?: number;
   chain?: string;
   message?: string;
+  progress?: number;
 }
 
 export interface Volume {

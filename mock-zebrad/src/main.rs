@@ -1,5 +1,5 @@
 use std::net::SocketAddr;
-use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::Arc;
 
 use http_body_util::{BodyExt, Full};
@@ -10,16 +10,18 @@ use hyper::{Request, Response, StatusCode};
 use hyper_util::rt::TokioIo;
 use tokio::net::TcpListener;
 use tokio::signal;
+use tokio::time::{sleep, Duration};
 
-static BLOCK_HEIGHT: AtomicU64 = AtomicU64::new(1_000_000);
+static BLOCK_HEIGHT: AtomicU64 = AtomicU64::new(0);
+static RPC_READY: AtomicBool = AtomicBool::new(false);
 
 async fn handle_request(
     req: Request<Incoming>,
 ) -> Result<Response<Full<Bytes>>, hyper::Error> {
-    if req.method() != hyper::Method::POST {
+    if req.method() != hyper::Method::POST || !RPC_READY.load(Ordering::Relaxed) {
         let resp = Response::builder()
-            .status(StatusCode::METHOD_NOT_ALLOWED)
-            .body(Full::new(Bytes::from("POST only")))
+            .status(StatusCode::SERVICE_UNAVAILABLE)
+            .body(Full::new(Bytes::from("not ready")))
             .unwrap();
         return Ok(resp);
     }
@@ -45,7 +47,7 @@ async fn handle_request(
             serde_json::json!({
                 "result": {
                     "version": 5_070_050,
-                    "subversion": "/Zebra:1.8.0/",
+                    "subversion": "/Zebra:4.2.0/",
                     "blocks": height,
                     "connections": 8,
                     "proxy": ""
@@ -61,7 +63,7 @@ async fn handle_request(
                     "chain": "main",
                     "blocks": height,
                     "bestblockhash": "0000000000000000000000000000000000000000000000000000000000000000",
-                    "estimatedheight": 2_500_000u64,
+                    "estimatedheight": 3_300_000u64,
                     "upgrades": {},
                     "consensus": { "chaintip": "c2d6d0b4", "nextblock": "c2d6d0b4" }
                 },
@@ -87,23 +89,73 @@ async fn handle_request(
 
 #[tokio::main]
 async fn main() {
-    // Accept --config <path> for compatibility with real zebrad invocation (ignored)
     let args: Vec<String> = std::env::args().collect();
     if args.len() >= 3 && args[1] == "--config" {
         eprintln!("mock-zebrad: ignoring config file {}", args[2]);
     }
 
+    // Simulate real zebrad startup sequence via stderr/stdout
+    tokio::spawn(async {
+        // Stage 1: Starting
+        eprintln!("Thank you for running a mainnet zebrad 4.2.0 node!");
+        eprintln!("You're helping to strengthen the network and contributing to a social good :)");
+        sleep(Duration::from_secs(3)).await;
+
+        // Stage 2: Database
+        eprintln!("INFO zebrad::commands::start: opening database, this may take a few minutes");
+        eprintln!("INFO zebra_state: creating new database running_version=27.0.0");
+        sleep(Duration::from_secs(4)).await;
+
+        // Stage 3: Network
+        eprintln!("INFO zebrad::commands::start: initializing network");
+        sleep(Duration::from_secs(3)).await;
+
+        // Stage 4: Peers
+        eprintln!("INFO add_initial_peers: zebra_network::peer_set::initialize: connecting to initial peer set ipv4_peer_count=23 ipv6_peer_count=2");
+        sleep(Duration::from_secs(4)).await;
+        eprintln!("INFO add_initial_peers: zebra_network::peer_set::initialize: finished connecting to initial seed and disk cache peers handshake_success_total=15 active_initial_peer_count=15");
+        sleep(Duration::from_secs(2)).await;
+
+        // Stage 5: Verifiers
+        eprintln!("INFO zebrad::commands::start: initializing verifiers");
+        eprintln!("INFO init: zebra_consensus::router: starting state checkpoint validation");
+        sleep(Duration::from_secs(3)).await;
+
+        // Stage 6: RPC ready
+        eprintln!("INFO zebra_rpc::server: Opened RPC endpoint at 127.0.0.1:8232");
+        RPC_READY.store(true, Ordering::Relaxed);
+        sleep(Duration::from_secs(1)).await;
+
+        // Stage 7: Checkpoints (simulate with rising block heights)
+        let checkpoints = [1200, 4800, 12000, 24000, 48000, 96000, 192000, 384000, 600000, 900000, 1200000, 1600000, 2000000];
+        for &height in &checkpoints {
+            BLOCK_HEIGHT.store(height, Ordering::Relaxed);
+            eprintln!(
+                "INFO sync:checkpoint: zebra_consensus::checkpoint: verified checkpoint range block_count=400 current_range=(Excluded(Height({})), Included(Height({})))",
+                height.saturating_sub(400), height
+            );
+            let pct = height as f64 / 3_300_000.0 * 100.0;
+            eprintln!(
+                "INFO zebrad::components::sync::progress: estimated progress to chain tip sync_percent={:.3}% current_height=Height({}) remaining_sync_blocks={}",
+                pct, height, 3_300_000u64.saturating_sub(height)
+            );
+            sleep(Duration::from_secs(8)).await;
+        }
+
+        // Stage 8: Fully synced
+        BLOCK_HEIGHT.store(3_300_000, Ordering::Relaxed);
+        eprintln!("INFO zebrad::components::sync::progress: estimated progress to chain tip sync_percent=100.000% current_height=Height(3300000) remaining_sync_blocks=0");
+
+        // Keep incrementing slowly like a synced node
+        loop {
+            sleep(Duration::from_millis(500)).await;
+            BLOCK_HEIGHT.fetch_add(1, Ordering::Relaxed);
+        }
+    });
+
     let addr = SocketAddr::from(([127, 0, 0, 1], 8232));
     let listener = TcpListener::bind(addr).await.expect("failed to bind to port 8232");
     eprintln!("mock-zebrad: listening on {}", addr);
-
-    // Increment block height in the background to simulate syncing
-    tokio::spawn(async {
-        loop {
-            tokio::time::sleep(std::time::Duration::from_millis(100)).await;
-            BLOCK_HEIGHT.fetch_add(5000, Ordering::Relaxed);
-        }
-    });
 
     let graceful = Arc::new(tokio::sync::Notify::new());
     let graceful_clone = graceful.clone();

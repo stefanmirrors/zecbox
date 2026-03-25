@@ -27,9 +27,9 @@ pub async fn start_zebrad(
     // Set status to Starting
     {
         let mut status = node.status.lock().await;
-        *status = NodeStatus::Starting { message: None };
+        *status = NodeStatus::Starting { message: None, progress: None };
     }
-    let _ = app_handle.emit("node_status_changed", NodeStatus::Starting { message: None });
+    let _ = app_handle.emit("node_status_changed", NodeStatus::Starting { message: None, progress: None });
 
     let data_dir = node.data_dir.lock().await.clone();
 
@@ -317,6 +317,72 @@ fn remove_pid_file(data_dir: &Path) -> Result<(), std::io::Error> {
     Ok(())
 }
 
+struct StartupInfo {
+    message: String,
+    progress: Option<f64>,
+}
+
+/// Parse zebrad log lines into user-friendly startup messages.
+fn parse_startup_message(line: &str) -> Option<StartupInfo> {
+    if line.contains("Thank you for running") || line.contains("Starting zebrad") {
+        Some(StartupInfo { message: "Preparing your node...".into(), progress: None })
+    } else if line.contains("opening database") || line.contains("creating new database") {
+        Some(StartupInfo { message: "Setting up local storage...".into(), progress: None })
+    } else if line.contains("initializing network") {
+        Some(StartupInfo { message: "Connecting to the Zcash network...".into(), progress: None })
+    } else if line.contains("connecting to initial peer set") {
+        Some(StartupInfo { message: "Finding other nodes to connect to...".into(), progress: None })
+    } else if line.contains("active_initial_peer_count=") {
+        let count = line.split("active_initial_peer_count=").nth(1)
+            .and_then(|s| s.split_whitespace().next())
+            .and_then(|s| s.parse::<u32>().ok());
+        let msg = match count {
+            Some(c) => format!("Connected to {} other nodes around the world", c),
+            None => "Connected to the network".into(),
+        };
+        Some(StartupInfo { message: msg, progress: None })
+    } else if line.contains("initializing verifiers") || line.contains("starting state checkpoint validation") {
+        Some(StartupInfo { message: "Getting ready to verify transactions...".into(), progress: None })
+    } else if line.contains("checkpoint") && line.contains("verified") {
+        // Extract block height from checkpoint logs for progress
+        let height = line.split("Included(Height(").nth(1)
+            .and_then(|s| s.split(')').next())
+            .and_then(|s| s.parse::<u64>().ok());
+        let pct = height.map(|h| (h as f64 / 3_300_000.0 * 100.0).min(99.0));
+        let msg = match height {
+            Some(h) if h > 1000 => format!("Verifying blockchain history — block {}", format_number(h)),
+            _ => "Verifying blockchain history...".into(),
+        };
+        Some(StartupInfo { message: msg, progress: pct })
+    } else if line.contains("sync_percent=") {
+        let pct = line.split("sync_percent=").nth(1)
+            .and_then(|s| s.split_whitespace().next())
+            .and_then(|s| s.strip_suffix('%').or(Some(s)))
+            .and_then(|s| s.parse::<f64>().ok());
+        let msg = match pct {
+            Some(p) => format!("Downloading the blockchain — {:.1}%", p),
+            None => "Downloading the blockchain...".into(),
+        };
+        Some(StartupInfo { message: msg, progress: pct })
+    } else if line.contains("Opened RPC endpoint") {
+        Some(StartupInfo { message: "Almost ready...".into(), progress: None })
+    } else {
+        None
+    }
+}
+
+fn format_number(n: u64) -> String {
+    let s = n.to_string();
+    let mut result = String::new();
+    for (i, c) in s.chars().enumerate() {
+        if i > 0 && (s.len() - i) % 3 == 0 {
+            result.push(',');
+        }
+        result.push(c);
+    }
+    result
+}
+
 async fn check_port_available(port: u16) -> Result<(), String> {
     match tokio::net::TcpListener::bind(format!("127.0.0.1:{}", port)).await {
         Ok(_) => Ok(()),
@@ -365,5 +431,21 @@ async fn read_log_stream<R: tokio::io::AsyncRead + Unpin>(
 
         // Emit to frontend
         let _ = app_handle.emit("log_line", &formatted);
+
+        // Parse real status from zebrad output and update Starting message
+        {
+            let status = node.status.lock().await;
+            if matches!(*status, NodeStatus::Starting { .. }) {
+                drop(status);
+                if let Some(info) = parse_startup_message(&line) {
+                    let new_status = NodeStatus::Starting { message: Some(info.message), progress: info.progress };
+                    {
+                        let mut status = node.status.lock().await;
+                        *status = new_status.clone();
+                    }
+                    let _ = app_handle.emit("node_status_changed", &new_status);
+                }
+            }
+        }
     }
 }

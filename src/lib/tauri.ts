@@ -133,5 +133,6 @@ export function parseNodeStatus(raw: Record<string, unknown>): NodeStatusInfo {
     syncPercentage: raw.syncPercentage as number | undefined,
     chain: raw.chain as string | undefined,
     message: raw.message as string | undefined,
+    progress: raw.progress as number | undefined,
   };
 }
