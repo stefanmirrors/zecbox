@@ -4,31 +4,27 @@ interface Props {
 
 export function Welcome({ onContinue }: Props) {
   return (
-    <div className="flex min-h-screen items-center justify-center px-6">
-      <div className="max-w-md text-center space-y-8">
-        <div className="space-y-2">
-          <div className="text-6xl mb-4 select-none" aria-hidden>
-            &#x1F6E1;
-          </div>
-          <h1 className="text-5xl font-bold text-zec-yellow tracking-tight">
+    <div className="flex min-h-[90vh] items-center justify-center px-6">
+      <div className="max-w-sm text-center space-y-10">
+        <div className="space-y-4">
+          <h1 className="text-4xl font-bold text-zec-yellow tracking-tight">
             zecbox
           </h1>
-          <p className="text-zec-muted text-sm tracking-wide uppercase">
+          <p className="text-zec-muted text-xs tracking-widest uppercase">
             Zcash Full Node
           </p>
         </div>
 
-        <p className="text-zec-text text-lg leading-relaxed">
-          Run your own Zcash full node with zero configuration. zecbox
-          downloads, verifies, and syncs the Zcash blockchain automatically.
-          Your node, your privacy.
+        <p className="text-zec-muted text-base leading-relaxed">
+          Run your own Zcash node with zero configuration. zecbox downloads,
+          verifies, and syncs the blockchain automatically.
         </p>
 
         <button
           onClick={onContinue}
-          className="w-full py-3 rounded-lg font-semibold text-lg bg-zec-yellow text-zec-dark hover:brightness-110 transition-all"
+          className="w-full py-3.5 rounded-xl font-semibold bg-zec-yellow text-zec-dark hover:brightness-110 transition-all"
         >
-          Continue
+          Get Started
         </button>
       </div>
     </div>

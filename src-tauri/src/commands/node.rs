@@ -1,7 +1,7 @@
 use tauri::{AppHandle, State};
 
 use crate::process::{zebrad, zaino};
-use crate::state::{AppState, NodeStatus};
+use crate::state::{AppState, NodeStats, NodeStatus};
 
 #[tauri::command]
 pub async fn start_node(
@@ -78,4 +78,12 @@ pub async fn rebuild_database(
     }
 
     Ok(())
+}
+
+#[tauri::command]
+pub async fn get_node_stats(
+    state: State<'_, AppState>,
+) -> Result<NodeStats, String> {
+    let stats = state.node.stats.lock().await;
+    Ok(stats.clone())
 }

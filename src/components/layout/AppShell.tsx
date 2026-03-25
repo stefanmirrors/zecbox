@@ -48,7 +48,7 @@ export function AppShell({ onResetToOnboarding }: AppShellProps) {
         <TitleBar title={titles[activeView]} />
         <main
           role="main"
-          className={`flex-1 overflow-y-auto p-6 transition-opacity duration-150 ease-out ${
+          className={`flex-1 overflow-y-auto px-8 py-6 transition-opacity duration-150 ease-out ${
             visible ? "opacity-100" : "opacity-0"
           }`}
         >

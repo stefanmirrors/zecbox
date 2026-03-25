@@ -24,10 +24,8 @@ export function LogViewer() {
   return (
     <div className="flex flex-col h-full">
       <div className="flex items-center justify-between mb-3">
-        <p className="text-sm text-zec-muted">
-          {lines.length > 0
-            ? `${lines.length.toLocaleString()} lines`
-            : "No log lines yet"}
+        <p className="text-xs text-zec-muted">
+          {lines.length > 0 ? `${lines.length.toLocaleString()} lines` : "No logs yet"}
         </p>
         <div className="flex items-center gap-2">
           {!autoScroll && (
@@ -35,11 +33,10 @@ export function LogViewer() {
               onClick={() => {
                 setAutoScroll(true);
                 if (containerRef.current) {
-                  containerRef.current.scrollTop =
-                    containerRef.current.scrollHeight;
+                  containerRef.current.scrollTop = containerRef.current.scrollHeight;
                 }
               }}
-              className="text-xs px-3 py-1 rounded bg-zec-yellow/20 text-zec-yellow hover:bg-zec-yellow/30 transition-colors"
+              className="text-[11px] px-2.5 py-1 rounded-lg border border-zec-yellow/20 text-zec-yellow hover:bg-zec-yellow/5 transition-colors"
             >
               Jump to bottom
             </button>
@@ -47,7 +44,7 @@ export function LogViewer() {
           {lines.length > 0 && (
             <button
               onClick={clear}
-              className="text-xs px-3 py-1 rounded bg-zec-border text-zec-muted hover:text-zec-text transition-colors"
+              className="text-[11px] px-2.5 py-1 rounded-lg border border-zec-border text-zec-muted hover:text-zec-text transition-colors"
             >
               Clear
             </button>
@@ -58,17 +55,15 @@ export function LogViewer() {
       <div
         ref={containerRef}
         onScroll={handleScroll}
-        className="flex-1 overflow-y-auto rounded-lg bg-zec-dark border border-zec-border p-4 font-mono text-xs leading-5 min-h-0"
+        className="flex-1 overflow-y-auto rounded-xl border border-zec-border p-4 font-mono text-[11px] leading-5 min-h-0"
       >
         {loading ? (
-          <p className="text-zec-muted/60 animate-pulse">Loading logs...</p>
+          <p className="text-zec-muted/40">Loading...</p>
         ) : lines.length === 0 ? (
-          <p className="text-zec-muted/60">
-            No log lines yet. Start the node to see logs.
-          </p>
+          <p className="text-zec-muted/40">Start the node to see logs.</p>
         ) : (
           lines.map((line, i) => (
-            <div key={i} className="text-zec-muted hover:text-zec-text transition-colors">
+            <div key={i} className="text-zec-muted/70 hover:text-zec-text transition-colors">
               {line}
             </div>
           ))

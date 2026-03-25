@@ -1,5 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
-import type { AppConfig, BinaryUpdateInfo, NodeStatusInfo, ShieldStatusInfo, StorageInfo, UpdateStatusInfo, VersionInfo, Volume, WalletStatusInfo } from "./types";
+import type { AppConfig, BinaryUpdateInfo, NodeStats, NodeStatusInfo, ShieldStatusInfo, StorageInfo, UpdateStatusInfo, VersionInfo, Volume, WalletStatusInfo } from "./types";
 
 export async function getNodeStatus(): Promise<NodeStatusInfo> {
   const raw = await invoke<Record<string, unknown>>("get_node_status");
@@ -118,12 +118,20 @@ export async function isFirewallHelperInstalled(): Promise<boolean> {
   return invoke<boolean>("is_firewall_helper_installed");
 }
 
+export async function getNodeStats(): Promise<NodeStats> {
+  return invoke<NodeStats>("get_node_stats");
+}
+
 export function parseNodeStatus(raw: Record<string, unknown>): NodeStatusInfo {
   const status = (raw.status as string) as NodeStatusInfo["status"];
   return {
     status,
     blockHeight: raw.blockHeight as number | undefined,
     peerCount: raw.peerCount as number | undefined,
+    estimatedHeight: raw.estimatedHeight as number | undefined,
+    bestBlockHash: raw.bestBlockHash as string | undefined,
+    syncPercentage: raw.syncPercentage as number | undefined,
+    chain: raw.chain as string | undefined,
     message: raw.message as string | undefined,
   };
 }

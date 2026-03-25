@@ -2,11 +2,12 @@
 
 @theme {
   --color-zec-yellow: #f4b728;
-  --color-zec-dark: #0d1117;
-  --color-zec-surface: #161b22;
-  --color-zec-border: #30363d;
+  --color-zec-dark: #0a0c10;
+  --color-zec-surface: #0f1318;
+  --color-zec-surface-hover: #141a21;
+  --color-zec-border: #1c2128;
   --color-zec-text: #e6edf3;
-  --color-zec-muted: #8b949e;
+  --color-zec-muted: #7a828a;
 }
 
 html {
@@ -20,6 +21,7 @@ body {
     Helvetica, Arial, sans-serif;
   margin: 0;
   min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
 }
 
 *:focus-visible {

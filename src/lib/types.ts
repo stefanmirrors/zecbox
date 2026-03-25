@@ -4,6 +4,10 @@ export interface NodeStatusInfo {
   status: NodeStatusTag;
   blockHeight?: number;
   peerCount?: number;
+  estimatedHeight?: number;
+  bestBlockHash?: string;
+  syncPercentage?: number;
+  chain?: string;
   message?: string;
 }
 
@@ -83,4 +87,14 @@ export interface VersionInfo {
   zebrad: string;
   zaino: string;
   arti: string;
+}
+
+export interface NodeStats {
+  totalUptimeSecs: number;
+  blocksValidated: number;
+  walletsServed: number;
+  currentStreakDays: number;
+  bestStreakDays: number;
+  lastOnlineDate: string | null;
+  firstStarted: string | null;
 }

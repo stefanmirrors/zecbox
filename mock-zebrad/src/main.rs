@@ -100,8 +100,8 @@ async fn main() {
     // Increment block height in the background to simulate syncing
     tokio::spawn(async {
         loop {
-            tokio::time::sleep(std::time::Duration::from_millis(500)).await;
-            BLOCK_HEIGHT.fetch_add(1, Ordering::Relaxed);
+            tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+            BLOCK_HEIGHT.fetch_add(5000, Ordering::Relaxed);
         }
     });
 

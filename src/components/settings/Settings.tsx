@@ -23,16 +23,8 @@ export function Settings({ onResetToOnboarding }: SettingsProps) {
   const [recoveryNeeded, setRecoveryNeeded] = useState(false);
   const [autoStartError, setAutoStartError] = useState<string | null>(null);
   const {
-    versions,
-    updateStatus,
-    availableUpdates,
-    checking,
-    error,
-    checkNow,
-    applyOne,
-    applyAll,
-    dismiss,
-    clearError,
+    versions, updateStatus, availableUpdates, checking, error,
+    checkNow, applyOne, applyAll, dismiss, clearError,
   } = useUpdates();
 
   const isUpdating =
@@ -41,13 +33,11 @@ export function Settings({ onResetToOnboarding }: SettingsProps) {
     updateStatus.status === "rollingBack";
 
   useEffect(() => {
-    getAutoStartEnabled().then(setAutoStartEnabled).catch((e) => console.warn("Auto-start check failed:", e));
+    getAutoStartEnabled().then(setAutoStartEnabled).catch(() => {});
   }, []);
 
   useEffect(() => {
-    const unlisten = listen("node_recovery_needed", () => {
-      setRecoveryNeeded(true);
-    });
+    const unlisten = listen("node_recovery_needed", () => setRecoveryNeeded(true));
     return () => { unlisten.then((f) => f()); };
   }, []);
 
@@ -72,225 +62,143 @@ export function Settings({ onResetToOnboarding }: SettingsProps) {
       setRecoveryNeeded(false);
       setRebuildConfirm(false);
     } catch {
-      // Error handled by node status
+      // handled by node status
     } finally {
       setRebuilding(false);
     }
   };
 
   return (
-    <div className="max-w-2xl space-y-6">
-      <div className="bg-zec-surface border border-zec-border rounded-lg p-6 space-y-4">
-        <h3 className="text-sm font-medium text-zec-muted uppercase tracking-wider">
-          About
-        </h3>
-        <div className="space-y-3">
-          <Row label="Version" value={versions?.app ?? "..."} />
-          <Row label="Node Status" value={capitalize(nodeStatus.status)} />
-          <Row
-            label="Shield Mode"
-            value={
-              shieldStatus.enabled
-                ? "Active (Tor)"
-                : capitalize(shieldStatus.status)
-            }
-          />
-          {storageInfo && (
-            <Row label="Data Directory" value={storageInfo.dataDir} mono />
-          )}
-        </div>
-      </div>
+    <div className="space-y-8">
+      {/* About */}
+      <Section title="About">
+        <Row label="Version" value={versions?.app ?? "..."} />
+        <Row label="Node" value={capitalize(nodeStatus.status)} />
+        <Row label="Shield" value={shieldStatus.enabled ? "Active (Tor)" : capitalize(shieldStatus.status)} />
+        {storageInfo && <Row label="Data" value={storageInfo.dataDir} mono />}
+      </Section>
 
-      <div className="bg-zec-surface border border-zec-border rounded-lg p-6 space-y-4">
-        <h3 className="text-sm font-medium text-zec-muted uppercase tracking-wider">
-          System
-        </h3>
+      {/* System */}
+      <Section title="System">
         <div className="flex items-center justify-between">
           <span className="text-sm text-zec-muted">Launch at Login</span>
-          <button
-            onClick={handleAutoStartToggle}
-            role="switch"
-            aria-label="Toggle Launch at Login"
-            aria-checked={autoStartEnabled}
-            disabled={autoStartLoading}
-            className={`relative w-10 h-5 rounded-full transition-colors ${
-              autoStartEnabled ? "bg-amber-500" : "bg-zec-border"
-            } ${autoStartLoading ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
-          >
-            <span
-              className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform duration-200 ${
-                autoStartEnabled ? "translate-x-5" : ""
-              }`}
-            />
-          </button>
+          <Toggle
+            enabled={autoStartEnabled}
+            loading={autoStartLoading}
+            onToggle={handleAutoStartToggle}
+          />
         </div>
-        {autoStartError && (
-          <p className="text-xs text-red-400">{autoStartError}</p>
-        )}
-      </div>
+        {autoStartError && <p className="text-xs text-red-400/80">{autoStartError}</p>}
+      </Section>
 
-      <div className="bg-zec-surface border border-zec-border rounded-lg p-6 space-y-4">
-        <div className="flex items-center justify-between">
-          <h3 className="text-sm font-medium text-zec-muted uppercase tracking-wider">
-            Binary Versions
-          </h3>
+      {/* Binaries */}
+      <Section
+        title="Binaries"
+        action={
           <button
             onClick={checkNow}
             disabled={checking || isUpdating}
-            className="text-xs px-3 py-1.5 rounded bg-zec-border text-zec-text hover:bg-zec-border/80 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="text-[11px] px-2.5 py-1 rounded-lg border border-zec-border text-zec-muted hover:text-zec-text disabled:opacity-40 transition-colors"
           >
             {checking ? "Checking..." : "Check for Updates"}
           </button>
-        </div>
-        <div className="space-y-3">
-          <Row label="zebrad" value={versions?.zebrad ?? "..."} mono />
-          <Row label="zaino" value={versions?.zaino ?? "..."} mono />
-          <Row label="arti" value={versions?.arti ?? "..."} mono />
-        </div>
-      </div>
+        }
+      >
+        <Row label="zebrad" value={versions?.zebrad ?? "..."} mono />
+        <Row label="zaino" value={versions?.zaino ?? "..."} mono />
+        <Row label="arti" value={versions?.arti ?? "..."} mono />
+      </Section>
 
-      {availableUpdates.length === 0 && !checking && updateStatus.status === "idle" && (
-        <div className="bg-zec-surface border border-zec-border rounded-lg p-4">
-          <p className="text-sm text-zec-muted">All binaries are up to date.</p>
-        </div>
-      )}
-
+      {/* Updates available */}
       {availableUpdates.length > 0 && (
-        <div className="bg-zec-surface border border-amber-500/30 rounded-lg p-6 space-y-4">
+        <div className="border border-zec-yellow/20 rounded-xl p-5 space-y-4">
           <div className="flex items-center justify-between">
-            <h3 className="text-sm font-medium text-amber-400 uppercase tracking-wider">
-              Updates Available
-            </h3>
+            <h3 className="text-xs font-medium text-zec-yellow">Updates Available</h3>
             <div className="flex gap-2">
-              <button
-                onClick={dismiss}
-                disabled={isUpdating}
-                className="text-xs px-3 py-1.5 rounded bg-zec-border text-zec-muted hover:bg-zec-border/80 disabled:opacity-50 transition-colors"
-              >
+              <button onClick={dismiss} disabled={isUpdating} className="text-[11px] text-zec-muted hover:text-zec-text">
                 Dismiss
               </button>
               {availableUpdates.length > 1 && (
-                <button
-                  onClick={applyAll}
-                  disabled={isUpdating}
-                  className="text-xs px-3 py-1.5 rounded bg-amber-500/20 text-amber-400 hover:bg-amber-500/30 disabled:opacity-50 transition-colors"
-                >
+                <button onClick={applyAll} disabled={isUpdating} className="text-[11px] px-2.5 py-1 rounded-lg bg-zec-yellow/10 text-zec-yellow hover:bg-zec-yellow/20 transition-colors">
                   Update All
                 </button>
               )}
             </div>
           </div>
-          <div className="space-y-3">
-            {availableUpdates.map((u) => (
-              <div
-                key={u.name}
-                className="flex items-center justify-between"
-              >
-                <div>
-                  <span className="text-sm text-zec-text">{u.name}</span>
-                  <span className="text-xs text-zec-muted ml-2">
-                    {u.currentVersion} → {u.newVersion}
-                  </span>
-                  <span className="text-xs text-zec-muted ml-2">
-                    ({formatBytes(u.sizeBytes)})
-                  </span>
-                </div>
-                <button
-                  onClick={() => applyOne(u.name)}
-                  disabled={isUpdating}
-                  className="text-xs px-3 py-1.5 rounded bg-amber-500/20 text-amber-400 hover:bg-amber-500/30 disabled:opacity-50 transition-colors"
-                >
-                  Update
-                </button>
+          {availableUpdates.map((u) => (
+            <div key={u.name} className="flex items-center justify-between">
+              <div>
+                <span className="text-sm text-zec-text">{u.name}</span>
+                <span className="text-xs text-zec-muted ml-2">{u.currentVersion} → {u.newVersion}</span>
+                <span className="text-xs text-zec-muted ml-2">({formatBytes(u.sizeBytes)})</span>
               </div>
-            ))}
-          </div>
+              <button
+                onClick={() => applyOne(u.name)}
+                disabled={isUpdating}
+                className="text-[11px] px-2.5 py-1 rounded-lg bg-zec-yellow/10 text-zec-yellow hover:bg-zec-yellow/20 disabled:opacity-40 transition-colors"
+              >
+                Update
+              </button>
+            </div>
+          ))}
         </div>
       )}
 
+      {/* Update status */}
       {isUpdating && (
-        <div className="bg-zec-surface border border-zec-border rounded-lg p-6">
-          <div className="flex items-center gap-3">
-            <div className="w-4 h-4 border-2 border-zec-muted border-t-zec-text rounded-full animate-spin" />
-            <div>
-              <p className="text-sm text-zec-text">
-                {updateStatus.status === "downloading" &&
-                  `Downloading ${updateStatus.binary}...${updateStatus.progress !== undefined ? ` ${updateStatus.progress}%` : ""}`}
-                {updateStatus.status === "installing" &&
-                  `Installing ${updateStatus.binary}...`}
-                {updateStatus.status === "rollingBack" &&
-                  `Rolling back ${updateStatus.binary}...`}
-              </p>
-            </div>
-          </div>
+        <div className="border border-zec-border rounded-xl p-4 flex items-center gap-3">
+          <div className="w-3.5 h-3.5 border-2 border-zec-muted border-t-zec-text rounded-full animate-spin" />
+          <p className="text-sm text-zec-muted">
+            {updateStatus.status === "downloading" && `Downloading ${updateStatus.binary}...${updateStatus.progress !== undefined ? ` ${updateStatus.progress}%` : ""}`}
+            {updateStatus.status === "installing" && `Installing ${updateStatus.binary}...`}
+            {updateStatus.status === "rollingBack" && `Rolling back ${updateStatus.binary}...`}
+          </p>
         </div>
       )}
 
       {updateStatus.status === "complete" && (
-        <div className="bg-zec-surface border border-green-500/30 rounded-lg p-4">
-          <p className="text-sm text-green-400">
-            Updates applied successfully.
-          </p>
-        </div>
+        <p className="text-xs text-emerald-400">Updates applied successfully.</p>
       )}
 
       {error && (
-        <div className="bg-zec-surface border border-red-500/30 rounded-lg p-4">
-          <div className="flex items-center justify-between">
-            <p className="text-sm text-red-400">{error}</p>
-            <button
-              onClick={clearError}
-              className="text-xs text-zec-muted hover:text-zec-text"
-            >
-              Dismiss
-            </button>
-          </div>
+        <div className="flex items-center justify-between">
+          <p className="text-xs text-red-400/80">{error}</p>
+          <button onClick={clearError} className="text-[11px] text-zec-muted hover:text-zec-text">Dismiss</button>
         </div>
       )}
 
       {recoveryNeeded && (
-        <div className="bg-zec-surface border border-red-500/30 rounded-lg p-4">
-          <p className="text-sm text-red-400">
-            Node failed to start after multiple attempts. The database may be
-            corrupted and need to be rebuilt.
+        <div className="border border-red-400/20 rounded-xl p-4">
+          <p className="text-sm text-red-400/80">
+            Node failed to start repeatedly. The database may need to be rebuilt.
           </p>
         </div>
       )}
 
-      <div className="bg-zec-surface border border-zec-border rounded-lg p-6 space-y-4">
-        <h3 className="text-sm font-medium text-zec-muted uppercase tracking-wider">
-          Advanced
-        </h3>
+      {/* Advanced */}
+      <Section title="Advanced">
         <div className="flex items-center justify-between">
           <div>
             <p className="text-sm text-zec-text">Rebuild Database</p>
-            <p className="text-xs text-zec-muted">
-              Deletes all chain data and re-syncs from scratch.
-            </p>
+            <p className="text-[11px] text-zec-muted">Deletes chain data and re-syncs from scratch.</p>
           </div>
           {!rebuildConfirm ? (
             <button
               onClick={() => setRebuildConfirm(true)}
               disabled={rebuilding}
-              className="text-xs px-3 py-1.5 rounded bg-red-500/20 text-red-400 hover:bg-red-500/30 disabled:opacity-50 transition-colors"
+              className="text-[11px] px-2.5 py-1 rounded-lg border border-red-400/20 text-red-400/80 hover:bg-red-400/5 transition-colors"
             >
               Rebuild
             </button>
           ) : (
             <div className="flex gap-2">
-              <button
-                onClick={() => setRebuildConfirm(false)}
-                disabled={rebuilding}
-                className="text-xs px-3 py-1.5 rounded bg-zec-border text-zec-muted hover:bg-zec-border/80 transition-colors"
-              >
-                Cancel
-              </button>
+              <button onClick={() => setRebuildConfirm(false)} className="text-[11px] text-zec-muted hover:text-zec-text">Cancel</button>
               <button
                 onClick={handleRebuild}
                 disabled={rebuilding}
-                className="text-xs px-3 py-1.5 rounded bg-red-500 text-white hover:bg-red-600 disabled:opacity-50 transition-colors"
+                className="text-[11px] px-2.5 py-1 rounded-lg bg-red-500 text-white hover:bg-red-600 disabled:opacity-50 transition-colors"
               >
-                {rebuilding ? "Rebuilding..." : "Confirm Rebuild"}
+                {rebuilding ? "Rebuilding..." : "Confirm"}
               </button>
             </div>
           )}
@@ -298,50 +206,62 @@ export function Settings({ onResetToOnboarding }: SettingsProps) {
         <div className="flex items-center justify-between">
           <div>
             <p className="text-sm text-zec-text">Reset to Onboarding</p>
-            <p className="text-xs text-zec-muted">
-              Stops all processes and returns to the first-run setup screen.
-            </p>
+            <p className="text-[11px] text-zec-muted">Returns to the first-run setup screen.</p>
           </div>
           <button
             onClick={async () => {
               setResetting(true);
-              try {
-                await resetOnboarding();
-                onResetToOnboarding();
-              } catch {
-                setResetting(false);
-              }
+              try { await resetOnboarding(); onResetToOnboarding(); } catch { setResetting(false); }
             }}
             disabled={resetting}
-            className="text-xs px-3 py-1.5 rounded bg-zec-border text-zec-text hover:bg-zec-border/80 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="text-[11px] px-2.5 py-1 rounded-lg border border-zec-border text-zec-muted hover:text-zec-text disabled:opacity-40 transition-colors"
           >
             {resetting ? "Resetting..." : "Reset"}
           </button>
         </div>
+      </Section>
+    </div>
+  );
+}
+
+function Section({ title, action, children }: { title: string; action?: React.ReactNode; children: React.ReactNode }) {
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h3 className="text-xs font-medium text-zec-muted">{title}</h3>
+        {action}
+      </div>
+      <div className="border border-zec-border rounded-xl p-5 space-y-3">
+        {children}
       </div>
     </div>
   );
 }
 
-function Row({
-  label,
-  value,
-  mono,
-}: {
-  label: string;
-  value: string;
-  mono?: boolean;
-}) {
+function Row({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
   return (
     <div className="flex items-center justify-between">
       <span className="text-sm text-zec-muted">{label}</span>
-      <span
-        className={`text-sm text-zec-text ${mono ? "font-mono" : ""} truncate max-w-72`}
-        title={value}
-      >
+      <span className={`text-sm text-zec-text ${mono ? "font-mono text-xs" : ""} truncate max-w-64`} title={value}>
         {value}
       </span>
     </div>
+  );
+}
+
+function Toggle({ enabled, loading, onToggle }: { enabled: boolean; loading: boolean; onToggle: () => void }) {
+  return (
+    <button
+      onClick={onToggle}
+      role="switch"
+      aria-checked={enabled}
+      disabled={loading}
+      className={`relative w-9 h-5 rounded-full transition-colors ${
+        enabled ? "bg-zec-yellow" : "bg-zec-border"
+      } ${loading ? "opacity-40 cursor-not-allowed" : ""}`}
+    >
+      <span className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform duration-200 ${enabled ? "translate-x-4" : ""}`} />
+    </button>
   );
 }
 

@@ -1,51 +1,47 @@
 import { useNodeStatus } from "../../hooks/useNodeStatus";
+import { InfoTip } from "../shared/InfoTip";
 
 export function NetworkPanel() {
-  const nodeStatus = useNodeStatus();
-  const isRunning = nodeStatus.status === "running";
+  const ns = useNodeStatus();
+  const isRunning = ns.status === "running";
 
   return (
-    <div className="bg-zec-surface border border-zec-border rounded-lg p-6 space-y-4">
-      <h3 className="text-sm font-medium text-zec-muted uppercase tracking-wider">
-        Network
+    <div className="border border-zec-border rounded-xl p-5 space-y-4">
+      <h3 className="text-xs font-medium text-zec-muted flex items-center gap-1.5">
+        Network <InfoTip text="Your node connects to the peer-to-peer Zcash network to download and broadcast transactions. It communicates with other nodes worldwide." />
       </h3>
 
       <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          <span className="text-sm text-zec-muted">Network</span>
-          <span className="text-sm text-zec-text font-medium">Mainnet</span>
-        </div>
+        <Row
+          label="Peers"
+          value={isRunning ? String(ns.peerCount ?? 0) : "--"}
+          tip="Nodes your computer is directly connected to. They share blocks and transactions with you."
+        />
+        <Row
+          label="Chain"
+          value={isRunning ? (ns.chain ?? "main") : "--"}
+          tip="The Zcash network you're connected to. 'main' is the real network with real ZEC."
+        />
+        <Row
+          label="Status"
+          value={isRunning ? "Connected" : "Offline"}
+          dot={isRunning ? "bg-emerald-400" : "bg-zec-muted/40"}
+        />
+      </div>
+    </div>
+  );
+}
 
-        <div className="flex items-center justify-between">
-          <span className="text-sm text-zec-muted">Connected Peers</span>
-          <span className="text-sm text-zec-text font-medium tabular-nums">
-            {isRunning ? (nodeStatus.peerCount ?? 0) : "--"}
-          </span>
-        </div>
-
-        <div className="flex items-center justify-between">
-          <span className="text-sm text-zec-muted">Status</span>
-          <div className="flex items-center gap-2">
-            <span
-              className={`w-2 h-2 rounded-full ${
-                isRunning ? "bg-green-500" : "bg-zec-muted"
-              }`}
-            />
-            <span className="text-sm text-zec-text">
-              {isRunning ? "Connected" : "Disconnected"}
-            </span>
-          </div>
-        </div>
-
-        <div className="flex items-center justify-between">
-          <span className="text-sm text-zec-muted">P2P Port</span>
-          <span className="text-sm text-zec-text font-mono">8233</span>
-        </div>
-
-        <div className="flex items-center justify-between">
-          <span className="text-sm text-zec-muted">RPC Port</span>
-          <span className="text-sm text-zec-text font-mono">8232</span>
-        </div>
+function Row({ label, value, dot, tip }: { label: string; value: string; dot?: string; tip?: string }) {
+  return (
+    <div className="flex items-center justify-between">
+      <span className="text-sm text-zec-muted flex items-center gap-1.5">
+        {label}
+        {tip && <InfoTip text={tip} />}
+      </span>
+      <div className="flex items-center gap-2">
+        {dot && <span className={`w-1.5 h-1.5 rounded-full ${dot}`} />}
+        <span className="text-sm text-zec-text tabular-nums">{value}</span>
       </div>
     </div>
   );

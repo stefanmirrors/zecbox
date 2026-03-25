@@ -17,8 +17,16 @@ async fn update_tray_status(app_handle: &AppHandle, status: &NodeStatus) {
     if let Some(state) = app_handle.try_state::<AppState>() {
         if let Some(item) = state.tray_status.lock().await.as_ref() {
             let text = match status {
-                NodeStatus::Running { block_height, .. } => {
-                    format!("Block: {}", block_height)
+                NodeStatus::Running { block_height, sync_percentage, .. } => {
+                    if let Some(pct) = sync_percentage {
+                        if *pct < 99.9 {
+                            format!("Syncing: {:.1}% ({})", pct, block_height)
+                        } else {
+                            format!("Block: {}", block_height)
+                        }
+                    } else {
+                        format!("Block: {}", block_height)
+                    }
                 }
                 _ => format!("Status: {}", capitalize(status.status_str())),
             };
@@ -71,12 +79,22 @@ pub fn spawn_health_monitor(
             }
 
             match poll_zebrad(&client).await {
-                Ok((block_height, peer_count)) => {
+                Ok(poll_result) => {
                     consecutive_failures = 0;
 
+                    let sync_pct = poll_result.estimated_height.map(|est| {
+                        if est == 0 { 0.0 } else {
+                            ((poll_result.block_height as f64 / est as f64) * 100.0).min(100.0)
+                        }
+                    });
+
                     let new_status = NodeStatus::Running {
-                        block_height,
-                        peer_count,
+                        block_height: poll_result.block_height,
+                        peer_count: poll_result.peer_count,
+                        estimated_height: poll_result.estimated_height,
+                        best_block_hash: poll_result.best_block_hash,
+                        sync_percentage: sync_pct,
+                        chain: poll_result.chain,
                     };
 
                     {
@@ -90,6 +108,18 @@ pub fn spawn_health_monitor(
                     {
                         let mut backoff = node.backoff.lock().await;
                         backoff.mark_healthy();
+                    }
+
+                    // Update stats
+                    {
+                        let mut stats = node.stats.lock().await;
+                        let mut last_height = node.last_block_height.lock().await;
+                        stats.record_uptime_tick(POLL_INTERVAL.as_secs());
+                        stats.record_blocks(poll_result.block_height, *last_height);
+                        stats.update_streak();
+                        *last_height = poll_result.block_height;
+                        let data_dir = node.data_dir.lock().await.clone();
+                        stats.save(&data_dir);
                     }
                 }
                 Err(e) => {
@@ -203,7 +233,15 @@ pub fn spawn_health_monitor(
     })
 }
 
-async fn poll_zebrad(client: &reqwest::Client) -> Result<(u64, u32), String> {
+struct PollResult {
+    block_height: u64,
+    peer_count: u32,
+    estimated_height: Option<u64>,
+    best_block_hash: Option<String>,
+    chain: Option<String>,
+}
+
+async fn poll_zebrad(client: &reqwest::Client) -> Result<PollResult, String> {
     let body = json!({
         "jsonrpc": "2.0",
         "method": "getinfo",
@@ -245,5 +283,59 @@ async fn poll_zebrad(client: &reqwest::Client) -> Result<(u64, u32), String> {
         .and_then(|c| c.as_u64())
         .unwrap_or(0) as u32;
 
-    Ok((block_height, peer_count))
+    // Try to get blockchain info for sync progress
+    let (estimated_height, best_block_hash, chain) =
+        match poll_blockchain_info(client).await {
+            Ok(info) => info,
+            Err(_) => (None, None, None),
+        };
+
+    Ok(PollResult {
+        block_height,
+        peer_count,
+        estimated_height,
+        best_block_hash,
+        chain,
+    })
+}
+
+async fn poll_blockchain_info(
+    client: &reqwest::Client,
+) -> Result<(Option<u64>, Option<String>, Option<String>), String> {
+    let body = json!({
+        "jsonrpc": "2.0",
+        "method": "getblockchaininfo",
+        "params": [],
+        "id": 2
+    });
+
+    let resp = client
+        .post("http://127.0.0.1:8232")
+        .json(&body)
+        .send()
+        .await
+        .map_err(|e| e.to_string())?;
+
+    let json: serde_json::Value = resp
+        .json()
+        .await
+        .map_err(|e| e.to_string())?;
+
+    let result = json.get("result").ok_or("Missing result")?;
+
+    let estimated_height = result
+        .get("estimatedheight")
+        .and_then(|v| v.as_u64());
+
+    let best_block_hash = result
+        .get("bestblockhash")
+        .and_then(|v| v.as_str())
+        .map(String::from);
+
+    let chain = result
+        .get("chain")
+        .and_then(|v| v.as_str())
+        .map(String::from);
+
+    Ok((estimated_height, best_block_hash, chain))
 }

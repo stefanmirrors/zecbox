@@ -210,6 +210,7 @@ pub fn run() {
             commands::node::stop_node,
             commands::node::get_node_status,
             commands::node::rebuild_database,
+            commands::node::get_node_stats,
             commands::storage::get_volumes,
             commands::storage::get_storage_info,
             commands::storage::set_data_dir,

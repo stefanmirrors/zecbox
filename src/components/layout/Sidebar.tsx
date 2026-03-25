@@ -4,8 +4,6 @@ interface NavItem {
   id: View | string;
   label: string;
   icon: React.ReactNode;
-  disabled?: boolean;
-  comingSoon?: boolean;
 }
 
 interface Props {
@@ -18,11 +16,11 @@ const navItems: NavItem[] = [
     id: "dashboard",
     label: "Dashboard",
     icon: (
-      <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-        <rect x="1" y="1" width="7" height="7" rx="1" />
-        <rect x="10" y="1" width="7" height="7" rx="1" />
-        <rect x="1" y="10" width="7" height="7" rx="1" />
-        <rect x="10" y="10" width="7" height="7" rx="1" />
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="3" y="3" width="8" height="8" rx="2" />
+        <rect x="13" y="3" width="8" height="8" rx="2" />
+        <rect x="3" y="13" width="8" height="8" rx="2" />
+        <rect x="13" y="13" width="8" height="8" rx="2" />
       </svg>
     ),
   },
@@ -30,8 +28,8 @@ const navItems: NavItem[] = [
     id: "shield",
     label: "Shield Mode",
     icon: (
-      <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M9 1.5L2 4.5v4.5c0 4.1 3 7.3 7 8.5 4-1.2 7-4.4 7-8.5V4.5z" />
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M12 2L3 7v5c0 5.5 3.8 10.7 9 12 5.2-1.3 9-6.5 9-12V7z" />
       </svg>
     ),
   },
@@ -39,10 +37,10 @@ const navItems: NavItem[] = [
     id: "wallet",
     label: "Wallet Server",
     icon: (
-      <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-        <rect x="1.5" y="4" width="15" height="11" rx="2" />
-        <path d="M1.5 8h15" />
-        <circle cx="13" cy="11.5" r="1" />
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="2" y="5" width="20" height="15" rx="2" />
+        <path d="M2 10h20" />
+        <circle cx="17" cy="15" r="1.5" />
       </svg>
     ),
   },
@@ -50,10 +48,10 @@ const navItems: NavItem[] = [
     id: "logs",
     label: "Logs",
     icon: (
-      <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-        <polyline points="4 4 14 4" />
-        <polyline points="4 9 14 9" />
-        <polyline points="4 14 10 14" />
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M4 6h16" />
+        <path d="M4 12h16" />
+        <path d="M4 18h10" />
       </svg>
     ),
   },
@@ -61,26 +59,24 @@ const navItems: NavItem[] = [
     id: "settings",
     label: "Settings",
     icon: (
-      <svg width="18" height="18" viewBox="0 0 18 18" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-        <circle cx="9" cy="9" r="2.5" />
-        <path d="M7.5 1.5h3l.5 2.2a6 6 0 011.5.9l2.1-.7 1.5 2.6-1.6 1.5a6 6 0 010 1.8l1.6 1.5-1.5 2.6-2.1-.7a6 6 0 01-1.5.9l-.5 2.2h-3l-.5-2.2a6 6 0 01-1.5-.9l-2.1.7-1.5-2.6 1.6-1.5a6 6 0 010-1.8L1.9 6.5l1.5-2.6 2.1.7a6 6 0 011.5-.9z" />
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="12" cy="12" r="3" />
+        <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 01-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09a1.65 1.65 0 00-1.08-1.51 1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09a1.65 1.65 0 001.51-1.08 1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001.08 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9c.26.604.852.997 1.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1.08z" />
       </svg>
     ),
   },
 ];
 
-const comingSoonItems: NavItem[] = [];
-
 export function Sidebar({ activeView, onNavigate }: Props) {
   return (
-    <aside className="flex flex-col w-56 bg-zec-surface border-r border-zec-border h-screen shrink-0">
-      <div className="px-5 py-5">
-        <h1 className="text-xl font-bold text-zec-yellow tracking-tight">
+    <aside className="flex flex-col w-48 border-r border-zec-border h-screen shrink-0">
+      <div className="px-5 pt-6 pb-8">
+        <span className="text-lg font-semibold text-zec-yellow tracking-tight">
           zecbox
-        </h1>
+        </span>
       </div>
 
-      <nav className="flex-1 px-3 space-y-1" role="navigation" aria-label="Main">
+      <nav className="flex-1 px-3 space-y-0.5" role="navigation" aria-label="Main">
         {navItems.map((item) => {
           const isActive = activeView === item.id;
           return (
@@ -88,41 +84,24 @@ export function Sidebar({ activeView, onNavigate }: Props) {
               key={item.id}
               onClick={() => onNavigate(item.id as View)}
               aria-current={isActive ? "page" : undefined}
-              className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+              className={`relative w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13px] font-medium transition-colors ${
                 isActive
-                  ? "bg-zec-yellow/10 text-zec-yellow"
-                  : "text-zec-muted hover:text-zec-text hover:bg-zec-dark/50"
+                  ? "text-zec-yellow"
+                  : "text-zec-muted hover:text-zec-text"
               }`}
             >
-              <span aria-hidden="true">{item.icon}</span>
+              {isActive && (
+                <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-4 rounded-r-full bg-zec-yellow" />
+              )}
+              <span className="opacity-80" aria-hidden="true">{item.icon}</span>
               {item.label}
             </button>
           );
         })}
-
-        {comingSoonItems.length > 0 && (
-          <>
-            <div className="pt-4 pb-2">
-              <p className="px-3 text-xs text-zec-muted/60 uppercase tracking-wider">
-                Coming Soon
-              </p>
-            </div>
-
-            {comingSoonItems.map((item) => (
-              <div
-                key={item.id}
-                className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-zec-muted/40 cursor-default"
-              >
-                {item.icon}
-                {item.label}
-              </div>
-            ))}
-          </>
-        )}
       </nav>
 
-      <div className="px-5 py-4 border-t border-zec-border">
-        <p className="text-xs text-zec-muted/60">v0.1.0</p>
+      <div className="px-5 py-4">
+        <p className="text-[11px] text-zec-muted/40">v0.1.0</p>
       </div>
     </aside>
   );

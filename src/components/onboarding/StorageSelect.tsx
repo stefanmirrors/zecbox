@@ -19,7 +19,6 @@ export function StorageSelect({ onSelect }: Props) {
     getVolumes()
       .then((vols) => {
         setVolumes(vols);
-        // Pre-select the recommended volume
         const recommended = findRecommended(vols);
         if (recommended) {
           setSelected(recommended.mountPoint);
@@ -37,8 +36,8 @@ export function StorageSelect({ onSelect }: Props) {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
-        <p className="text-zec-muted text-lg">Scanning volumes...</p>
+      <div className="flex min-h-[90vh] items-center justify-center">
+        <p className="text-zec-muted">Scanning volumes...</p>
       </div>
     );
   }
@@ -46,18 +45,16 @@ export function StorageSelect({ onSelect }: Props) {
   const recommended = findRecommended(volumes);
 
   return (
-    <div className="flex min-h-screen items-center justify-center px-6">
-      <div className="w-full max-w-lg space-y-6">
+    <div className="flex min-h-[90vh] items-center justify-center px-6">
+      <div className="w-full max-w-md space-y-8">
         <div className="text-center space-y-2">
-          <h2 className="text-3xl font-bold text-zec-text">
-            Choose Storage Location
-          </h2>
-          <p className="text-zec-muted">
-            The Zcash blockchain requires approximately 300 GB of disk space.
+          <h2 className="text-2xl font-bold text-zec-text">Storage</h2>
+          <p className="text-sm text-zec-muted">
+            The Zcash blockchain needs about 300 GB of disk space.
           </p>
         </div>
 
-        <div className="space-y-3">
+        <div className="space-y-2">
           {volumes.map((vol) => {
             const isRecommended =
               recommended?.mountPoint === vol.mountPoint;
@@ -72,49 +69,44 @@ export function StorageSelect({ onSelect }: Props) {
                 key={vol.mountPoint}
                 disabled={tooSmall}
                 onClick={() => setSelected(vol.mountPoint)}
-                className={`w-full text-left p-4 rounded-lg border transition-all ${
+                className={`w-full text-left p-4 rounded-xl border transition-all ${
                   tooSmall
-                    ? "border-zec-border opacity-40 cursor-not-allowed"
+                    ? "border-zec-border/50 opacity-30 cursor-not-allowed"
                     : isSelected
-                      ? "border-zec-yellow ring-2 ring-zec-yellow bg-zec-surface"
-                      : "border-zec-border bg-zec-surface hover:border-zec-muted"
+                      ? "border-zec-yellow/60 bg-zec-yellow/5"
+                      : "border-zec-border hover:border-zec-border hover:bg-zec-surface-hover"
                 }`}
               >
-                <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">
-                    <span className="font-semibold text-zec-text">
+                    <span className="font-medium text-sm text-zec-text">
                       {vol.name || vol.mountPoint}
                     </span>
                     {vol.isRemovable && (
-                      <span className="text-xs px-2 py-0.5 rounded bg-zec-border text-zec-muted">
+                      <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-zec-border/50 text-zec-muted">
                         External
                       </span>
                     )}
                     {isRecommended && (
-                      <span className="text-xs px-2 py-0.5 rounded bg-zec-yellow/20 text-zec-yellow font-medium">
+                      <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-zec-yellow/10 text-zec-yellow">
                         Recommended
                       </span>
                     )}
                   </div>
                   {tooSmall && (
-                    <span className="text-xs text-red-400">Too small</span>
+                    <span className="text-[10px] text-red-400/80">Too small</span>
                   )}
                 </div>
 
-                <p className="text-sm text-zec-muted mb-2">
-                  {vol.mountPoint}
-                </p>
-
                 <div className="flex items-center gap-3">
-                  <div className="flex-1 h-2 rounded-full bg-zec-border overflow-hidden">
+                  <div className="flex-1 h-1 rounded-full bg-zec-border overflow-hidden">
                     <div
-                      className="h-full rounded-full bg-zec-muted"
+                      className="h-full rounded-full bg-zec-muted/40"
                       style={{ width: `${usedPercent}%` }}
                     />
                   </div>
-                  <span className="text-xs text-zec-muted whitespace-nowrap">
-                    {formatBytes(vol.availableBytes)} free of{" "}
-                    {formatBytes(vol.totalBytes)}
+                  <span className="text-[11px] text-zec-muted whitespace-nowrap">
+                    {formatBytes(vol.availableBytes)} free
                   </span>
                 </div>
               </button>
@@ -123,7 +115,7 @@ export function StorageSelect({ onSelect }: Props) {
         </div>
 
         {volumes.length === 0 && (
-          <p className="text-center text-red-400">
+          <p className="text-center text-sm text-red-400/80">
             No suitable storage volumes found.
           </p>
         )}
@@ -131,10 +123,10 @@ export function StorageSelect({ onSelect }: Props) {
         <button
           onClick={handleContinue}
           disabled={!selected}
-          className={`w-full py-3 rounded-lg font-semibold text-lg transition-all ${
+          className={`w-full py-3.5 rounded-xl font-semibold transition-all ${
             selected
               ? "bg-zec-yellow text-zec-dark hover:brightness-110"
-              : "bg-zec-border text-zec-muted cursor-not-allowed"
+              : "bg-zec-border/50 text-zec-muted cursor-not-allowed"
           }`}
         >
           Continue
@@ -149,7 +141,6 @@ function findRecommended(volumes: Volume[]): Volume | undefined {
     .filter((v) => v.availableBytes >= MIN_RECOMMENDED_BYTES)
     .sort((a, b) => b.availableBytes - a.availableBytes);
   if (suitable.length > 0) return suitable[0];
-  // Fallback: largest volume with at least minimum usable space
   return volumes
     .filter((v) => v.availableBytes >= MIN_USABLE_BYTES)
     .sort((a, b) => b.availableBytes - a.availableBytes)[0];

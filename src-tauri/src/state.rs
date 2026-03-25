@@ -3,6 +3,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Instant;
 
+use chrono::{NaiveDate, Utc};
 use serde::{Deserialize, Serialize};
 use tokio::sync::Mutex;
 use tokio::task::JoinHandle;
@@ -91,16 +92,21 @@ pub struct NodeState {
     pub log_buffer: Mutex<VecDeque<String>>,
     pub data_dir: Mutex<PathBuf>,
     pub backoff: Mutex<BackoffState>,
+    pub stats: Mutex<NodeStats>,
+    pub last_block_height: Mutex<u64>,
 }
 
 impl NodeState {
     pub fn new(data_dir: PathBuf) -> Self {
+        let stats = NodeStats::load(&data_dir);
         Self {
             status: Mutex::new(NodeStatus::Stopped),
             process: Mutex::new(None),
             health_task: Mutex::new(None),
             log_reader_tasks: Mutex::new(Vec::new()),
             log_buffer: Mutex::new(VecDeque::with_capacity(LOG_BUFFER_CAPACITY)),
+            stats: Mutex::new(stats),
+            last_block_height: Mutex::new(0),
             data_dir: Mutex::new(data_dir),
             backoff: Mutex::new(BackoffState::default()),
         }
@@ -116,6 +122,10 @@ pub enum NodeStatus {
     Running {
         block_height: u64,
         peer_count: u32,
+        estimated_height: Option<u64>,
+        best_block_hash: Option<String>,
+        sync_percentage: Option<f64>,
+        chain: Option<String>,
     },
     Stopping,
     Error {
@@ -327,6 +337,90 @@ impl UpdateState {
             status: Mutex::new(UpdateStatus::Idle),
             available_updates: Mutex::new(Vec::new()),
             check_task: Mutex::new(None),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct NodeStats {
+    pub total_uptime_secs: u64,
+    pub blocks_validated: u64,
+    pub wallets_served: u64,
+    pub current_streak_days: u32,
+    pub best_streak_days: u32,
+    pub last_online_date: Option<String>,
+    pub first_started: Option<String>,
+}
+
+impl Default for NodeStats {
+    fn default() -> Self {
+        Self {
+            total_uptime_secs: 0,
+            blocks_validated: 0,
+            wallets_served: 0,
+            current_streak_days: 0,
+            best_streak_days: 0,
+            last_online_date: None,
+            first_started: None,
+        }
+    }
+}
+
+impl NodeStats {
+    pub fn load(data_dir: &PathBuf) -> Self {
+        let path = data_dir.join("config").join("node_stats.json");
+        match std::fs::read_to_string(&path) {
+            Ok(s) => serde_json::from_str(&s).unwrap_or_default(),
+            Err(_) => Self::default(),
+        }
+    }
+
+    pub fn save(&self, data_dir: &PathBuf) {
+        let config_dir = data_dir.join("config");
+        let _ = std::fs::create_dir_all(&config_dir);
+        let path = config_dir.join("node_stats.json");
+        if let Ok(json) = serde_json::to_string_pretty(self) {
+            let _ = std::fs::write(path, json);
+        }
+    }
+
+    pub fn record_uptime_tick(&mut self, secs: u64) {
+        self.total_uptime_secs += secs;
+    }
+
+    pub fn record_blocks(&mut self, new_height: u64, prev_height: u64) {
+        if new_height > prev_height {
+            self.blocks_validated += new_height - prev_height;
+        }
+    }
+
+    pub fn update_streak(&mut self) {
+        let today = Utc::now().format("%Y-%m-%d").to_string();
+        match &self.last_online_date {
+            Some(last) if *last == today => {}
+            Some(last) => {
+                if let Ok(last_date) = NaiveDate::parse_from_str(last, "%Y-%m-%d") {
+                    let today_date = Utc::now().date_naive();
+                    let diff = (today_date - last_date).num_days();
+                    if diff == 1 {
+                        self.current_streak_days += 1;
+                    } else if diff > 1 {
+                        self.current_streak_days = 1;
+                    }
+                }
+                self.last_online_date = Some(today);
+            }
+            None => {
+                self.current_streak_days = 1;
+                self.last_online_date = Some(today);
+                if self.first_started.is_none() {
+                    self.first_started = Some(Utc::now().to_rfc3339());
+                }
+            }
+        }
+        if self.current_streak_days > self.best_streak_days {
+            self.best_streak_days = self.current_streak_days;
         }
     }
 }

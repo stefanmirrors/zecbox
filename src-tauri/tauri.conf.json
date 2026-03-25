@@ -13,10 +13,10 @@
     "windows": [
       {
         "title": "zecbox",
-        "width": 1024,
-        "height": 700,
-        "minWidth": 800,
-        "minHeight": 600,
+        "width": 1200,
+        "height": 800,
+        "minWidth": 900,
+        "minHeight": 650,
         "center": true,
         "decorations": true
       }

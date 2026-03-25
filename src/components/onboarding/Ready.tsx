@@ -23,35 +23,33 @@ export function Ready({ selectedPath, onComplete }: Props) {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center px-6">
-      <div className="max-w-md w-full text-center space-y-8">
+    <div className="flex min-h-[90vh] items-center justify-center px-6">
+      <div className="max-w-sm w-full text-center space-y-10">
         <div className="space-y-2">
-          <h2 className="text-3xl font-bold text-zec-text">Ready to Go</h2>
-          <p className="text-zec-muted">
-            Your node will begin syncing the Zcash blockchain. This may take
+          <h2 className="text-2xl font-bold text-zec-text">Ready</h2>
+          <p className="text-sm text-zec-muted">
+            Your node will begin syncing the Zcash blockchain. This can take
             several hours depending on your connection.
           </p>
         </div>
 
-        <div className="bg-zec-surface border border-zec-border rounded-lg p-4 text-left space-y-2">
-          <div className="flex justify-between">
-            <span className="text-zec-muted text-sm">Storage</span>
-            <span className="text-zec-text text-sm font-medium">
-              {selectedPath}
-            </span>
-          </div>
+        <div className="border border-zec-border rounded-xl p-4 text-left">
+          <span className="text-xs text-zec-muted">Storage location</span>
+          <p className="text-sm text-zec-text font-mono mt-1 break-all">
+            {selectedPath}
+          </p>
         </div>
 
         {error && (
-          <p className="text-sm text-red-400">{error}</p>
+          <p className="text-sm text-red-400/80">{error}</p>
         )}
 
         <button
           onClick={handleStart}
           disabled={loading}
-          className={`w-full py-3 rounded-lg font-semibold text-lg transition-all ${
+          className={`w-full py-3.5 rounded-xl font-semibold transition-all ${
             loading
-              ? "bg-zec-border text-zec-muted cursor-not-allowed"
+              ? "bg-zec-border/50 text-zec-muted cursor-not-allowed"
               : "bg-zec-yellow text-zec-dark hover:brightness-110"
           }`}
         >
