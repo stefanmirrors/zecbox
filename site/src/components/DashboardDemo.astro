@@ -3,8 +3,8 @@
 
 <section class="py-20 px-6" aria-label="Interactive demo">
   <div class="text-center mb-10">
-    <h2 class="text-3xl sm:text-4xl font-bold text-zec-text mb-3" style="font-family: 'Montserrat', sans-serif;">See it in action</h2>
-    <p class="text-zec-muted text-lg">Click Start Node to watch it boot up</p>
+    <h2 class="text-4xl sm:text-5xl font-black text-zec-text mb-3" style="font-family: 'Montserrat', sans-serif;">See It in Action</h2>
+    <p class="text-zec-muted text-lg leading-relaxed">Click Start Node to watch it boot up</p>
   </div>
 
   <div id="demo-frame" class="max-w-[1100px] mx-auto rounded-2xl border border-zec-border shadow-2xl overflow-hidden bg-zec-dark">
@@ -19,7 +19,7 @@
       <div class="w-[52px]"></div>
     </div>
 
-    <div class="flex h-screen bg-zec-dark overflow-hidden" style="max-height:540px;">
+    <div class="flex bg-zec-dark overflow-hidden" style="height:700px;">
       <!-- Sidebar: copied from Sidebar.tsx -->
       <aside class="hidden sm:flex flex-col w-48 border-r border-zec-border h-full shrink-0">
         <div class="px-5 pt-6 pb-8">
@@ -60,15 +60,15 @@
       <!-- Main: copied from AppShell.tsx layout -->
       <div class="flex-1 flex flex-col min-w-0">
         <!-- TitleBar: copied from TitleBar.tsx -->
-        <div class="h-10 flex items-center px-6 shrink-0 select-none">
+        <div class="h-8 flex items-center px-6 shrink-0 select-none">
           <h2 id="demo-title" class="text-xs font-medium text-zec-muted/50">Dashboard</h2>
         </div>
-        <main class="flex-1 overflow-y-auto px-8 py-6">
+        <main class="flex-1 overflow-hidden px-6 py-4">
           <!-- Dashboard view: copied from Dashboard.tsx layout -->
-          <div id="demo-dashboard" class="space-y-6">
+          <div id="demo-dashboard" class="space-y-3">
 
             <!-- NodeStatus: copied from NodeStatus.tsx -->
-            <div class="border border-zec-border rounded-xl p-6 space-y-5">
+            <div class="border border-zec-border rounded-xl p-5">
               <div class="flex items-center justify-between">
                 <div class="flex items-center gap-2.5">
                   <span id="demo-dot" class="w-2 h-2 rounded-full bg-zec-muted/50"></span>
@@ -97,7 +97,7 @@
               </div>
 
               <!-- UnifiedProgress: copied from UnifiedProgress -->
-              <div id="demo-progress" class="hidden space-y-4">
+              <div id="demo-progress" class="hidden mt-4 space-y-4">
                 <div class="space-y-2">
                   <div class="flex items-baseline justify-between">
                     <span id="demo-pct" class="text-3xl font-bold text-zec-text tabular-nums">0%</span>
@@ -133,14 +133,14 @@
               </div>
 
               <!-- Synced: copied from NodeStatus isSynced block -->
-              <div id="demo-synced" class="hidden space-y-4">
+              <div id="demo-synced" class="hidden mt-4 space-y-3">
                 <div class="flex items-center gap-8">
                   <div>
-                    <p class="text-xs text-zec-muted mb-1 flex items-center gap-1.5">Block Height <span class="inline-flex"><span class="itip">?</span></span></p>
+                    <p class="text-xs text-zec-muted mb-0 flex items-center gap-1.5">Block Height <span class="inline-flex"><span class="itip">?</span></span></p>
                     <p class="text-2xl font-bold text-zec-text tabular-nums">3,304,456</p>
                   </div>
                   <div>
-                    <p class="text-xs text-zec-muted mb-1 flex items-center gap-1.5">Peers <span class="inline-flex"><span class="itip">?</span></span></p>
+                    <p class="text-xs text-zec-muted mb-0 flex items-center gap-1.5">Peers <span class="inline-flex"><span class="itip">?</span></span></p>
                     <p class="text-2xl font-bold text-zec-text tabular-nums">8</p>
                   </div>
                 </div>
@@ -153,27 +153,27 @@
             </div>
 
             <!-- NodeStatsPanel: copied from NodeStatsPanel.tsx -->
-            <div id="demo-stats" class="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <div class="border border-zec-border rounded-xl p-4">
-                <p class="text-xs text-zec-muted flex items-center gap-1.5 mb-2">Uptime <span class="inline-flex"><span class="itip">?</span></span></p>
-                <p class="text-xl font-bold text-zec-text tabular-nums">2h 6m</p>
+            <div id="demo-stats" class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              <div class="border border-zec-border rounded-lg px-3 py-1.5">
+                <p class="text-[10px] text-zec-muted flex items-center gap-1 mb-0.5">Uptime <span class="inline-flex"><span class="itip">?</span></span></p>
+                <p class="text-sm font-bold text-zec-text tabular-nums">2h 6m</p>
               </div>
-              <div class="border border-zec-border rounded-xl p-4">
-                <p class="text-xs text-zec-muted flex items-center gap-1.5 mb-2">Blocks Verified <span class="inline-flex"><span class="itip">?</span></span></p>
-                <p class="text-xl font-bold text-zec-text tabular-nums">215.6M</p>
+              <div class="border border-zec-border rounded-lg px-3 py-1.5">
+                <p class="text-[10px] text-zec-muted flex items-center gap-1 mb-0.5">Blocks Verified <span class="inline-flex"><span class="itip">?</span></span></p>
+                <p class="text-sm font-bold text-zec-text tabular-nums">215.6M</p>
               </div>
-              <div class="border border-zec-border rounded-xl p-4">
-                <p class="text-xs text-zec-muted flex items-center gap-1.5 mb-2">Streak <span class="inline-flex"><span class="itip">?</span></span></p>
-                <p class="text-xl font-bold text-zec-text tabular-nums">1d</p>
+              <div class="border border-zec-border rounded-lg px-3 py-1.5">
+                <p class="text-[10px] text-zec-muted flex items-center gap-1 mb-0.5">Streak <span class="inline-flex"><span class="itip">?</span></span></p>
+                <p class="text-sm font-bold text-zec-text tabular-nums">1d</p>
               </div>
-              <div class="border border-zec-border rounded-xl p-4">
-                <p class="text-xs text-zec-muted flex items-center gap-1.5 mb-2">Wallets Served <span class="inline-flex"><span class="itip">?</span></span></p>
-                <p class="text-xl font-bold text-zec-text tabular-nums">0</p>
+              <div class="border border-zec-border rounded-lg px-3 py-1.5">
+                <p class="text-[10px] text-zec-muted flex items-center gap-1 mb-0.5">Wallets Served <span class="inline-flex"><span class="itip">?</span></span></p>
+                <p class="text-sm font-bold text-zec-text tabular-nums">0</p>
               </div>
             </div>
 
             <!-- StorageBar: copied from StorageBar.tsx -->
-            <div class="border border-zec-border rounded-xl px-5 py-3 space-y-2">
+            <div class="border border-zec-border rounded-lg px-4 py-2 space-y-1.5">
               <div class="flex items-center justify-between">
                 <span class="text-xs text-zec-muted flex items-center gap-1.5">Storage <span class="inline-flex"><span class="itip">?</span></span></span>
                 <span class="text-xs text-zec-muted tabular-nums">772.5 GB free of 994.7 GB</span>
@@ -184,7 +184,7 @@
             </div>
 
             <!-- LiveLogPreview: copied from LiveLogPreview.tsx -->
-            <div id="demo-logs-panel" class="border border-zec-border rounded-xl p-4 space-y-3">
+            <div id="demo-logs-panel" class="border border-zec-border rounded-lg px-4 py-2.5 space-y-2">
               <div class="flex items-center justify-between">
                 <h3 class="text-xs font-medium text-zec-muted">Live Activity</h3>
                 <button class="text-[11px] text-zec-muted/50 hover:text-zec-yellow transition-colors">View all logs →</button>
@@ -216,6 +216,17 @@
 
 <style is:global>
   @layer base {
+    #demo-frame p,
+    #demo-frame h2,
+    #demo-frame h3,
+    #demo-frame div,
+    #demo-frame span,
+    #demo-frame nav,
+    #demo-frame aside,
+    #demo-frame main,
+    #demo-frame section {
+      margin: 0;
+    }
     #demo-frame button {
       appearance: none;
       background: transparent;

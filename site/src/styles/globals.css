@@ -14,6 +14,10 @@ html {
   scroll-behavior: smooth;
 }
 
+#site-nav a {
+  text-decoration: none;
+}
+
 body {
   background-color: var(--color-zec-dark);
   color: var(--color-zec-text);
