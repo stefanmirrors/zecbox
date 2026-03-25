@@ -7,18 +7,12 @@ pub fn generate_zebrad_toml(data_dir: &Path, shield_mode: bool) -> String {
     let cache_dir = data_dir.join("zebra");
 
     if shield_mode {
-        // Shield Mode: use only IP-based seed peers to prevent DNS leaks.
-        // All TCP 8233 traffic is PF-redirected through Tor, so peer discovery
-        // will happen over Tor. No hostname resolution occurs.
         format!(
             r#"[consensus]
 checkpoint_sync = true
 
 [mempool]
 eviction_memory_time = "1h"
-
-[mining]
-miner_address = ""
 
 [network]
 network = "Mainnet"
@@ -30,9 +24,6 @@ listen_addr = "127.0.0.1:8232"
 
 [state]
 cache_dir = "{cache_dir}"
-
-[tracing]
-progress_bar = "never"
 "#,
             cache_dir = cache_dir.display()
         )
@@ -44,9 +35,6 @@ checkpoint_sync = true
 [mempool]
 eviction_memory_time = "1h"
 
-[mining]
-miner_address = ""
-
 [network]
 network = "Mainnet"
 listen_addr = "0.0.0.0:8233"
@@ -56,9 +44,6 @@ listen_addr = "127.0.0.1:8232"
 
 [state]
 cache_dir = "{cache_dir}"
-
-[tracing]
-progress_bar = "never"
 "#,
             cache_dir = cache_dir.display()
         )
