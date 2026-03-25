@@ -1,5 +1,6 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { useNodeStatus } from "../../hooks/useNodeStatus";
+import { useShieldMode } from "../../hooks/useShieldMode";
 import { startNode, stopNode } from "../../lib/tauri";
 import { InfoTip } from "../shared/InfoTip";
 
@@ -10,8 +11,24 @@ export function NodeStatus() {
   const isSynced = isRunning && ns.syncPercentage != null && ns.syncPercentage >= 99.9;
   const isStarting = ns.status === "starting";
   const isBusy = isStarting || ns.status === "stopping";
+  const shield = useShieldMode();
   const [toggling, setToggling] = useState(false);
   const [toggleError, setToggleError] = useState<string | null>(null);
+  const [showCongrats, setShowCongrats] = useState(false);
+  const wasSyncing = useRef(false);
+
+  useEffect(() => {
+    if (isSyncing || isStarting) wasSyncing.current = true;
+    if (isSynced && wasSyncing.current) {
+      wasSyncing.current = false;
+      const shown = sessionStorage.getItem("zecbox_congrats_shown_session");
+      if (!shown) {
+        setShowCongrats(true);
+        localStorage.setItem("zecbox_congrats_shown", "1");
+        sessionStorage.setItem("zecbox_congrats_shown_session", "1");
+      }
+    }
+  }, [isSyncing, isSynced, isStarting]);
 
   const handleToggle = async () => {
     setToggleError(null);
@@ -49,25 +66,46 @@ export function NodeStatus() {
             {ns.status === "error" ? "Error" : ns.status}
           </span>
         </div>
-        <button
-          onClick={handleToggle}
-          disabled={isBusy || toggling}
-          className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-            isBusy || toggling
-              ? "bg-zec-border/50 text-zec-muted cursor-not-allowed"
+        <div className="flex items-center gap-4">
+          {/* Feature toggles */}
+          {isRunning && (
+            <>
+              <MiniToggle
+                label="Shield"
+                tip="Route all node traffic through Tor for maximum privacy."
+                enabled={shield.status.enabled}
+                loading={shield.toggling || shield.status.status === "bootstrapping"}
+                onToggle={shield.toggle}
+              />
+              <MiniToggle
+                label="Wallet"
+                tip="Serve light wallets via gRPC so mobile wallets can connect to your node."
+                enabled={false}
+                disabled
+              />
+              <div className="w-px h-5 bg-zec-border" />
+            </>
+          )}
+          <button
+            onClick={handleToggle}
+            disabled={isBusy || toggling}
+            className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+              isBusy || toggling
+                ? "bg-zec-border/50 text-zec-muted cursor-not-allowed"
+                : isRunning
+                  ? "border border-zec-border text-zec-muted hover:text-zec-text hover:border-red-400/50"
+                  : "bg-zec-yellow text-zec-dark hover:brightness-110"
+            }`}
+          >
+            {isBusy || toggling
+              ? ns.status === "starting" || (!isRunning && toggling)
+                ? "Starting..."
+                : "Stopping..."
               : isRunning
-                ? "border border-zec-border text-zec-muted hover:text-zec-text hover:border-red-400/50"
-                : "bg-zec-yellow text-zec-dark hover:brightness-110"
-          }`}
-        >
-          {isBusy || toggling
-            ? ns.status === "starting" || (!isRunning && toggling)
-              ? "Starting..."
-              : "Stopping..."
-            : isRunning
-              ? "Stop"
-              : "Start Node"}
-        </button>
+                ? "Stop"
+                : "Start Node"}
+          </button>
+        </div>
       </div>
 
       {/* Unified progress: startup steps → sync */}
@@ -147,6 +185,39 @@ export function NodeStatus() {
       {toggleError && (
         <p className="text-sm text-red-400/80">{toggleError}</p>
       )}
+
+      {showCongrats && <CongratsOverlay onClose={() => setShowCongrats(false)} />}
+    </div>
+  );
+}
+
+function CongratsOverlay({ onClose }: { onClose: () => void }) {
+  return (
+    <div
+      className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <div
+        className="max-w-md mx-4 bg-zec-dark border border-zec-yellow/30 rounded-2xl p-8 text-center space-y-5 shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="text-5xl">🛡️</div>
+        <h2 className="text-2xl font-bold text-zec-text">Your node is fully synced</h2>
+        <p className="text-sm text-zec-muted leading-relaxed">
+          You're now running a full Zcash node. Every transaction on the network
+          is being verified by your computer — no trust required. You're strengthening
+          the privacy and decentralization of the entire Zcash network.
+        </p>
+        <p className="text-xs text-zec-muted/60 leading-relaxed">
+          Every full node makes the network stronger and more private for everyone.
+        </p>
+        <button
+          onClick={onClose}
+          className="px-6 py-2.5 rounded-lg bg-zec-yellow text-zec-dark font-semibold hover:brightness-110 transition-all"
+        >
+          Let's go
+        </button>
+      </div>
     </div>
   );
 }
@@ -261,3 +332,47 @@ function UnifiedProgress({
     </div>
   );
 }
+
+function MiniToggle({
+  label,
+  tip,
+  enabled,
+  disabled,
+  loading,
+  onToggle,
+}: {
+  label: string;
+  tip: string;
+  enabled: boolean;
+  disabled?: boolean;
+  loading?: boolean;
+  onToggle?: () => void;
+}) {
+  return (
+    <div className={`flex items-center gap-2 ${disabled ? "opacity-40" : ""}`}>
+      <span className="text-xs text-zec-muted flex items-center gap-1">
+        {label}
+        <InfoTip text={tip} />
+      </span>
+      <button
+        onClick={onToggle}
+        role="switch"
+        aria-label={`Toggle ${label}`}
+        aria-checked={enabled}
+        disabled={disabled || loading}
+        className={`relative w-7 h-4 rounded-full transition-colors shrink-0 ${
+          disabled || loading
+            ? loading ? "bg-zec-yellow/20 cursor-wait" : "bg-zec-border/50 cursor-not-allowed"
+            : enabled ? "bg-emerald-400" : "bg-zec-border hover:bg-zec-muted/20"
+        }`}
+      >
+        <span
+          className={`absolute top-0.5 left-0.5 w-3 h-3 rounded-full bg-white transition-transform duration-200 ${
+            enabled ? "translate-x-3" : ""
+          }`}
+        />
+      </button>
+    </div>
+  );
+}
+

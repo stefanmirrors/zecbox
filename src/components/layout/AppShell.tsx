@@ -52,7 +52,7 @@ export function AppShell({ onResetToOnboarding }: AppShellProps) {
             visible ? "opacity-100" : "opacity-0"
           }`}
         >
-          {activeView === "dashboard" && <Dashboard />}
+          {activeView === "dashboard" && <Dashboard onNavigate={handleNavigate} />}
           {activeView === "shield" && <ShieldMode />}
           {activeView === "wallet" && <WalletServer />}
           {activeView === "logs" && <LogViewer />}

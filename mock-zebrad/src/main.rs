@@ -127,7 +127,7 @@ async fn main() {
         sleep(Duration::from_secs(1)).await;
 
         // Stage 7: Checkpoints (simulate with rising block heights)
-        let checkpoints = [1200, 4800, 12000, 24000, 48000, 96000, 192000, 384000, 600000, 900000, 1200000, 1600000, 2000000];
+        let checkpoints = [1200, 12000, 96000, 384000, 900000, 1600000, 2400000, 3000000, 3200000];
         for &height in &checkpoints {
             BLOCK_HEIGHT.store(height, Ordering::Relaxed);
             eprintln!(
@@ -139,7 +139,7 @@ async fn main() {
                 "INFO zebrad::components::sync::progress: estimated progress to chain tip sync_percent={:.3}% current_height=Height({}) remaining_sync_blocks={}",
                 pct, height, 3_300_000u64.saturating_sub(height)
             );
-            sleep(Duration::from_secs(8)).await;
+            sleep(Duration::from_secs(3)).await;
         }
 
         // Stage 8: Fully synced
