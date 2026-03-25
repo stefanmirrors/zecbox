@@ -9,15 +9,15 @@ import Footer from "../components/Footer.astro";
 
 <Base>
   <nav id="site-nav" class="fixed top-0 left-0 right-0 z-50 border-b border-zec-border backdrop-blur-md" style="background:rgba(13,17,23,0.85);">
-    <div class="flex items-center px-6 py-2">
-      <a href="#" class="flex items-center gap-2 mr-8 no-underline">
-        <img src="/zecbox-icon.png" alt="" class="w-6 h-6" />
-        <span class="text-sm font-semibold text-zec-yellow tracking-tight" style="font-family:'Montserrat',sans-serif;">zecbox</span>
+    <div class="flex items-center px-4 sm:px-6 py-2">
+      <a href="#" class="flex items-center gap-2 mr-4 sm:mr-8 no-underline shrink-0">
+        <img src="/zecbox-icon.png" alt="" class="w-5 h-5 sm:w-6 sm:h-6" />
+        <span class="hidden sm:inline text-sm font-semibold text-zec-yellow tracking-tight" style="font-family:'Montserrat',sans-serif;">zecbox</span>
       </a>
-      <div class="flex items-center gap-1">
-        <a href="#how-it-works" class="site-tab px-4 py-1.5 rounded-lg text-sm font-medium text-zec-muted hover:text-zec-text transition-colors no-underline">How it works</a>
-        <a href="#app-demo" class="site-tab px-4 py-1.5 rounded-lg text-sm font-medium text-zec-muted hover:text-zec-text transition-colors no-underline">App demo</a>
-        <a href="#" class="site-tab px-4 py-1.5 rounded-lg text-sm font-medium text-zec-muted hover:text-zec-text transition-colors no-underline">Downloads</a>
+      <div class="flex items-center flex-1 gap-0">
+        <a href="#how-it-works" class="site-tab flex-1 text-center px-1 sm:px-4 py-1.5 rounded-lg text-xs sm:text-sm font-medium text-zec-muted hover:text-zec-text transition-colors no-underline whitespace-nowrap">How it works</a>
+        <a href="#app-demo" class="site-tab flex-1 text-center px-1 sm:px-4 py-1.5 rounded-lg text-xs sm:text-sm font-medium text-zec-muted hover:text-zec-text transition-colors no-underline whitespace-nowrap">App demo</a>
+        <a href="#" class="site-tab flex-1 text-center px-1 sm:px-4 py-1.5 rounded-lg text-xs sm:text-sm font-medium text-zec-muted hover:text-zec-text transition-colors no-underline whitespace-nowrap">Downloads</a>
       </div>
     </div>
   </nav>
@@ -35,11 +35,11 @@ import Footer from "../components/Footer.astro";
     const sections = [document.getElementById('how-it-works'), document.getElementById('app-demo')];
     function updateActive() {
       const y = window.scrollY + 80;
-      let active = 0;
+      let active = -1;
       sections.forEach((s, i) => { if (s && s.offsetTop <= y) active = i; });
       tabs.forEach((t, i) => {
-        if (i === active) { t.className = 'site-tab px-4 py-1.5 rounded-lg text-sm font-medium text-zec-yellow transition-colors'; }
-        else { t.className = 'site-tab px-4 py-1.5 rounded-lg text-sm font-medium text-zec-muted hover:text-zec-text transition-colors'; }
+        if (i === active) { t.className = 'site-tab flex-1 text-center px-1 sm:px-4 py-1.5 rounded-lg text-xs sm:text-sm font-medium text-zec-yellow transition-colors no-underline whitespace-nowrap'; }
+        else { t.className = 'site-tab flex-1 text-center px-1 sm:px-4 py-1.5 rounded-lg text-xs sm:text-sm font-medium text-zec-muted hover:text-zec-text transition-colors no-underline whitespace-nowrap'; }
       });
     }
     window.addEventListener('scroll', updateActive);
