@@ -16,7 +16,7 @@ jobs:
           - runner: macos-14
             arch: aarch64
             triple: aarch64-apple-darwin
-          - runner: macos-13
+          - runner: macos-14
             arch: x86_64
             triple: x86_64-apple-darwin
     runs-on: ${{ matrix.runner }}
@@ -24,6 +24,8 @@ jobs:
       - uses: actions/checkout@v4
 
       - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.triple }}
 
       - uses: Swatinem/rust-cache@v2
         with:
@@ -43,26 +45,26 @@ jobs:
 
       - name: Build firewall helper
         run: |
-          cargo build -p firewall-helper --release
-          cp target/release/zecbox-firewall-helper src-tauri/binaries/zecbox-firewall-helper-${{ matrix.triple }}
+          cargo build -p firewall-helper --release --target ${{ matrix.triple }}
+          cp target/${{ matrix.triple }}/release/zecbox-firewall-helper src-tauri/binaries/zecbox-firewall-helper-${{ matrix.triple }}
           chmod +x src-tauri/binaries/zecbox-firewall-helper-${{ matrix.triple }}
 
       - name: Build app
-        run: npx tauri build
+        run: npx tauri build --target ${{ matrix.triple }}
 
       - name: Find DMG
         id: dmg
         run: |
-          DMG_PATH=$(find target/release/bundle/dmg -name "*.dmg" | head -1)
+          DMG_PATH=$(find target/${{ matrix.triple }}/release/bundle/dmg -name "*.dmg" | head -1)
           echo "path=$DMG_PATH" >> "$GITHUB_OUTPUT"
           echo "name=$(basename "$DMG_PATH")" >> "$GITHUB_OUTPUT"
 
       - name: Create fixed-name copy
-        run: cp "${{ steps.dmg.outputs.path }}" "target/release/bundle/dmg/zecbox-macos-${{ matrix.arch }}.dmg"
+        run: cp "${{ steps.dmg.outputs.path }}" "target/${{ matrix.triple }}/release/bundle/dmg/zecbox-macos-${{ matrix.arch }}.dmg"
 
       - name: Generate SHA256
         run: |
-          cd target/release/bundle/dmg
+          cd "target/${{ matrix.triple }}/release/bundle/dmg"
           shasum -a 256 "${{ steps.dmg.outputs.name }}" "zecbox-macos-${{ matrix.arch }}.dmg" > SHA256SUMS
 
       - name: Upload artifacts
@@ -71,8 +73,8 @@ jobs:
           name: dmg-${{ matrix.arch }}
           path: |
             ${{ steps.dmg.outputs.path }}
-            target/release/bundle/dmg/zecbox-macos-${{ matrix.arch }}.dmg
-            target/release/bundle/dmg/SHA256SUMS
+            target/${{ matrix.triple }}/release/bundle/dmg/zecbox-macos-${{ matrix.arch }}.dmg
+            target/${{ matrix.triple }}/release/bundle/dmg/SHA256SUMS
 
   release:
     needs: build-macos
