@@ -8,7 +8,8 @@ export function NodeStatus() {
   const isRunning = ns.status === "running";
   const isSyncing = isRunning && ns.syncPercentage != null && ns.syncPercentage < 99.9;
   const isSynced = isRunning && ns.syncPercentage != null && ns.syncPercentage >= 99.9;
-  const isBusy = ns.status === "starting" || ns.status === "stopping";
+  const isStarting = ns.status === "starting";
+  const isBusy = isStarting || ns.status === "stopping";
   const [toggling, setToggling] = useState(false);
   const [toggleError, setToggleError] = useState<string | null>(null);
 
@@ -68,6 +69,21 @@ export function NodeStatus() {
               : "Start Node"}
         </button>
       </div>
+
+      {/* Starting feedback */}
+      {isStarting && (
+        <div className="space-y-3">
+          <div className="flex items-center gap-3">
+            <div className="w-4 h-4 border-2 border-zec-yellow border-t-transparent rounded-full animate-spin" />
+            <span className="text-sm text-zec-muted">
+              {ns.message || "Initializing node..."}
+            </span>
+          </div>
+          <div className="h-1 rounded-full bg-zec-border overflow-hidden">
+            <div className="h-full rounded-full bg-zec-yellow/40 animate-pulse w-full" />
+          </div>
+        </div>
+      )}
 
       {/* Sync progress */}
       {isSyncing && (

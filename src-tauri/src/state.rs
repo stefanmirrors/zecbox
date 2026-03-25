@@ -117,7 +117,9 @@ impl NodeState {
 #[serde(tag = "status", rename_all = "camelCase")]
 pub enum NodeStatus {
     Stopped,
-    Starting,
+    Starting {
+        message: Option<String>,
+    },
     #[serde(rename_all = "camelCase")]
     Running {
         block_height: u64,
@@ -137,7 +139,7 @@ impl NodeStatus {
     pub fn status_str(&self) -> &'static str {
         match self {
             NodeStatus::Stopped => "stopped",
-            NodeStatus::Starting => "starting",
+            NodeStatus::Starting { .. } => "starting",
             NodeStatus::Running { .. } => "running",
             NodeStatus::Stopping => "stopping",
             NodeStatus::Error { .. } => "error",

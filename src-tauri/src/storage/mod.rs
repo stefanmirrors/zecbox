@@ -178,7 +178,7 @@ pub fn spawn_storage_monitor(
 
                     // Stop all running processes that depend on this drive
                     let status = node.status.lock().await.clone();
-                    if matches!(status, NodeStatus::Running { .. } | NodeStatus::Starting) {
+                    if matches!(status, NodeStatus::Running { .. } | NodeStatus::Starting { .. }) {
                         log::warn!("Stopping zebrad due to drive disconnect");
                         let _ = zebrad::stop_zebrad(&app_handle, &node).await;
                     }
@@ -218,7 +218,7 @@ pub fn spawn_storage_monitor(
                                 );
                                 // Only stop if node is actually running
                                 let status = node.status.lock().await.clone();
-                                if matches!(status, NodeStatus::Running { .. } | NodeStatus::Starting) {
+                                if matches!(status, NodeStatus::Running { .. } | NodeStatus::Starting { .. }) {
                                     drop(status);
                                     let _ = zebrad::stop_zebrad(&app_handle, &node).await;
                                 }

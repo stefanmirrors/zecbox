@@ -5,6 +5,13 @@ export function LogViewer() {
   const { lines, clear, loading } = useLogs();
   const containerRef = useRef<HTMLDivElement>(null);
   const [autoScroll, setAutoScroll] = useState(true);
+  const [copied, setCopied] = useState(false);
+
+  const copyLogs = () => {
+    navigator.clipboard.writeText(lines.join("\n"));
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   useEffect(() => {
     if (autoScroll && containerRef.current) {
@@ -39,6 +46,14 @@ export function LogViewer() {
               className="text-[11px] px-2.5 py-1 rounded-lg border border-zec-yellow/20 text-zec-yellow hover:bg-zec-yellow/5 transition-colors"
             >
               Jump to bottom
+            </button>
+          )}
+          {lines.length > 0 && (
+            <button
+              onClick={copyLogs}
+              className="text-[11px] px-2.5 py-1 rounded-lg border border-zec-border text-zec-muted hover:text-zec-text transition-colors"
+            >
+              {copied ? "Copied" : "Copy"}
             </button>
           )}
           {lines.length > 0 && (

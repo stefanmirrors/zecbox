@@ -1,4 +1,12 @@
 ---
+let version = "0.1.2";
+try {
+  const res = await fetch("https://api.github.com/repos/stefanmirrors/zecbox/releases/latest");
+  if (res.ok) {
+    const data = await res.json();
+    version = data.tag_name?.replace("v", "") ?? version;
+  }
+} catch {}
 ---
 
 <section class="px-6 py-20">
@@ -45,7 +53,7 @@
       </div>
     </details>
     <p class="text-xs text-zec-muted">
-      Windows and Linux coming soon.
+      v{version} · Windows and Linux coming soon.
     </p>
   </div>
 </section>

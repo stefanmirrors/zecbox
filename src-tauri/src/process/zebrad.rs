@@ -27,9 +27,9 @@ pub async fn start_zebrad(
     // Set status to Starting
     {
         let mut status = node.status.lock().await;
-        *status = NodeStatus::Starting;
+        *status = NodeStatus::Starting { message: None };
     }
-    let _ = app_handle.emit("node_status_changed", NodeStatus::Starting);
+    let _ = app_handle.emit("node_status_changed", NodeStatus::Starting { message: None });
 
     let data_dir = node.data_dir.lock().await.clone();
 

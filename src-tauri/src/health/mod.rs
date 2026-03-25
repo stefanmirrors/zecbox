@@ -9,8 +9,8 @@ use crate::process::zebrad;
 use crate::state::{AppState, NodeState, NodeStatus};
 
 const POLL_INTERVAL: Duration = Duration::from_secs(2);
-const REQUEST_TIMEOUT: Duration = Duration::from_secs(2);
-const MAX_CONSECUTIVE_FAILURES: u32 = 3;
+const REQUEST_TIMEOUT: Duration = Duration::from_secs(5);
+const MAX_CONSECUTIVE_FAILURES: u32 = 10;
 const RECOVERY_THRESHOLD: u32 = 5;
 
 async fn update_tray_status(app_handle: &AppHandle, status: &NodeStatus) {
@@ -65,6 +65,7 @@ pub fn spawn_health_monitor(
         // Brief initial delay to let the process start up
         tokio::time::sleep(Duration::from_secs(1)).await;
 
+        let mut startup_polls: u32 = 0;
         let mut interval = tokio::time::interval(POLL_INTERVAL);
         loop {
             interval.tick().await;
@@ -78,9 +79,33 @@ pub fn spawn_health_monitor(
                 }
             }
 
+            // Track startup polls to show feedback while waiting for RPC
+            let is_starting = {
+                let status = node.status.lock().await;
+                matches!(*status, NodeStatus::Starting { .. })
+            };
+            if is_starting {
+                startup_polls += 1;
+                // Emit progress messages so the user sees something happening
+                let msg = match startup_polls {
+                    1..=3 => "Initializing node...",
+                    4..=8 => "Opening database...",
+                    9..=15 => "Connecting to peers...",
+                    16..=30 => "Waiting for RPC to become available...",
+                    _ => "Still starting up — this can take a few minutes on first launch...",
+                };
+                let starting_status = NodeStatus::Starting { message: Some(msg.to_string()) };
+                {
+                    let mut status = node.status.lock().await;
+                    *status = starting_status.clone();
+                }
+                let _ = app_handle.emit("node_status_changed", &starting_status);
+            }
+
             match poll_zebrad(&client).await {
                 Ok(poll_result) => {
                     consecutive_failures = 0;
+                    startup_polls = 0;
 
                     let sync_pct = poll_result.estimated_height.map(|est| {
                         if est == 0 { 0.0 } else {

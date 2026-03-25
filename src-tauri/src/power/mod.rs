@@ -159,7 +159,7 @@ async fn handle_wake_events(
         // Check zebrad health if it was running
         let node_was_running = {
             let status = state.node.status.lock().await;
-            matches!(*status, NodeStatus::Running { .. } | NodeStatus::Starting)
+            matches!(*status, NodeStatus::Running { .. } | NodeStatus::Starting { .. })
         };
 
         if node_was_running {
