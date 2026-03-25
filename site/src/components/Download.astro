@@ -31,10 +31,16 @@
       </svg>
       Download .dmg
     </a>
-    <p class="text-sm text-zec-muted max-w-md mx-auto">
-      macOS may show a security warning for unsigned apps. Right-click zecbox in
-      Applications, select Open, then click Open again.
-    </p>
+    <details class="text-left max-w-md mx-auto">
+      <summary class="text-xs text-zec-muted cursor-pointer hover:text-zec-text transition-colors text-center">
+        macOS showing a security warning?
+      </summary>
+      <div class="mt-3 text-sm text-zec-muted space-y-2">
+        <p>Open Terminal and run:</p>
+        <code class="block bg-zec-dark border border-zec-border rounded-lg px-4 py-2.5 text-zec-text text-xs font-mono select-all">xattr -cr /Applications/zecbox.app</code>
+        <p class="text-xs">This removes the quarantine flag macOS applies to downloaded apps. Code signing is coming soon.</p>
+      </div>
+    </details>
     <p class="text-xs text-zec-muted">
       Windows and Linux coming soon.
     </p>
