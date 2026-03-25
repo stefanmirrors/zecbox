@@ -17,6 +17,7 @@ import Footer from "../components/Footer.astro";
       <div class="flex items-center gap-1">
         <a href="#how-it-works" class="site-tab px-4 py-1.5 rounded-lg text-sm font-medium text-zec-muted hover:text-zec-text transition-colors no-underline">How it works</a>
         <a href="#app-demo" class="site-tab px-4 py-1.5 rounded-lg text-sm font-medium text-zec-muted hover:text-zec-text transition-colors no-underline">App demo</a>
+        <a href="#" class="site-tab px-4 py-1.5 rounded-lg text-sm font-medium text-zec-muted hover:text-zec-text transition-colors no-underline">Downloads</a>
       </div>
     </div>
   </nav>
@@ -46,4 +47,7 @@ import Footer from "../components/Footer.astro";
   </script>
   <Download />
   <Footer />
+  <style is:global>
+    #site-nav a { text-decoration: none !important; }
+  </style>
 </Base>
