@@ -10,7 +10,16 @@ permissions:
 
 jobs:
   build-macos:
-    runs-on: macos-14
+    strategy:
+      matrix:
+        include:
+          - runner: macos-14
+            arch: aarch64
+            triple: aarch64-apple-darwin
+          - runner: macos-13
+            arch: x86_64
+            triple: x86_64-apple-darwin
+    runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@v4
 
@@ -30,13 +39,13 @@ jobs:
       - name: Fetch upstream binaries
         run: |
           chmod +x scripts/fetch-binaries.sh
-          scripts/fetch-binaries.sh
+          TARGET_TRIPLE=${{ matrix.triple }} scripts/fetch-binaries.sh
 
       - name: Build firewall helper
         run: |
           cargo build -p firewall-helper --release
-          cp target/release/zecbox-firewall-helper src-tauri/binaries/zecbox-firewall-helper-aarch64-apple-darwin
-          chmod +x src-tauri/binaries/zecbox-firewall-helper-aarch64-apple-darwin
+          cp target/release/zecbox-firewall-helper src-tauri/binaries/zecbox-firewall-helper-${{ matrix.triple }}
+          chmod +x src-tauri/binaries/zecbox-firewall-helper-${{ matrix.triple }}
 
       - name: Build app
         run: npx tauri build
@@ -49,20 +58,38 @@ jobs:
           echo "name=$(basename "$DMG_PATH")" >> "$GITHUB_OUTPUT"
 
       - name: Create fixed-name copy
-        run: cp "${{ steps.dmg.outputs.path }}" target/release/bundle/dmg/zecbox-macos.dmg
+        run: cp "${{ steps.dmg.outputs.path }}" "target/release/bundle/dmg/zecbox-macos-${{ matrix.arch }}.dmg"
 
       - name: Generate SHA256
         run: |
           cd target/release/bundle/dmg
-          shasum -a 256 "${{ steps.dmg.outputs.name }}" zecbox-macos.dmg > SHA256SUMS
+          shasum -a 256 "${{ steps.dmg.outputs.name }}" "zecbox-macos-${{ matrix.arch }}.dmg" > SHA256SUMS
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: dmg-${{ matrix.arch }}
+          path: |
+            ${{ steps.dmg.outputs.path }}
+            target/release/bundle/dmg/zecbox-macos-${{ matrix.arch }}.dmg
+            target/release/bundle/dmg/SHA256SUMS
+
+  release:
+    needs: build-macos
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
 
       - name: Create Release
-        if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
           draft: true
           generate_release_notes: true
           files: |
-            ${{ steps.dmg.outputs.path }}
-            target/release/bundle/dmg/zecbox-macos.dmg
-            target/release/bundle/dmg/SHA256SUMS
+            artifacts/dmg-aarch64/*.dmg
+            artifacts/dmg-aarch64/SHA256SUMS
+            artifacts/dmg-x86_64/*.dmg
+            artifacts/dmg-x86_64/SHA256SUMS

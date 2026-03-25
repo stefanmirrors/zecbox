@@ -16,7 +16,8 @@
   </p>
   <div class="flex flex-col sm:flex-row gap-4">
     <a
-      href="https://github.com/stefanmirrors/zecbox/releases/latest/download/zecbox-macos.dmg"
+      id="download-btn"
+      href="https://github.com/stefanmirrors/zecbox/releases/latest/download/zecbox-macos-aarch64.dmg"
       target="_blank"
       rel="noopener noreferrer"
       class="inline-flex items-center gap-2 px-8 py-3.5 rounded-lg bg-zec-yellow text-zec-dark font-semibold text-lg hover:brightness-110 transition-all"
@@ -26,6 +27,15 @@
       </svg>
       Download for macOS
     </a>
+    <script is:inline>
+      (function() {
+        var isIntel = !navigator.userAgent.includes('ARM') && navigator.platform === 'MacIntel';
+        if (isIntel) {
+          document.getElementById('download-btn').href =
+            'https://github.com/stefanmirrors/zecbox/releases/latest/download/zecbox-macos-x86_64.dmg';
+        }
+      })();
+    </script>
     <a
       href="https://github.com/stefanmirrors/zecbox"
       target="_blank"
