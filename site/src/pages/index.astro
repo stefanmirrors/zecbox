@@ -1,5 +1,6 @@
 ---
 import Base from "../layouts/Base.astro";
+import Nav from "../components/Nav.astro";
 import Hero from "../components/Hero.astro";
 import DashboardDemo from "../components/DashboardDemo.astro";
 import Features from "../components/Features.astro";
@@ -8,19 +9,7 @@ import Footer from "../components/Footer.astro";
 ---
 
 <Base>
-  <nav id="site-nav" class="fixed top-0 left-0 right-0 z-50 border-b border-zec-border backdrop-blur-md" style="background:rgba(13,17,23,0.85);">
-    <div class="flex items-center px-4 sm:px-6 py-2">
-      <a href="#" class="flex items-center gap-2 mr-4 sm:mr-8 no-underline shrink-0">
-        <img src="/zecbox-icon.png" alt="" class="w-5 h-5 sm:w-6 sm:h-6" />
-        <span class="hidden sm:inline text-sm font-semibold text-zec-yellow tracking-tight" style="font-family:'Montserrat',sans-serif;">zecbox</span>
-      </a>
-      <div class="flex items-center flex-1 gap-0">
-        <a href="#how-it-works" class="site-tab flex-1 text-center px-1 sm:px-4 py-1.5 rounded-lg text-xs sm:text-sm font-medium text-zec-muted hover:text-zec-text transition-colors no-underline whitespace-nowrap">How it works</a>
-        <a href="#app-demo" class="site-tab flex-1 text-center px-1 sm:px-4 py-1.5 rounded-lg text-xs sm:text-sm font-medium text-zec-muted hover:text-zec-text transition-colors no-underline whitespace-nowrap">App demo</a>
-        <a href="#" class="site-tab flex-1 text-center px-1 sm:px-4 py-1.5 rounded-lg text-xs sm:text-sm font-medium text-zec-muted hover:text-zec-text transition-colors no-underline whitespace-nowrap">Downloads</a>
-      </div>
-    </div>
-  </nav>
+  <Nav activePage="home" />
   <div class="pt-11">
     <Hero />
   </div>
@@ -30,24 +19,8 @@ import Footer from "../components/Footer.astro";
   <div id="app-demo" class="scroll-mt-11">
     <DashboardDemo />
   </div>
-  <script>
-    const tabs = document.querySelectorAll('.site-tab');
-    const sections = [document.getElementById('how-it-works'), document.getElementById('app-demo')];
-    function updateActive() {
-      const y = window.scrollY + 80;
-      let active = -1;
-      sections.forEach((s, i) => { if (s && s.offsetTop <= y) active = i; });
-      tabs.forEach((t, i) => {
-        if (i === active) { t.className = 'site-tab flex-1 text-center px-1 sm:px-4 py-1.5 rounded-lg text-xs sm:text-sm font-medium text-zec-yellow transition-colors no-underline whitespace-nowrap'; }
-        else { t.className = 'site-tab flex-1 text-center px-1 sm:px-4 py-1.5 rounded-lg text-xs sm:text-sm font-medium text-zec-muted hover:text-zec-text transition-colors no-underline whitespace-nowrap'; }
-      });
-    }
-    window.addEventListener('scroll', updateActive);
-    updateActive();
-  </script>
-  <Download />
+  <div id="downloads" class="scroll-mt-11">
+    <Download />
+  </div>
   <Footer />
-  <style is:global>
-    #site-nav a { text-decoration: none !important; }
-  </style>
 </Base>

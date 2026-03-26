@@ -1,0 +1,312 @@
+---
+// Fetch all data at build time (no CORS issues server-side)
+const buildData: Record<string, string> = {};
+
+// Blockchair: hashrate, block time, height, difficulty, nodes
+try {
+  const res = await fetch('https://api.blockchair.com/zcash/stats');
+  if (res.ok) {
+    const d = (await res.json()).data;
+    buildData.hash = String(d.hashrate_24h ?? '');
+    buildData.blocks24h = String(d.blocks_24h ?? '');
+    buildData.height = String(d.best_block_height ?? '');
+    buildData.diff = String(d.difficulty ?? '');
+    buildData.nodes = String(d.nodes ?? '');
+  }
+} catch {}
+
+// Zcash Explorer: shielded pool %
+try {
+  const res = await fetch('https://mainnet.zcashexplorer.app/api/v1/blockchain-info');
+  if (res.ok) {
+    const data = await res.json();
+    const pools: {id: string; chainValue: number}[] = data.valuePools ?? [];
+    const total = data.chainSupply?.chainValue ?? 0;
+    if (total > 0) {
+      let shielded = 0;
+      for (const p of pools) {
+        if (p.id === 'sprout' || p.id === 'sapling' || p.id === 'orchard') {
+          shielded += p.chainValue ?? 0;
+        }
+      }
+      buildData.pool = ((shielded / total) * 100).toFixed(0);
+    }
+  }
+} catch {}
+
+// CoinGecko: price, 24h change, market cap (fetch last, retry once on 429)
+async function fetchCoinGecko(): Promise<void> {
+  const url = 'https://api.coingecko.com/api/v3/simple/price?ids=zcash&vs_currencies=usd&include_24hr_change=true&include_market_cap=true';
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const res = await fetch(url);
+      if (res.status === 429) { await new Promise(r => setTimeout(r, 2000)); continue; }
+      if (res.ok) {
+        const d = (await res.json()).zcash;
+        buildData.price = d.usd?.toFixed(2) ?? '';
+        buildData.change = d.usd_24h_change?.toFixed(2) ?? '';
+        buildData.mcap = String(d.usd_market_cap ?? '');
+        return;
+      }
+    } catch {}
+  }
+}
+await fetchCoinGecko();
+---
+
+<section id="nh-section" class="pt-6 sm:pt-10 pb-12 sm:pb-20 px-4 sm:px-6" aria-label="Network Health"
+  data-price={buildData.price} data-change={buildData.change} data-mcap={buildData.mcap}
+  data-hash={buildData.hash} data-blocks24h={buildData.blocks24h} data-height={buildData.height}
+  data-diff={buildData.diff} data-nodes={buildData.nodes} data-pool={buildData.pool}>
+  <div class="max-w-[1100px] mx-auto">
+    <div class="text-center mb-6 sm:mb-8">
+      <h1 class="text-4xl sm:text-5xl font-black text-zec-text mb-3" style="font-family: 'Montserrat', sans-serif;">Network Health</h1>
+      <p class="text-zec-muted text-lg leading-relaxed">Live Zcash network metrics</p>
+    </div>
+
+    <!-- Stat Cards -->
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+      <!-- ZEC Price -->
+      <div class="border border-zec-border rounded-xl px-4 py-3">
+        <p class="text-[10px] text-zec-muted uppercase tracking-wider mb-1">ZEC Price</p>
+        <div id="nh-price-skeleton" class="space-y-2">
+          <div class="h-6 w-24 bg-zec-border/30 rounded animate-pulse"></div>
+          <div class="h-4 w-16 bg-zec-border/20 rounded animate-pulse"></div>
+        </div>
+        <div id="nh-price-value" class="hidden">
+          <p id="nh-price" class="text-xl font-bold text-zec-text tabular-nums">—</p>
+          <p id="nh-price-change" class="text-xs tabular-nums mt-1">—</p>
+        </div>
+        <p id="nh-price-error" class="hidden text-sm text-zec-muted">Unavailable</p>
+      </div>
+
+      <!-- Network Hashrate -->
+      <div class="border border-zec-border rounded-xl px-4 py-3">
+        <p class="text-[10px] text-zec-muted uppercase tracking-wider mb-1">Hashrate</p>
+        <div id="nh-hash-skeleton" class="space-y-2">
+          <div class="h-6 w-24 bg-zec-border/30 rounded animate-pulse"></div>
+          <div class="h-4 w-16 bg-zec-border/20 rounded animate-pulse"></div>
+        </div>
+        <div id="nh-hash-value" class="hidden">
+          <p id="nh-hash" class="text-xl font-bold text-zec-text tabular-nums">—</p>
+          <p class="text-xs text-zec-muted mt-1">24h average</p>
+        </div>
+        <p id="nh-hash-error" class="hidden text-sm text-zec-muted">Unavailable</p>
+      </div>
+
+      <!-- Avg Block Time -->
+      <div class="border border-zec-border rounded-xl px-4 py-3">
+        <p class="text-[10px] text-zec-muted uppercase tracking-wider mb-1">Block Time</p>
+        <div id="nh-block-skeleton" class="space-y-2">
+          <div class="h-6 w-20 bg-zec-border/30 rounded animate-pulse"></div>
+          <div class="h-4 w-14 bg-zec-border/20 rounded animate-pulse"></div>
+        </div>
+        <div id="nh-block-value" class="hidden">
+          <p id="nh-block" class="text-xl font-bold text-zec-text tabular-nums">—</p>
+          <p class="text-xs text-zec-muted mt-1">average</p>
+        </div>
+        <p id="nh-block-error" class="hidden text-sm text-zec-muted">Unavailable</p>
+      </div>
+
+      <!-- Node Count -->
+      <div class="border border-zec-border rounded-xl px-4 py-3">
+        <p class="text-[10px] text-zec-muted uppercase tracking-wider mb-1">Nodes</p>
+        <div id="nh-nodes-skeleton" class="space-y-2">
+          <div class="h-6 w-16 bg-zec-border/30 rounded animate-pulse"></div>
+          <div class="h-4 w-14 bg-zec-border/20 rounded animate-pulse"></div>
+        </div>
+        <div id="nh-nodes-value" class="hidden">
+          <p id="nh-nodes" class="text-xl font-bold text-zec-text tabular-nums">—</p>
+          <p class="text-xs text-zec-muted mt-1">reachable</p>
+        </div>
+        <p id="nh-nodes-error" class="hidden text-sm text-zec-muted">Unavailable</p>
+      </div>
+    </div>
+
+    <!-- Additional Stats Row -->
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+      <!-- Block Height -->
+      <div class="border border-zec-border rounded-xl px-4 py-3">
+        <p class="text-[10px] text-zec-muted uppercase tracking-wider mb-1">Block Height</p>
+        <div id="nh-height-skeleton" class="h-6 w-28 bg-zec-border/30 rounded animate-pulse"></div>
+        <p id="nh-height" class="hidden text-xl font-bold text-zec-text tabular-nums">—</p>
+        <p id="nh-height-error" class="hidden text-sm text-zec-muted">Unavailable</p>
+      </div>
+
+      <!-- Difficulty -->
+      <div class="border border-zec-border rounded-xl px-4 py-3">
+        <p class="text-[10px] text-zec-muted uppercase tracking-wider mb-1">Difficulty</p>
+        <div id="nh-diff-skeleton" class="h-6 w-28 bg-zec-border/30 rounded animate-pulse"></div>
+        <p id="nh-diff" class="hidden text-xl font-bold text-zec-text tabular-nums">—</p>
+        <p id="nh-diff-error" class="hidden text-sm text-zec-muted">Unavailable</p>
+      </div>
+
+      <!-- Market Cap -->
+      <div class="border border-zec-border rounded-xl px-4 py-3">
+        <p class="text-[10px] text-zec-muted uppercase tracking-wider mb-1">Market Cap</p>
+        <div id="nh-mcap-skeleton" class="h-6 w-28 bg-zec-border/30 rounded animate-pulse"></div>
+        <p id="nh-mcap" class="hidden text-xl font-bold text-zec-text tabular-nums">—</p>
+        <p id="nh-mcap-error" class="hidden text-sm text-zec-muted">Unavailable</p>
+      </div>
+
+      <!-- Shielded Pool % -->
+      <div class="border border-zec-border rounded-xl px-4 py-3">
+        <p class="text-[10px] text-zec-muted uppercase tracking-wider mb-1">Shielded Pool</p>
+        <div id="nh-pool-skeleton" class="h-6 w-20 bg-zec-border/30 rounded animate-pulse"></div>
+        <div id="nh-pool-value" class="hidden">
+          <p id="nh-pool-pct" class="text-xl font-bold text-zec-yellow tabular-nums">—</p>
+          <p class="text-xs text-zec-muted mt-1">of ZEC shielded</p>
+        </div>
+        <p id="nh-pool-error" class="hidden text-sm text-zec-muted">Unavailable</p>
+      </div>
+    </div>
+
+    <!-- CTA + Updated -->
+    <div class="border border-zec-border rounded-xl p-6 sm:p-8 text-center">
+      <h3 class="text-lg sm:text-xl font-bold text-zec-text mb-2" style="font-family: 'Montserrat', sans-serif;">Strengthen the Network</h3>
+      <p class="text-sm text-zec-muted mb-5 max-w-md mx-auto">Every full node makes Zcash more resilient. Run yours in one click.</p>
+      <a href="/" class="inline-block px-6 py-2.5 rounded-lg text-sm font-semibold bg-zec-yellow text-zec-dark hover:brightness-110 transition-all no-underline">Download ZecBox</a>
+    </div>
+
+    <p id="nh-updated" class="text-center text-[11px] text-zec-muted/40 mt-6">Fetching data...</p>
+  </div>
+</section>
+
+<script>
+(function() {
+  const $ = (s: string) => document.querySelector(s) as HTMLElement | null;
+  const show = (id: string) => { const el = $(id); if (el) el.classList.remove('hidden'); };
+  const hide = (id: string) => { const el = $(id); if (el) el.classList.add('hidden'); };
+  const setText = (id: string, text: string) => { const el = $(id); if (el) el.textContent = text; };
+  const section = $('#nh-section') as HTMLElement;
+  const d = section.dataset;
+
+  function showCard(prefix: string, success: boolean) {
+    hide(`${prefix}-skeleton`);
+    if (success) { show(`${prefix}-value`); hide(`${prefix}-error`); }
+    else { hide(`${prefix}-value`); show(`${prefix}-error`); }
+  }
+
+  function formatHash(h: number): string {
+    if (h >= 1e12) return (h / 1e12).toFixed(2) + ' TH/s';
+    if (h >= 1e9) return (h / 1e9).toFixed(2) + ' GH/s';
+    if (h >= 1e6) return (h / 1e6).toFixed(2) + ' MH/s';
+    return h.toFixed(0) + ' H/s';
+  }
+
+  function formatNum(n: number): string {
+    return n.toLocaleString('en-US');
+  }
+
+  function formatCompact(n: number): string {
+    if (n >= 1e12) return '$' + (n / 1e12).toFixed(2) + 'T';
+    if (n >= 1e9) return '$' + (n / 1e9).toFixed(2) + 'B';
+    if (n >= 1e6) return '$' + (n / 1e6).toFixed(1) + 'M';
+    return '$' + formatNum(Math.round(n));
+  }
+
+  function renderPrice(price: string, change: string, mcap: string) {
+    if (price) {
+      setText('#nh-price', '$' + price);
+      const changeEl = $('#nh-price-change');
+      if (changeEl && change) {
+        const n = parseFloat(change);
+        const sign = n >= 0 ? '+' : '';
+        changeEl.textContent = sign + change + '% (24h)';
+        changeEl.className = 'text-xs tabular-nums mt-1 ' + (n >= 0 ? 'text-emerald-400' : 'text-red-400');
+      }
+      showCard('#nh-price', true);
+    } else {
+      showCard('#nh-price', false);
+    }
+
+    if (mcap) {
+      setText('#nh-mcap', formatCompact(parseFloat(mcap)));
+      hide('#nh-mcap-skeleton'); show('#nh-mcap'); hide('#nh-mcap-error');
+    } else {
+      hide('#nh-mcap-skeleton'); show('#nh-mcap-error');
+    }
+  }
+
+  function renderStats(hash: string, blocks24h: string, height: string, diff: string, nodes: string) {
+    // Hashrate
+    if (hash) { setText('#nh-hash', formatHash(Number(hash))); showCard('#nh-hash', true); }
+    else { showCard('#nh-hash', false); }
+
+    // Block time
+    const b24 = Number(blocks24h);
+    if (b24 > 0) { setText('#nh-block', '~' + Math.round(86400 / b24) + 's'); showCard('#nh-block', true); }
+    else { showCard('#nh-block', false); }
+
+    // Block height
+    if (height) { setText('#nh-height', formatNum(Number(height))); hide('#nh-height-skeleton'); show('#nh-height'); hide('#nh-height-error'); }
+    else { hide('#nh-height-skeleton'); show('#nh-height-error'); }
+
+    // Difficulty
+    if (diff) {
+      const dn = Number(diff);
+      let ds: string;
+      if (dn >= 1e12) ds = (dn / 1e12).toFixed(2) + 'T';
+      else if (dn >= 1e9) ds = (dn / 1e9).toFixed(2) + 'G';
+      else if (dn >= 1e6) ds = (dn / 1e6).toFixed(2) + 'M';
+      else ds = formatNum(dn);
+      setText('#nh-diff', ds); hide('#nh-diff-skeleton'); show('#nh-diff'); hide('#nh-diff-error');
+    } else { hide('#nh-diff-skeleton'); show('#nh-diff-error'); }
+
+    // Nodes
+    if (nodes) { setText('#nh-nodes', formatNum(Number(nodes))); showCard('#nh-nodes', true); }
+    else { showCard('#nh-nodes', false); }
+  }
+
+  function renderPool(pct: string) {
+    if (pct) { setText('#nh-pool-pct', pct + '%'); showCard('#nh-pool', true); }
+    else { showCard('#nh-pool', false); }
+  }
+
+  function updateTimestamp(live: boolean) {
+    const el = $('#nh-updated');
+    if (el) {
+      const now = new Date();
+      const time = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+      el.textContent = live
+        ? 'Updated ' + time + ' · refreshes every 60s'
+        : 'Data from last build · refreshes every 60s';
+    }
+  }
+
+  // Render build-time data immediately (no CORS issues)
+  renderPrice(d.price ?? '', d.change ?? '', d.mcap ?? '');
+  renderStats(d.hash ?? '', d.blocks24h ?? '', d.height ?? '', d.diff ?? '', d.nodes ?? '');
+  renderPool(d.pool ?? '');
+  updateTimestamp(false);
+
+  // Try client-side refresh for live updates
+  async function refresh() {
+    try {
+      const [priceRes, statsRes] = await Promise.allSettled([
+        fetch('https://api.coingecko.com/api/v3/simple/price?ids=zcash&vs_currencies=usd&include_24hr_change=true&include_market_cap=true'),
+        fetch('https://api.blockchair.com/zcash/stats'),
+      ]);
+
+      if (priceRes.status === 'fulfilled' && priceRes.value.ok) {
+        const p = (await priceRes.value.json()).zcash;
+        renderPrice(p.usd?.toFixed(2) ?? '', p.usd_24h_change?.toFixed(2) ?? '', String(p.usd_market_cap ?? ''));
+      }
+
+      if (statsRes.status === 'fulfilled' && statsRes.value.ok) {
+        const s = (await statsRes.value.json()).data;
+        renderStats(
+          String(s.hashrate_24h ?? ''), String(s.blocks_24h ?? ''),
+          String(s.best_block_height ?? ''), String(s.difficulty ?? ''), String(s.nodes ?? '')
+        );
+      }
+
+      updateTimestamp(true);
+    } catch {}
+  }
+
+  // First live refresh after 2s, then every 60s
+  setTimeout(refresh, 2000);
+  setInterval(refresh, 60_000);
+})();
+</script>
