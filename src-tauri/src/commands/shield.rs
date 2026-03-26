@@ -98,6 +98,14 @@ pub async fn enable_shield_mode(
     firewall::enable_firewall()
         .map_err(|e| format!("Failed to enable firewall: {}", e))?;
 
+    // Verify traffic actually routes through Tor
+    if let Err(e) = tor::verify_tor_path().await {
+        log::error!("Traffic verification failed: {}", e);
+        let _ = firewall::disable_firewall();
+        let _ = tor::stop_arti(&app_handle, &state.shield).await;
+        return Err(format!("Shield Mode failed traffic verification: {}. Disabled for safety.", e));
+    }
+
     // If node was running, restart it with shield config
     if node_was_running {
         zebrad::stop_zebrad(&app_handle, &state.node).await?;

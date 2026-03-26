@@ -146,9 +146,13 @@ pub async fn start_arti(
             }
         };
         if alive {
-            // Force status to Active if process is running (bootstrap output may have been missed)
+            // Process is running but bootstrap didn't complete — report error, don't assume Active
             let mut status = shield.status.lock().await;
-            *status = ShieldStatus::Active;
+            *status = ShieldStatus::Error {
+                message: "Tor bootstrap timed out. Check your network connection.".into(),
+            };
+            emit_shield_status(&app_handle, shield).await;
+            return Err("Arti bootstrap timed out after 60s".into());
         } else {
             let mut status = shield.status.lock().await;
             *status = ShieldStatus::Error {
@@ -263,8 +267,8 @@ fn spawn_kill_switch(
                 }
             };
 
-            // Check if PF firewall is still active (only when Arti is alive and shield is Active)
-            let firewall_down = if !arti_dead && matches!(status, ShieldStatus::Active) {
+            // Check if PF firewall is still active (during both Active and Bootstrapping)
+            let firewall_down = if !arti_dead {
                 match firewall::firewall_status() {
                     Ok((enabled, _)) => !enabled,
                     Err(_) => false, // Don't trip kill switch on transient query failures
@@ -440,6 +444,45 @@ fn remove_pid_file(data_dir: &Path) -> Result<(), std::io::Error> {
     if path.exists() {
         std::fs::remove_file(path)?;
     }
+    Ok(())
+}
+
+/// Verify the Tor routing path is functional by performing a SOCKS5 handshake
+/// through the redirector to Arti. This confirms: PF rules → redirector → Arti are all working.
+pub async fn verify_tor_path() -> Result<(), String> {
+    use tokio::io::{AsyncReadExt, AsyncWriteExt};
+    use tokio::net::TcpStream;
+
+    let arti_addr = "127.0.0.1:9150";
+
+    let mut stream = tokio::time::timeout(
+        Duration::from_secs(10),
+        TcpStream::connect(arti_addr),
+    )
+    .await
+    .map_err(|_| "Tor path verification timed out connecting to Arti".to_string())?
+    .map_err(|e| format!("Cannot connect to Arti SOCKS at {}: {}", arti_addr, e))?;
+
+    // SOCKS5 greeting: version 5, 1 auth method (no auth)
+    stream
+        .write_all(&[0x05, 0x01, 0x00])
+        .await
+        .map_err(|e| format!("SOCKS5 handshake write failed: {}", e))?;
+
+    let mut resp = [0u8; 2];
+    tokio::time::timeout(Duration::from_secs(5), stream.read_exact(&mut resp))
+        .await
+        .map_err(|_| "SOCKS5 handshake read timed out".to_string())?
+        .map_err(|e| format!("SOCKS5 handshake read failed: {}", e))?;
+
+    if resp[0] != 0x05 || resp[1] != 0x00 {
+        return Err(format!(
+            "Arti SOCKS5 handshake failed: version={}, method={}",
+            resp[0], resp[1]
+        ));
+    }
+
+    log::info!("Tor path verification passed: SOCKS5 handshake with Arti successful");
     Ok(())
 }
 

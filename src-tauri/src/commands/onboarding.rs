@@ -36,6 +36,14 @@ pub async fn complete_onboarding(
         tor::firewall::enable_firewall()
             .map_err(|e| format!("Failed to enable firewall: {}", e))?;
 
+        // Verify traffic actually routes through Tor before starting the node
+        if let Err(e) = tor::verify_tor_path().await {
+            log::error!("Traffic verification failed during onboarding: {}", e);
+            let _ = tor::firewall::disable_firewall();
+            let _ = tor::stop_arti(&app_handle, &state.shield).await;
+            return Err(format!("Shield Mode failed traffic verification: {}. Try again or select Standard.", e));
+        }
+
         log::info!("Shield Mode enabled during onboarding");
     }
 

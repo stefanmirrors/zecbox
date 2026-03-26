@@ -5,12 +5,16 @@
 use std::net::{Ipv4Addr, SocketAddr, SocketAddrV4};
 use std::os::fd::RawFd;
 use std::sync::Arc;
+use std::time::Duration;
 
 use tokio::io;
 use tokio::net::{TcpListener, TcpStream};
-use tokio::sync::watch;
+use tokio::sync::{watch, Semaphore};
 
 use crate::socks5;
+
+const MAX_CONCURRENT_CONNECTIONS: usize = 128;
+const CONNECTION_TIMEOUT_SECS: u64 = 120;
 
 // --- macOS PF ioctl definitions ---
 // Based on XNU open-source pfvar.h
@@ -195,6 +199,7 @@ pub async fn run(
     log::info!("Transparent redirector listening on {}", listen_addr);
 
     let socks = Arc::new(socks_addr);
+    let semaphore = Arc::new(Semaphore::new(MAX_CONCURRENT_CONNECTIONS));
 
     loop {
         tokio::select! {
@@ -202,8 +207,22 @@ pub async fn run(
                 match result {
                     Ok((stream, _)) => {
                         let socks_clone = Arc::clone(&socks);
+                        let permit = Arc::clone(&semaphore);
                         tokio::spawn(async move {
-                            handle_connection(stream, pf_fd, (*socks_clone).clone()).await;
+                            let _permit = match permit.try_acquire() {
+                                Ok(p) => p,
+                                Err(_) => {
+                                    log::warn!("Connection limit reached ({}), dropping connection", MAX_CONCURRENT_CONNECTIONS);
+                                    return;
+                                }
+                            };
+                            let result = tokio::time::timeout(
+                                Duration::from_secs(CONNECTION_TIMEOUT_SECS),
+                                handle_connection(stream, pf_fd, (*socks_clone).clone()),
+                            ).await;
+                            if result.is_err() {
+                                log::debug!("Connection timed out after {}s", CONNECTION_TIMEOUT_SECS);
+                            }
                         });
                     }
                     Err(e) => {

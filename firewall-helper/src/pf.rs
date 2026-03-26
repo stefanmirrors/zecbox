@@ -1,6 +1,8 @@
 //! PF (packet filter) anchor management for Shield Mode.
 //! Loads/flushes rules in the `com.zecbox.shield` anchor.
 
+use std::collections::BTreeSet;
+use std::ffi::CStr;
 use std::fs;
 use std::os::unix::fs::PermissionsExt;
 use std::process::Command;
@@ -14,24 +16,52 @@ fn ensure_secure_tmpdir() {
     let _ = fs::set_permissions(SECURE_TMPDIR, fs::Permissions::from_mode(0o700));
 }
 
+/// Dynamically enumerate active, non-loopback network interfaces via getifaddrs().
+fn get_active_interfaces() -> Vec<String> {
+    let mut ifaces = BTreeSet::new();
+    unsafe {
+        let mut ifaddr_ptr: *mut libc::ifaddrs = std::ptr::null_mut();
+        if libc::getifaddrs(&mut ifaddr_ptr) != 0 {
+            log::warn!("getifaddrs() failed, falling back to common interfaces");
+            return vec![
+                "en0", "en1", "en2", "en3", "en4", "en5",
+                "utun0", "utun1", "utun2", "utun3",
+            ].into_iter().map(String::from).collect();
+        }
+
+        let mut current = ifaddr_ptr;
+        while !current.is_null() {
+            let flags = (*current).ifa_flags;
+            let up = (flags & libc::IFF_UP as u32) != 0;
+            let running = (flags & libc::IFF_RUNNING as u32) != 0;
+            let loopback = (flags & libc::IFF_LOOPBACK as u32) != 0;
+
+            if up && running && !loopback {
+                if let Ok(name) = CStr::from_ptr((*current).ifa_name).to_str() {
+                    ifaces.insert(name.to_string());
+                }
+            }
+            current = (*current).ifa_next;
+        }
+        libc::freeifaddrs(ifaddr_ptr);
+    }
+    ifaces.into_iter().collect()
+}
+
 /// Generate PF rules that redirect outbound Zcash P2P traffic through the transparent proxy.
 fn generate_rules(redir_port: u16) -> String {
-    // rdr on lo0: redirects loopback-routed traffic to our transparent proxy.
-    // pass out route-to lo0: forces outbound port 8233 TCP through loopback
-    //   so the rdr rule catches it.
-    // We enumerate common macOS interfaces since `!lo0` negation may not work
-    //   on Apple's PF fork. Each rule forces matching outbound traffic through lo0.
-    let interfaces = ["en0", "en1", "en2", "en3", "en4", "en5", "utun0", "utun1", "utun2", "utun3"];
+    let interfaces = get_active_interfaces();
+    log::info!("Generating PF rules for interfaces: {:?}", interfaces);
 
     let mut rules = String::new();
 
-    // Redirect rule on loopback
+    // Redirect rule on loopback (translation rule — goes in anchor's rdr section)
     rules.push_str(&format!(
         "rdr on lo0 proto tcp from any to any port 8233 -> 127.0.0.1 port {}\n",
         redir_port
     ));
 
-    // Route-to rules for each interface
+    // Route-to rules for each active interface (forces traffic through lo0 for rdr to catch)
     for iface in &interfaces {
         rules.push_str(&format!(
             "pass out on {} route-to (lo0 127.0.0.1) proto tcp from any to any port 8233 no state\n",
@@ -39,33 +69,93 @@ fn generate_rules(redir_port: u16) -> String {
         ));
     }
 
+    // Catch-all: block any port 8233 traffic that wasn't matched by a route-to rule above.
+    // This prevents clearnet leaks if a new interface appears after rules were generated.
+    rules.push_str("block out proto tcp from any to any port 8233\n");
+
     rules
+}
+
+/// Classify a PF rule line as translation (rdr/nat/binat) or filter (everything else).
+fn is_translation_rule(line: &str) -> bool {
+    let trimmed = line.trim();
+    trimmed.starts_with("rdr")
+        || trimmed.starts_with("nat")
+        || trimmed.starts_with("binat")
+        || trimmed.starts_with("rdr-anchor")
+        || trimmed.starts_with("nat-anchor")
 }
 
 /// Ensure our anchor is referenced in the main PF config.
 /// macOS PF requires anchors to be declared in the main ruleset.
+/// PF enforces strict rule ordering: translation rules (rdr/nat) before filter rules (pass/block/anchor).
 fn ensure_anchor_registered() -> Result<(), String> {
-    // Check if our anchor is already in the main rules
-    let output = Command::new("pfctl")
-        .args(["-s", "rules"])
-        .output()
-        .map_err(|e| format!("Failed to query PF rules: {}", e))?;
-
-    let rules = String::from_utf8_lossy(&output.stdout);
     let rdr_anchor = format!("rdr-anchor \"{}\"", ANCHOR_NAME);
     let anchor = format!("anchor \"{}\"", ANCHOR_NAME);
 
-    if rules.contains(&rdr_anchor) && rules.contains(&anchor) {
+    // Query existing NAT/translation rules and filter rules separately
+    let nat_output = Command::new("pfctl")
+        .args(["-s", "nat"])
+        .output()
+        .map_err(|e| format!("Failed to query PF NAT rules: {}", e))?;
+    let nat_rules = String::from_utf8_lossy(&nat_output.stdout);
+
+    let filter_output = Command::new("pfctl")
+        .args(["-s", "rules"])
+        .output()
+        .map_err(|e| format!("Failed to query PF filter rules: {}", e))?;
+    let filter_rules = String::from_utf8_lossy(&filter_output.stdout);
+
+    // Check if already registered in both sections
+    if nat_rules.contains(&rdr_anchor) && filter_rules.contains(&anchor) {
         return Ok(());
     }
 
-    // Load a main config that includes our anchor alongside existing rules
-    let main_rules = format!(
-        "{}\n{}\n{}\n",
-        rdr_anchor,
-        anchor,
-        rules.trim()
-    );
+    // Build config in correct PF order:
+    // 1. Translation rules (rdr, nat, binat, rdr-anchor, nat-anchor)
+    // 2. Filter rules (pass, block, anchor)
+    let mut translation_lines = Vec::new();
+    let mut filter_lines = Vec::new();
+
+    // Collect existing translation rules
+    for line in nat_rules.lines() {
+        let trimmed = line.trim();
+        if !trimmed.is_empty() && !trimmed.contains(ANCHOR_NAME) {
+            translation_lines.push(line.to_string());
+        }
+    }
+
+    // Collect existing filter rules, separating any misplaced translation rules
+    for line in filter_rules.lines() {
+        let trimmed = line.trim();
+        if trimmed.is_empty() || trimmed.contains(ANCHOR_NAME) {
+            continue;
+        }
+        if is_translation_rule(trimmed) {
+            translation_lines.push(line.to_string());
+        } else {
+            filter_lines.push(line.to_string());
+        }
+    }
+
+    // Build the final config
+    let mut main_rules = String::new();
+
+    // Translation section: existing + our rdr-anchor
+    for line in &translation_lines {
+        main_rules.push_str(line);
+        main_rules.push('\n');
+    }
+    main_rules.push_str(&rdr_anchor);
+    main_rules.push('\n');
+
+    // Filter section: our anchor + existing
+    main_rules.push_str(&anchor);
+    main_rules.push('\n');
+    for line in &filter_lines {
+        main_rules.push_str(line);
+        main_rules.push('\n');
+    }
 
     ensure_secure_tmpdir();
     let main_path = format!("{}/pf-main.conf", SECURE_TMPDIR);
@@ -86,6 +176,7 @@ fn ensure_anchor_registered() -> Result<(), String> {
             .filter(|l| {
                 !l.contains("pf enabled")
                     && !l.contains("pf already enabled")
+                    && !l.contains("ALTQ")
                     && !l.trim().is_empty()
             })
             .collect();
@@ -125,10 +216,9 @@ pub fn enable(redir_port: u16) -> Result<(), String> {
 
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
-        // pfctl prints "pf enabled" to stderr even on success, filter that out
         let real_errors: Vec<&str> = stderr
             .lines()
-            .filter(|l| !l.contains("pf enabled") && !l.contains("pf already enabled") && !l.trim().is_empty())
+            .filter(|l| !l.contains("pf enabled") && !l.contains("pf already enabled") && !l.contains("ALTQ") && !l.trim().is_empty())
             .collect();
         if !real_errors.is_empty() {
             return Err(format!("pfctl failed: {}", real_errors.join("\n")));
@@ -141,7 +231,6 @@ pub fn enable(redir_port: u16) -> Result<(), String> {
 
 /// Flush all rules from the PF anchor.
 pub fn disable() -> Result<(), String> {
-    // Flush all rules in our anchor
     let output = Command::new("pfctl")
         .args(["-a", ANCHOR_NAME, "-F", "all"])
         .output()
