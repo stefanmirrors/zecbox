@@ -11,6 +11,7 @@ zecbox turns your computer into a Zcash full node. Download, install, click star
 - Runs a [Zebra](https://github.com/ZcashFoundation/zebra) full node (zebrad) behind a clean dashboard
 - **Shield Mode** -- route all node traffic through Tor with one toggle. If Tor drops, the node stops. It will never silently fall back to clearnet.
 - **Wallet Server** -- serve your own light wallet backend (Zaino) so ZODL, Ywallet, or any compatible wallet can sync from _your_ node instead of someone else's
+- **Network Serve** -- open your node to inbound connections with one toggle. Automatic UPnP port forwarding, CGNAT detection, and reachability checks
 - Monitors storage, network peers, sync progress, and node health in real time
 - Survives reboots, sleep, crashes, and power loss without losing chain data
 - Lives in your system tray -- close the window, the node keeps running
@@ -134,6 +135,17 @@ When you toggle the Wallet Server on, zecbox starts Zaino as a sidecar. Zaino re
 
 A QR code with the connection endpoint is generated in-app for easy setup. Zaino has its own health check (TCP connect to :9067 every 2s), auto-restart with backoff, and PID file management. The toggle is disabled when zebrad isn't running.
 
+### Network Serve
+
+When you toggle Network Serve on, zecbox makes your node accept inbound peer connections to strengthen the Zcash network:
+
+1. UPnP port mapping is attempted on your router for TCP port 8233 (1-hour lease, renewed every 30 minutes)
+2. Your public IP is discovered and checked for CGNAT (carrier-grade NAT)
+3. An external reachability check confirms the port is open from the internet
+4. Peer counts (inbound/outbound) are polled every 10 seconds via zebrad's JSON-RPC
+
+If UPnP is unavailable, the UI shows manual port forwarding instructions with your local IP. If CGNAT is detected, it explains the limitation. The feature auto-disables if zebrad goes down (5 consecutive RPC failures). It cannot be used with Shield Mode since Tor prevents inbound connections.
+
 ---
 
 ## Security and Trust
@@ -148,6 +160,7 @@ zecbox collects nothing. There are no analytics, no tracking pixels, no usage re
 
 - Zcash P2P peers (port 8233) -- this is the blockchain network itself
 - Update manifest fetch from zecbox.io -- periodic, fetches a small JSON file to check for new versions
+- If Network Serve is enabled: public IP lookup (api.ipify.org) and port reachability check (ifconfig.co) -- only while the feature is active
 
 That's it. Nothing else leaves your machine.
 
@@ -299,29 +312,34 @@ zecbox/
     App.tsx                Entry point, onboarding vs dashboard routing
     components/
       layout/              AppShell, Sidebar, TitleBar
-      dashboard/           NodeStatus, NetworkPanel, StoragePanel, QuickActions
+      dashboard/           NodeStatus, NetworkPanel, StoragePanel, QuickActions, LiveLogPreview, NodeStatsPanel, StorageBar
       onboarding/          Welcome, StorageSelect, Ready
       shield/              Shield Mode toggle and status
       wallet/              Wallet Server toggle, endpoint display, QR code
+      network/             Network Serve toggle, UPnP status, reachability
       logs/                Log viewer
       settings/            Settings panels (versions, auto-start, rebuild, updates)
-    hooks/                 useNodeStatus, useStorage, useShieldMode, useLogs, useWalletServer
+      shared/              InfoTip
+    hooks/                 useNodeStatus, useStorage, useShieldMode, useLogs, useWalletServer, useUpdates, useNetworkServe
     lib/
       tauri.ts             Typed invoke() wrappers for Rust commands
       types.ts             Shared TypeScript types
       format.ts            Formatting utilities (bytes, etc.)
+      logParser.ts         Log line parsing
   src-tauri/
     src/
       main.rs              App init, tray setup, command registration
       lib.rs               Tauri plugin setup, shutdown handler
       state.rs             AppState (node, storage, shield, wallet, update managers)
-      commands/            IPC command handlers (node, storage, shield, wallet, updates, etc.)
+      commands/            IPC command handlers (node, storage, shield, wallet, updates, network, settings, etc.)
       process/             Sidecar lifecycle (zebrad.rs, zaino.rs -- spawn, monitor, restart, PID)
       health/              Polling loop, JSON-RPC health checks, event emission
       tor/                 Arti lifecycle (mod.rs), PF firewall client (firewall.rs)
-      config/              Config generation (zebrad_config.rs, zaino_config.rs)
+      config/              Config generation (zebrad_config.rs, zaino_config.rs, app_config.rs)
       storage/             Volume enumeration, space monitoring, thresholds
       updates/             Binary updater (manifest, download, verify, swap, rollback)
+      network/             UPnP port mapping, CGNAT detection, peer monitoring
+      power/               Sleep/wake handling (macOS IOKit)
     binaries/              Sidecar binaries (gitignored, populated by build script)
   mock-zebrad/             Mock Zcash node (workspace member)
   mock-arti/               Mock Tor proxy (workspace member)
