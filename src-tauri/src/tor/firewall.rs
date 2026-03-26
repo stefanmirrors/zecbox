@@ -111,8 +111,8 @@ launchctl bootstrap system {plist_dst}
     let output = Command::new("osascript")
         .arg("-e")
         .arg(format!(
-            "do shell script {} with administrator privileges",
-            shell_escape(&script_tmp)
+            "do shell script \"{}\" with administrator privileges",
+            script_tmp.replace('\\', "\\\\").replace('"', "\\\"")
         ))
         .output()
         .map_err(|e| format!("Failed to run osascript: {}", e))?;
