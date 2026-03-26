@@ -36,9 +36,15 @@ const isNetwork = activePage === "network";
       {el: document.getElementById('downloads'), tab: dlTab},
     ];
     function updateActive() {
-      const y = window.scrollY + 80;
+      const atBottom = (window.innerHeight + window.scrollY) >= (document.body.scrollHeight - 50);
       let active = -1;
-      sections.forEach((s, i) => { if (s.el && s.el.offsetTop <= y) active = i; });
+      if (atBottom) {
+        active = sections.length - 1;
+      } else {
+        // Activate when section's top reaches the upper third of the viewport
+        const trigger = window.scrollY + window.innerHeight * 0.35;
+        sections.forEach((s, i) => { if (s.el && s.el.offsetTop <= trigger) active = i; });
+      }
       sections.forEach((s, i) => { if (s.tab) s.tab.className = i === active ? ACT : INACT; });
       if (netTab) netTab.className = INACT;
     }
