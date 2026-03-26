@@ -4,7 +4,7 @@ use tauri::{AppHandle, State};
 
 use crate::config::app_config::AppConfig;
 use crate::process::zebrad;
-use crate::state::{AppState, ShieldStatus};
+use crate::state::{AppState, NetworkServeStatus, ShieldStatus};
 use crate::tor;
 use crate::tor::firewall;
 
@@ -70,6 +70,14 @@ pub async fn enable_shield_mode(
     app_handle: AppHandle,
     state: State<'_, AppState>,
 ) -> Result<(), String> {
+    // Check if network serving is active
+    {
+        let net_status = state.network.status.lock().await;
+        if matches!(*net_status, NetworkServeStatus::Active { .. }) {
+            return Err("Disable Serve the Network first. Shield Mode cannot be enabled while accepting inbound connections.".into());
+        }
+    }
+
     // Check if firewall helper is installed
     if !firewall::is_helper_installed() {
         return Err("Firewall helper not installed. Install it first to enable Shield Mode.".into());

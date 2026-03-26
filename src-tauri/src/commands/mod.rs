@@ -1,4 +1,5 @@
 pub mod logs;
+pub mod network;
 pub mod node;
 pub mod onboarding;
 pub mod settings;

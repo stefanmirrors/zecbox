@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import { useNodeStatus } from "../../hooks/useNodeStatus";
 import { useShieldMode } from "../../hooks/useShieldMode";
+import { useNetworkServe } from "../../hooks/useNetworkServe";
 import { startNode, stopNode } from "../../lib/tauri";
 import { InfoTip } from "../shared/InfoTip";
 
@@ -12,6 +13,7 @@ export function NodeStatus() {
   const isStarting = ns.status === "starting";
   const isBusy = isStarting || ns.status === "stopping";
   const shield = useShieldMode();
+  const network = useNetworkServe();
   const [toggling, setToggling] = useState(false);
   const [toggleError, setToggleError] = useState<string | null>(null);
   const [showCongrats, setShowCongrats] = useState(false);
@@ -78,10 +80,12 @@ export function NodeStatus() {
                 onToggle={shield.toggle}
               />
               <MiniToggle
-                label="Wallet"
-                tip="Serve light wallets via gRPC so mobile wallets can connect to your node."
-                enabled={false}
-                disabled
+                label="Inbound"
+                tip="Allow inbound connections from other nodes to strengthen the Zcash network. Attempts automatic port forwarding via UPnP."
+                enabled={network.status.enabled}
+                loading={network.toggling || network.status.status === "enabling"}
+                disabled={shield.status.enabled}
+                onToggle={network.toggle}
               />
               <div className="w-px h-5 bg-zec-border" />
             </>

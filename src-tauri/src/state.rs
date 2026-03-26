@@ -16,6 +16,7 @@ pub struct AppState {
     pub shield: Arc<ShieldState>,
     pub wallet: Arc<WalletState>,
     pub update: Arc<UpdateState>,
+    pub network: Arc<NetworkServeState>,
     pub default_data_dir: PathBuf,
     pub tray_status: Mutex<Option<tauri::menu::MenuItem<tauri::Wry>>>,
     pub power_thread: Mutex<Option<std::thread::JoinHandle<()>>>,
@@ -30,6 +31,7 @@ impl AppState {
             shield: Arc::new(ShieldState::new()),
             wallet: Arc::new(WalletState::new()),
             update: Arc::new(UpdateState::new()),
+            network: Arc::new(NetworkServeState::new()),
             default_data_dir,
             tray_status: Mutex::new(None),
             power_thread: Mutex::new(None),
@@ -340,6 +342,40 @@ impl UpdateState {
             status: Mutex::new(UpdateStatus::Idle),
             available_updates: Mutex::new(Vec::new()),
             check_task: Mutex::new(None),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(tag = "status", rename_all = "camelCase")]
+pub enum NetworkServeStatus {
+    Disabled,
+    Enabling,
+    #[serde(rename_all = "camelCase")]
+    Active {
+        public_ip: Option<String>,
+        reachable: Option<bool>,
+        inbound_peers: Option<u32>,
+        outbound_peers: Option<u32>,
+        upnp_active: bool,
+        local_ip: Option<String>,
+        cgnat_detected: bool,
+    },
+    Error {
+        message: String,
+    },
+}
+
+pub struct NetworkServeState {
+    pub status: Mutex<NetworkServeStatus>,
+    pub monitor_task: Mutex<Option<JoinHandle<()>>>,
+}
+
+impl NetworkServeState {
+    pub fn new() -> Self {
+        Self {
+            status: Mutex::new(NetworkServeStatus::Disabled),
+            monitor_task: Mutex::new(None),
         }
     }
 }

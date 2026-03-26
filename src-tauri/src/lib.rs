@@ -1,6 +1,7 @@
 mod commands;
 mod config;
 mod health;
+mod network;
 mod power;
 mod process;
 pub mod state;
@@ -11,7 +12,7 @@ mod updates;
 use tauri::{
     menu::{Menu, MenuItem},
     tray::TrayIconBuilder,
-    Manager,
+    Emitter, Manager,
 };
 
 use config::app_config::AppConfig;
@@ -121,6 +122,65 @@ pub fn run() {
                 });
             }
 
+            // Restore network serve if previously enabled
+            if app_config.serve_network && !app_config.shield_mode {
+                let app_handle = app.handle().clone();
+                let net_arc = app.state::<AppState>().network.clone();
+                let ddd = app.state::<AppState>().default_data_dir.clone();
+                tokio::spawn(async move {
+                    // Wait for node to come up before enabling network serve
+                    let client = reqwest::Client::builder()
+                        .timeout(std::time::Duration::from_secs(5))
+                        .build()
+                        .ok();
+                    for _ in 0..60 {
+                        tokio::time::sleep(std::time::Duration::from_secs(5)).await;
+                        if let Some(ref c) = client {
+                            if let Ok(resp) = c.post("http://127.0.0.1:8232")
+                                .json(&serde_json::json!({"jsonrpc":"2.0","method":"getinfo","params":[],"id":1}))
+                                .send().await
+                            {
+                                if resp.status().is_success() {
+                                    log::info!("Node is up, restoring network serve");
+                                    let (public_ip, upnp_active, cgnat) = network::enable_upnp(8233).await.unwrap_or_default();
+                                    let public_ip_opt = if public_ip.is_empty() { None } else { Some(public_ip.clone()) };
+                                    let reachable = if !public_ip.is_empty() {
+                                        network::check_reachability(&public_ip, 8233).await
+                                    } else { None };
+                                    let local_ip = network::get_local_ip();
+                                    let active = state::NetworkServeStatus::Active {
+                                        public_ip: public_ip_opt,
+                                        reachable,
+                                        inbound_peers: None,
+                                        outbound_peers: None,
+                                        upnp_active,
+                                        local_ip,
+                                        cgnat_detected: cgnat,
+                                    };
+                                    {
+                                        let mut status = net_arc.status.lock().await;
+                                        *status = active.clone();
+                                    }
+                                    let info = crate::commands::network::NetworkServeStatusInfo::from(&active);
+                                    let _ = app_handle.emit("network_serve_status_changed", &info);
+                                    let monitor = network::spawn_network_monitor(
+                                        app_handle, net_arc.clone(), upnp_active, ddd,
+                                    );
+                                    *net_arc.monitor_task.lock().await = Some(monitor);
+                                    return;
+                                }
+                            }
+                        }
+                    }
+                    log::warn!("Node never came up, not restoring network serve");
+                    // Clear the config since we couldn't restore
+                    if let Ok(mut config) = AppConfig::load(&ddd) {
+                        config.serve_network = false;
+                        let _ = config.save(&ddd);
+                    }
+                });
+            }
+
             // System tray
             let status_item_for_tray = MenuItem::with_id(app, "status", "Status: Stopped", false, None::<&str>)?;
             let quit = MenuItem::with_id(app, "quit", "Quit zecbox", true, None::<&str>)?;
@@ -152,6 +212,7 @@ pub fn run() {
                         let shield = state.shield.clone();
                         let wallet = state.wallet.clone();
                         let update = state.update.clone();
+                        let network_state = state.network.clone();
                         let app_handle = app.clone();
                         tauri::async_runtime::block_on(async {
                             // Abort update checker
@@ -161,6 +222,17 @@ pub fn run() {
                             // Abort storage monitor
                             if let Some(task) = storage.monitor_task.lock().await.take() {
                                 task.abort();
+                            }
+                            // Abort network serve monitor and clean up UPnP
+                            if let Some(task) = network_state.monitor_task.lock().await.take() {
+                                task.abort();
+                            }
+                            let needs_upnp_cleanup = {
+                                let status = network_state.status.lock().await;
+                                matches!(*status, state::NetworkServeStatus::Active { upnp_active: true, .. })
+                            };
+                            if needs_upnp_cleanup {
+                                network::disable_upnp(8233).await;
                             }
                             // Stop power monitor
                             power::stop_power_monitor();
@@ -236,6 +308,10 @@ pub fn run() {
             commands::settings::set_auto_start,
             commands::shield::install_firewall_helper,
             commands::shield::is_firewall_helper_installed,
+            commands::network::get_network_serve_status,
+            commands::network::enable_network_serve,
+            commands::network::disable_network_serve,
+            commands::network::recheck_reachability,
         ])
         .run(tauri::generate_context!())
         .expect("zecbox failed to launch. Please reinstall the application.");

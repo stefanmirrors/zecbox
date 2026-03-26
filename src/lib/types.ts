@@ -37,6 +37,7 @@ export interface AppConfig {
   shieldMode: boolean;
   walletServer: boolean;
   autoStart: boolean;
+  serveNetwork: boolean;
 }
 
 export type ShieldStatusTag = "disabled" | "bootstrapping" | "active" | "error" | "interrupted";
@@ -88,6 +89,21 @@ export interface VersionInfo {
   zebrad: string;
   zaino: string;
   arti: string;
+}
+
+export type NetworkServeStatusTag = "disabled" | "enabling" | "active" | "error";
+
+export interface NetworkServeStatusInfo {
+  enabled: boolean;
+  status: NetworkServeStatusTag;
+  publicIp?: string;
+  reachable?: boolean;
+  inboundPeers?: number;
+  outboundPeers?: number;
+  upnpActive?: boolean;
+  localIp?: string;
+  cgnatDetected?: boolean;
+  message?: string;
 }
 
 export interface NodeStats {

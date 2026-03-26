@@ -4,6 +4,7 @@ import { TitleBar } from "./TitleBar";
 import { Dashboard } from "../dashboard/Dashboard";
 import ShieldMode from "../shield/ShieldMode";
 import WalletServer from "../wallet/WalletServer";
+import NetworkServe from "../network/NetworkServe";
 import { LogViewer } from "../logs/LogViewer";
 import { Settings } from "../settings/Settings";
 
@@ -11,6 +12,7 @@ const titles: Record<View, string> = {
   dashboard: "Dashboard",
   shield: "Shield Mode",
   wallet: "Wallet Server",
+  network: "Serve the Network",
   logs: "Logs",
   settings: "Settings",
 };
@@ -55,6 +57,7 @@ export function AppShell({ onResetToOnboarding }: AppShellProps) {
           {activeView === "dashboard" && <Dashboard onNavigate={handleNavigate} />}
           {activeView === "shield" && <ShieldMode />}
           {activeView === "wallet" && <WalletServer />}
+          {activeView === "network" && <NetworkServe />}
           {activeView === "logs" && <LogViewer />}
           {activeView === "settings" && <Settings onResetToOnboarding={onResetToOnboarding} />}
         </main>

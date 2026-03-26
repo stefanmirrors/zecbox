@@ -10,6 +10,7 @@ pub struct AppConfig {
     pub shield_mode: bool,
     pub wallet_server: bool,
     pub auto_start: bool,
+    pub serve_network: bool,
 }
 
 impl AppConfig {
@@ -20,6 +21,7 @@ impl AppConfig {
             shield_mode: false,
             wallet_server: false,
             auto_start: false,
+            serve_network: false,
         }
     }
 
@@ -30,6 +32,7 @@ impl AppConfig {
             shield_mode: false,
             wallet_server: false,
             auto_start: false,
+            serve_network: false,
         }
     }
 

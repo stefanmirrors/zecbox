@@ -71,6 +71,22 @@ async fn handle_request(
                 "error": null
             })
         }
+        "getpeerinfo" => {
+            serde_json::json!({
+                "result": [
+                    { "addr": "203.0.113.5:8233", "inbound": false, "conntime": 1700000000 },
+                    { "addr": "198.51.100.10:8233", "inbound": false, "conntime": 1700000100 },
+                    { "addr": "192.0.2.42:8233", "inbound": false, "conntime": 1700000200 },
+                    { "addr": "10.0.0.5:8233", "inbound": false, "conntime": 1700000300 },
+                    { "addr": "172.16.0.8:8233", "inbound": false, "conntime": 1700000400 },
+                    { "addr": "198.51.100.77:8233", "inbound": true, "conntime": 1700000500 },
+                    { "addr": "203.0.113.99:8233", "inbound": true, "conntime": 1700000600 },
+                    { "addr": "192.0.2.101:8233", "inbound": true, "conntime": 1700000700 }
+                ],
+                "id": id,
+                "error": null
+            })
+        }
         _ => {
             serde_json::json!({
                 "result": null,

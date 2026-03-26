@@ -1,5 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
-import type { AppConfig, BinaryUpdateInfo, NodeStats, NodeStatusInfo, ShieldStatusInfo, StorageInfo, UpdateStatusInfo, VersionInfo, Volume, WalletStatusInfo } from "./types";
+import type { AppConfig, BinaryUpdateInfo, NetworkServeStatusInfo, NodeStats, NodeStatusInfo, ShieldStatusInfo, StorageInfo, UpdateStatusInfo, VersionInfo, Volume, WalletStatusInfo } from "./types";
 
 export async function getNodeStatus(): Promise<NodeStatusInfo> {
   const raw = await invoke<Record<string, unknown>>("get_node_status");
@@ -116,6 +116,22 @@ export async function installFirewallHelper(): Promise<void> {
 
 export async function isFirewallHelperInstalled(): Promise<boolean> {
   return invoke<boolean>("is_firewall_helper_installed");
+}
+
+export async function getNetworkServeStatus(): Promise<NetworkServeStatusInfo> {
+  return invoke<NetworkServeStatusInfo>("get_network_serve_status");
+}
+
+export async function enableNetworkServe(): Promise<void> {
+  return invoke("enable_network_serve");
+}
+
+export async function disableNetworkServe(): Promise<void> {
+  return invoke("disable_network_serve");
+}
+
+export async function recheckReachability(): Promise<void> {
+  return invoke("recheck_reachability");
 }
 
 export async function getNodeStats(): Promise<NodeStats> {
