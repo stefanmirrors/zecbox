@@ -54,13 +54,13 @@ async function fetchCoinGecko(): Promise<void> {
 await fetchCoinGecko();
 ---
 
-<section id="nh-section" class="pt-6 sm:pt-10 pb-12 sm:pb-20 px-4 sm:px-6" aria-label="Network Health"
+<section id="nh-section" class="pt-6 sm:pt-10 pb-12 sm:pb-20 px-4 sm:px-6" aria-label="Network"
   data-price={buildData.price} data-change={buildData.change} data-mcap={buildData.mcap}
   data-hash={buildData.hash} data-blocks24h={buildData.blocks24h} data-height={buildData.height}
   data-diff={buildData.diff} data-nodes={buildData.nodes} data-pool={buildData.pool}>
   <div class="max-w-[1100px] mx-auto">
     <div class="text-center mb-6 sm:mb-8">
-      <h2 class="text-4xl sm:text-5xl font-black text-zec-text mb-3" style="font-family: 'Montserrat', sans-serif;">Network Health</h2>
+      <h2 class="text-4xl sm:text-5xl font-black text-zec-text mb-3" style="font-family: 'Montserrat', sans-serif;">Network</h2>
       <p class="text-zec-muted text-lg leading-relaxed">Live Zcash network metrics</p>
     </div>
 
@@ -80,32 +80,23 @@ await fetchCoinGecko();
         <p id="nh-price-error" class="hidden text-sm text-zec-muted">Unavailable</p>
       </div>
 
-      <!-- Network Hashrate -->
+      <!-- Market Cap -->
       <div class="border border-zec-border rounded-xl px-4 py-3">
-        <p class="text-[10px] text-zec-muted uppercase tracking-wider mb-1">Hashrate</p>
-        <div id="nh-hash-skeleton" class="space-y-2">
-          <div class="h-6 w-24 bg-zec-border/30 rounded animate-pulse"></div>
-          <div class="h-4 w-16 bg-zec-border/20 rounded animate-pulse"></div>
-        </div>
-        <div id="nh-hash-value" class="hidden">
-          <p id="nh-hash" class="text-xl font-bold text-zec-text tabular-nums">—</p>
-          <p class="text-xs text-zec-muted mt-1">24h average</p>
-        </div>
-        <p id="nh-hash-error" class="hidden text-sm text-zec-muted">Unavailable</p>
+        <p class="text-[10px] text-zec-muted uppercase tracking-wider mb-1">Market Cap</p>
+        <div id="nh-mcap-skeleton" class="h-6 w-28 bg-zec-border/30 rounded animate-pulse"></div>
+        <p id="nh-mcap" class="hidden text-xl font-bold text-zec-text tabular-nums">—</p>
+        <p id="nh-mcap-error" class="hidden text-sm text-zec-muted">Unavailable</p>
       </div>
 
-      <!-- Avg Block Time -->
+      <!-- Shielded Pool % -->
       <div class="border border-zec-border rounded-xl px-4 py-3">
-        <p class="text-[10px] text-zec-muted uppercase tracking-wider mb-1">Block Time</p>
-        <div id="nh-block-skeleton" class="space-y-2">
-          <div class="h-6 w-20 bg-zec-border/30 rounded animate-pulse"></div>
-          <div class="h-4 w-14 bg-zec-border/20 rounded animate-pulse"></div>
+        <p class="text-[10px] text-zec-muted uppercase tracking-wider mb-1">Shielded Pool</p>
+        <div id="nh-pool-skeleton" class="h-6 w-20 bg-zec-border/30 rounded animate-pulse"></div>
+        <div id="nh-pool-value" class="hidden">
+          <p id="nh-pool-pct" class="text-xl font-bold text-zec-yellow tabular-nums">—</p>
+          <p class="text-xs text-zec-muted mt-1">of ZEC shielded</p>
         </div>
-        <div id="nh-block-value" class="hidden">
-          <p id="nh-block" class="text-xl font-bold text-zec-text tabular-nums">—</p>
-          <p class="text-xs text-zec-muted mt-1">average</p>
-        </div>
-        <p id="nh-block-error" class="hidden text-sm text-zec-muted">Unavailable</p>
+        <p id="nh-pool-error" class="hidden text-sm text-zec-muted">Unavailable</p>
       </div>
 
       <!-- Node Count -->
@@ -141,23 +132,32 @@ await fetchCoinGecko();
         <p id="nh-diff-error" class="hidden text-sm text-zec-muted">Unavailable</p>
       </div>
 
-      <!-- Market Cap -->
+      <!-- Block Time -->
       <div class="border border-zec-border rounded-xl px-4 py-3">
-        <p class="text-[10px] text-zec-muted uppercase tracking-wider mb-1">Market Cap</p>
-        <div id="nh-mcap-skeleton" class="h-6 w-28 bg-zec-border/30 rounded animate-pulse"></div>
-        <p id="nh-mcap" class="hidden text-xl font-bold text-zec-text tabular-nums">—</p>
-        <p id="nh-mcap-error" class="hidden text-sm text-zec-muted">Unavailable</p>
+        <p class="text-[10px] text-zec-muted uppercase tracking-wider mb-1">Block Time</p>
+        <div id="nh-block-skeleton" class="space-y-2">
+          <div class="h-6 w-20 bg-zec-border/30 rounded animate-pulse"></div>
+          <div class="h-4 w-14 bg-zec-border/20 rounded animate-pulse"></div>
+        </div>
+        <div id="nh-block-value" class="hidden">
+          <p id="nh-block" class="text-xl font-bold text-zec-text tabular-nums">—</p>
+          <p class="text-xs text-zec-muted mt-1">average</p>
+        </div>
+        <p id="nh-block-error" class="hidden text-sm text-zec-muted">Unavailable</p>
       </div>
 
-      <!-- Shielded Pool % -->
+      <!-- Network Hashrate -->
       <div class="border border-zec-border rounded-xl px-4 py-3">
-        <p class="text-[10px] text-zec-muted uppercase tracking-wider mb-1">Shielded Pool</p>
-        <div id="nh-pool-skeleton" class="h-6 w-20 bg-zec-border/30 rounded animate-pulse"></div>
-        <div id="nh-pool-value" class="hidden">
-          <p id="nh-pool-pct" class="text-xl font-bold text-zec-yellow tabular-nums">—</p>
-          <p class="text-xs text-zec-muted mt-1">of ZEC shielded</p>
+        <p class="text-[10px] text-zec-muted uppercase tracking-wider mb-1">Hashrate</p>
+        <div id="nh-hash-skeleton" class="space-y-2">
+          <div class="h-6 w-24 bg-zec-border/30 rounded animate-pulse"></div>
+          <div class="h-4 w-16 bg-zec-border/20 rounded animate-pulse"></div>
         </div>
-        <p id="nh-pool-error" class="hidden text-sm text-zec-muted">Unavailable</p>
+        <div id="nh-hash-value" class="hidden">
+          <p id="nh-hash" class="text-xl font-bold text-zec-text tabular-nums">—</p>
+          <p class="text-xs text-zec-muted mt-1">24h average</p>
+        </div>
+        <p id="nh-hash-error" class="hidden text-sm text-zec-muted">Unavailable</p>
       </div>
     </div>
 
