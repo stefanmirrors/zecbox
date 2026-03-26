@@ -1,13 +1,10 @@
 import { useShieldMode } from "../../hooks/useShieldMode";
-import { useNodeStatus } from "../../hooks/useNodeStatus";
 
 export default function ShieldMode() {
   const {
     status, toggling, error, toggle, clearError,
     helperInstalled, installing, installHelper,
   } = useShieldMode();
-  const nodeStatus = useNodeStatus();
-  const nodeRunning = nodeStatus.status === "running";
 
   return (
     <div className="space-y-6">
@@ -111,11 +108,9 @@ export default function ShieldMode() {
         </div>
       </div>
 
-      {!nodeRunning && status.status === "disabled" && (
-        <p className="text-xs text-zec-muted/60">
-          Shield Mode can be enabled before or after starting the node.
-        </p>
-      )}
+      <p className="text-xs text-zec-muted/60">
+        Currently available on macOS. Windows and Linux support coming soon.
+      </p>
     </div>
   );
 }

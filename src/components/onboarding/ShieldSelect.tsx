@@ -76,10 +76,14 @@ export function ShieldSelect({ onSelect }: Props) {
               <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-zec-yellow/10 text-zec-yellow">
                 Tor
               </span>
+              <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-zec-border/50 text-zec-muted">
+                macOS
+              </span>
             </div>
             <p className="text-xs text-zec-muted mt-1">
               Route all traffic through Tor. Your IP stays hidden from peers
-              and your ISP.
+              and your ISP. Currently available on macOS. Windows and Linux
+              support coming soon.
             </p>
           </button>
         </div>
