@@ -3,7 +3,9 @@ import { NodeStatsPanel } from "./NodeStatsPanel";
 import { StorageBar } from "./StorageBar";
 import { LiveLogPreview } from "./LiveLogPreview";
 
-export function Dashboard({ onNavigate }: { onNavigate?: (view: string) => void }) {
+import type { View } from "../layout/Sidebar";
+
+export function Dashboard({ onNavigate }: { onNavigate?: (view: View) => void }) {
   return (
     <div className="space-y-6">
       <NodeStatus />

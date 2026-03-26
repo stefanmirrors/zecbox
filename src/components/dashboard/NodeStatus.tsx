@@ -118,7 +118,7 @@ export function NodeStatus() {
           isStarting={isStarting}
           isSyncing={isSyncing}
           message={ns.message}
-          startupProgress={ns.progress}
+
           syncPercentage={ns.syncPercentage}
           blockHeight={ns.blockHeight}
           estimatedHeight={ns.estimatedHeight}
@@ -248,7 +248,6 @@ function UnifiedProgress({
   isStarting,
   isSyncing,
   message,
-  startupProgress,
   syncPercentage,
   blockHeight,
   estimatedHeight,
@@ -256,7 +255,6 @@ function UnifiedProgress({
   isStarting: boolean;
   isSyncing: boolean;
   message?: string;
-  startupProgress?: number;
   syncPercentage?: number;
   blockHeight?: number;
   estimatedHeight?: number;
