@@ -3,10 +3,11 @@ import { completeOnboarding } from "../../lib/tauri";
 
 interface Props {
   selectedPath: string;
+  shieldMode: boolean;
   onComplete: () => void;
 }
 
-export function Ready({ selectedPath, onComplete }: Props) {
+export function Ready({ selectedPath, shieldMode, onComplete }: Props) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -14,7 +15,7 @@ export function Ready({ selectedPath, onComplete }: Props) {
     setLoading(true);
     setError(null);
     try {
-      await completeOnboarding(selectedPath);
+      await completeOnboarding(selectedPath, shieldMode);
       onComplete();
     } catch (e) {
       setError(typeof e === "string" ? e : "Failed to start node. Please try again.");
@@ -33,11 +34,19 @@ export function Ready({ selectedPath, onComplete }: Props) {
           </p>
         </div>
 
-        <div className="border border-zec-border rounded-xl p-4 text-left">
-          <span className="text-xs text-zec-muted">Storage location</span>
-          <p className="text-sm text-zec-text font-mono mt-1 break-all">
-            {selectedPath}
-          </p>
+        <div className="border border-zec-border rounded-xl p-4 text-left space-y-3">
+          <div>
+            <span className="text-xs text-zec-muted">Storage location</span>
+            <p className="text-sm text-zec-text font-mono mt-1 break-all">
+              {selectedPath}
+            </p>
+          </div>
+          <div>
+            <span className="text-xs text-zec-muted">Network privacy</span>
+            <p className="text-sm text-zec-text mt-1">
+              {shieldMode ? "Shielded (Tor)" : "Standard"}
+            </p>
+          </div>
         </div>
 
         {error && (
@@ -53,7 +62,9 @@ export function Ready({ selectedPath, onComplete }: Props) {
               : "bg-zec-yellow text-zec-dark hover:brightness-110"
           }`}
         >
-          {loading ? "Starting..." : "Start Node"}
+          {loading
+            ? shieldMode ? "Starting shielded..." : "Starting..."
+            : shieldMode ? "Start Shielded Node" : "Start Node"}
         </button>
       </div>
     </div>

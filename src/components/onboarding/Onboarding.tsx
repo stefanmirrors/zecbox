@@ -1,11 +1,12 @@
 import { useState } from "react";
 import { Welcome } from "./Welcome";
 import { StorageSelect } from "./StorageSelect";
+import { ShieldSelect } from "./ShieldSelect";
 import { Ready } from "./Ready";
 
-type Step = "welcome" | "storage" | "ready";
+type Step = "welcome" | "storage" | "shield" | "ready";
 
-const steps: Step[] = ["welcome", "storage", "ready"];
+const steps: Step[] = ["welcome", "storage", "shield", "ready"];
 
 interface Props {
   onComplete: () => void;
@@ -14,9 +15,15 @@ interface Props {
 export function Onboarding({ onComplete }: Props) {
   const [step, setStep] = useState<Step>("welcome");
   const [selectedPath, setSelectedPath] = useState<string>("");
+  const [shieldMode, setShieldMode] = useState(false);
 
   const handleStorageSelect = (path: string) => {
     setSelectedPath(path);
+    setStep("shield");
+  };
+
+  const handleShieldSelect = (shield: boolean) => {
+    setShieldMode(shield);
     setStep("ready");
   };
 
@@ -31,8 +38,11 @@ export function Onboarding({ onComplete }: Props) {
         {step === "storage" && (
           <StorageSelect onSelect={handleStorageSelect} />
         )}
+        {step === "shield" && (
+          <ShieldSelect onSelect={handleShieldSelect} />
+        )}
         {step === "ready" && (
-          <Ready selectedPath={selectedPath} onComplete={onComplete} />
+          <Ready selectedPath={selectedPath} shieldMode={shieldMode} onComplete={onComplete} />
         )}
       </div>
 

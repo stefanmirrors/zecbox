@@ -30,8 +30,8 @@ export async function getAppConfig(): Promise<AppConfig> {
   return invoke<AppConfig>("get_app_config");
 }
 
-export async function completeOnboarding(path: string): Promise<void> {
-  return invoke("complete_onboarding", { path });
+export async function completeOnboarding(path: string, shieldMode: boolean): Promise<void> {
+  return invoke("complete_onboarding", { path, shieldMode });
 }
 
 export async function resetOnboarding(): Promise<void> {

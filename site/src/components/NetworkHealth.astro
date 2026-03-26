@@ -11,7 +11,7 @@ try {
     buildData.blocks24h = String(d.blocks_24h ?? '');
     buildData.height = String(d.best_block_height ?? '');
     buildData.diff = String(d.difficulty ?? '');
-    buildData.nodes = String(d.nodes ?? '');
+
   }
 } catch {}
 
@@ -57,7 +57,7 @@ await fetchCoinGecko();
 <section id="nh-section" class="pt-6 sm:pt-10 pb-12 sm:pb-20 px-4 sm:px-6" aria-label="Network"
   data-price={buildData.price} data-change={buildData.change} data-mcap={buildData.mcap}
   data-hash={buildData.hash} data-blocks24h={buildData.blocks24h} data-height={buildData.height}
-  data-diff={buildData.diff} data-nodes={buildData.nodes} data-pool={buildData.pool}>
+  data-diff={buildData.diff} data-pool={buildData.pool}>
   <div class="max-w-[1100px] mx-auto">
     <div class="text-center mb-6 sm:mb-8">
       <h2 class="text-4xl sm:text-5xl font-black text-zec-text mb-3" style="font-family: 'Montserrat', sans-serif;">Network</h2>
@@ -102,15 +102,7 @@ await fetchCoinGecko();
       <!-- Node Count -->
       <div class="border border-zec-border rounded-xl px-4 py-3">
         <p class="text-[10px] text-zec-muted uppercase tracking-wider mb-1">Nodes</p>
-        <div id="nh-nodes-skeleton" class="space-y-2">
-          <div class="h-6 w-16 bg-zec-border/30 rounded animate-pulse"></div>
-          <div class="h-4 w-14 bg-zec-border/20 rounded animate-pulse"></div>
-        </div>
-        <div id="nh-nodes-value" class="hidden">
-          <p id="nh-nodes" class="text-xl font-bold text-zec-text tabular-nums">—</p>
-          <p class="text-xs text-zec-muted mt-1">reachable</p>
-        </div>
-        <p id="nh-nodes-error" class="hidden text-sm text-zec-muted">Unavailable</p>
+        <p class="text-xl font-bold text-zec-muted tabular-nums">TBD</p>
       </div>
     </div>
 
@@ -221,7 +213,7 @@ await fetchCoinGecko();
     }
   }
 
-  function renderStats(hash: string, blocks24h: string, height: string, diff: string, nodes: string) {
+  function renderStats(hash: string, blocks24h: string, height: string, diff: string) {
     // Hashrate
     if (hash) { setText('#nh-hash', formatHash(Number(hash))); showCard('#nh-hash', true); }
     else { showCard('#nh-hash', false); }
@@ -246,9 +238,6 @@ await fetchCoinGecko();
       setText('#nh-diff', ds); hide('#nh-diff-skeleton'); show('#nh-diff'); hide('#nh-diff-error');
     } else { hide('#nh-diff-skeleton'); show('#nh-diff-error'); }
 
-    // Nodes
-    if (nodes) { setText('#nh-nodes', formatNum(Number(nodes))); showCard('#nh-nodes', true); }
-    else { showCard('#nh-nodes', false); }
   }
 
   function renderPool(pct: string) {
@@ -269,7 +258,7 @@ await fetchCoinGecko();
 
   // Render build-time data immediately (no CORS issues)
   renderPrice(d.price ?? '', d.change ?? '', d.mcap ?? '');
-  renderStats(d.hash ?? '', d.blocks24h ?? '', d.height ?? '', d.diff ?? '', d.nodes ?? '');
+  renderStats(d.hash ?? '', d.blocks24h ?? '', d.height ?? '', d.diff ?? '');
   renderPool(d.pool ?? '');
   updateTimestamp(false);
 
@@ -290,7 +279,7 @@ await fetchCoinGecko();
         const s = (await statsRes.value.json()).data;
         renderStats(
           String(s.hashrate_24h ?? ''), String(s.blocks_24h ?? ''),
-          String(s.best_block_height ?? ''), String(s.difficulty ?? ''), String(s.nodes ?? '')
+          String(s.best_block_height ?? ''), String(s.difficulty ?? '')
         );
       }
 
