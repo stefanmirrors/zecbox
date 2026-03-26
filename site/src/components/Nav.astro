@@ -7,7 +7,7 @@ const { activePage = "home" } = Astro.props;
 const isNetwork = activePage === "network";
 ---
 
-<nav id="site-nav" class="fixed top-0 left-0 right-0 z-50 border-b border-zec-border backdrop-blur-md" style="background:rgba(13,17,23,0.85);">
+<nav id="site-nav" class="fixed top-0 left-0 right-0 z-50 backdrop-blur-xl" style="background:rgba(13,17,23,0.6);">
   <div class="flex items-center px-4 sm:px-6 py-2">
     <a href="/" class="flex items-center gap-2 mr-4 sm:mr-8 no-underline shrink-0">
       <img src="/zecbox-icon.png" alt="" class="w-5 h-5 sm:w-6 sm:h-6" />
@@ -16,7 +16,7 @@ const isNetwork = activePage === "network";
     <div class="flex items-center flex-1 gap-0">
       <a href="/#how-it-works" class={`site-tab flex-1 text-center px-1 sm:px-4 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-colors no-underline whitespace-nowrap ${isNetwork ? 'text-zec-muted hover:text-zec-text' : 'text-zec-muted hover:text-zec-text'}`}>How it works</a>
       <a href="/#app-demo" class={`site-tab flex-1 text-center px-1 sm:px-4 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-colors no-underline whitespace-nowrap ${isNetwork ? 'text-zec-muted hover:text-zec-text' : 'text-zec-muted hover:text-zec-text'}`}>App demo</a>
-      <a href="/network" class={`site-tab flex-1 text-center px-1 sm:px-4 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-colors no-underline whitespace-nowrap ${isNetwork ? 'text-zec-yellow' : 'text-zec-muted hover:text-zec-text'}`} data-nav-page="network">Network</a>
+      <a href="/#network" class={`site-tab flex-1 text-center px-1 sm:px-4 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-colors no-underline whitespace-nowrap ${isNetwork ? 'text-zec-yellow' : 'text-zec-muted hover:text-zec-text'}`}>Network Health</a>
       <a href="/#downloads" class={`site-tab flex-1 text-center px-1 sm:px-4 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-colors no-underline whitespace-nowrap ${isNetwork ? 'text-zec-muted hover:text-zec-text' : 'text-zec-muted hover:text-zec-text'}`}>Downloads</a>
     </div>
   </div>
@@ -26,27 +26,19 @@ const isNetwork = activePage === "network";
   <script>
     const ACT = 'site-tab flex-1 text-center px-1 sm:px-4 py-1.5 rounded-lg text-xs sm:text-sm font-medium text-zec-yellow transition-colors no-underline whitespace-nowrap';
     const INACT = 'site-tab flex-1 text-center px-1 sm:px-4 py-1.5 rounded-lg text-xs sm:text-sm font-medium text-zec-muted hover:text-zec-text transition-colors no-underline whitespace-nowrap';
-    const howTab = document.querySelector('.site-tab[href="/#how-it-works"]') as HTMLElement;
-    const demoTab = document.querySelector('.site-tab[href="/#app-demo"]') as HTMLElement;
-    const netTab = document.querySelector('.site-tab[data-nav-page="network"]') as HTMLElement;
-    const dlTab = document.querySelector('.site-tab[href="/#downloads"]') as HTMLElement;
-    const sections = [
-      {el: document.getElementById('how-it-works'), tab: howTab},
-      {el: document.getElementById('app-demo'), tab: demoTab},
-      {el: document.getElementById('downloads'), tab: dlTab},
-    ];
+    const tabs = document.querySelectorAll('.site-tab');
+    const sectionIds = ['how-it-works', 'app-demo', 'network', 'downloads'];
+    const sectionEls = sectionIds.map(id => document.getElementById(id));
     function updateActive() {
       const atBottom = (window.innerHeight + window.scrollY) >= (document.body.scrollHeight - 50);
       let active = -1;
       if (atBottom) {
-        active = sections.length - 1;
+        active = sectionIds.length - 1;
       } else {
-        // Activate when section's top reaches the upper third of the viewport
         const trigger = window.scrollY + window.innerHeight * 0.35;
-        sections.forEach((s, i) => { if (s.el && s.el.offsetTop <= trigger) active = i; });
+        sectionEls.forEach((s, i) => { if (s && s.offsetTop <= trigger) active = i; });
       }
-      sections.forEach((s, i) => { if (s.tab) s.tab.className = i === active ? ACT : INACT; });
-      if (netTab) netTab.className = INACT;
+      tabs.forEach((t, i) => { (t as HTMLElement).className = i === active ? ACT : INACT; });
     }
     window.addEventListener('scroll', updateActive);
     updateActive();
