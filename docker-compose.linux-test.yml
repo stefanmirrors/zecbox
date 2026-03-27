@@ -1,0 +1,37 @@
+services:
+  test:
+    build:
+      context: .
+      dockerfile: Dockerfile.linux-test
+      target: test
+    cap_add:
+      - NET_ADMIN
+    network_mode: host
+
+  build:
+    build:
+      context: .
+      dockerfile: Dockerfile.linux-test
+      target: build
+    volumes:
+      - ./dist-linux:/output
+    command: >
+      sh -c '
+        mkdir -p /output &&
+        cp target/release/bundle/appimage/*.AppImage /output/ 2>/dev/null || true &&
+        cp target/release/bundle/deb/*.deb /output/ 2>/dev/null || true &&
+        echo "Artifacts copied to ./dist-linux/"
+      '
+
+  shell:
+    build:
+      context: .
+      dockerfile: Dockerfile.linux-test
+      target: base
+    cap_add:
+      - NET_ADMIN
+    volumes:
+      - .:/app
+    command: bash
+    stdin_open: true
+    tty: true

@@ -348,42 +348,7 @@ fn parse_bootstrap_progress(line: &str) -> Option<u8> {
 }
 
 fn resolve_arti_binary_path(app_handle: &AppHandle) -> PathBuf {
-    let target_triple = "aarch64-apple-darwin";
-    let binary_name_with_triple = format!("arti-{}", target_triple);
-    let binary_name = "arti";
-
-    if cfg!(debug_assertions) {
-        let dev_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-            .join("binaries")
-            .join(&binary_name_with_triple);
-        if dev_path.exists() {
-            return dev_path;
-        }
-    }
-
-    let exe_dir = std::env::current_exe()
-        .ok()
-        .and_then(|p| p.parent().map(|p| p.to_path_buf()));
-
-    if let Some(ref dir) = exe_dir {
-        let prod_path = dir.join(binary_name);
-        if prod_path.exists() {
-            return prod_path;
-        }
-        let prod_path = dir.join(&binary_name_with_triple);
-        if prod_path.exists() {
-            return prod_path;
-        }
-    }
-
-    if let Ok(resource_dir) = app_handle.path().resource_dir() {
-        let prod_path = resource_dir.join(binary_name);
-        if prod_path.exists() {
-            return prod_path;
-        }
-    }
-
-    exe_dir.unwrap_or_default().join(binary_name)
+    crate::platform::resolve_sidecar_path(app_handle, "arti")
 }
 
 async fn emit_shield_status(app_handle: &AppHandle, shield: &ShieldState) {

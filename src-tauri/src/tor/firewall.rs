@@ -1,31 +1,41 @@
 //! Client for communicating with the ZecBox Firewall Helper daemon.
-//! The helper manages PF rules and a transparent SOCKS5 redirector.
+//! The helper manages firewall rules and a transparent SOCKS5 redirector.
+//! macOS: PF rules via LaunchDaemon
+//! Linux: iptables rules via systemd service
 
 use std::io::{BufRead, BufReader, Write};
 use std::os::unix::net::UnixStream;
 use std::process::Command;
 use std::time::Duration;
 
-use tauri::{AppHandle, Manager};
+use tauri::AppHandle;
 
 const SOCKET_PATH: &str = "/var/run/com.zecbox.firewall.sock";
 
 /// Escape a string for safe use inside a single-quoted shell argument.
-/// Wraps in single quotes and escapes embedded single quotes with the
-/// standard '\'' idiom (end quote, escaped quote, start quote).
 fn shell_escape(s: &str) -> String {
     format!("'{}'", s.replace('\'', "'\\''"))
 }
+
 /// Must match HELPER_VERSION in firewall-helper/src/main.rs.
-/// Bump both when the helper protocol or behavior changes.
 const REQUIRED_HELPER_VERSION: &str = "2";
 const HELPER_BIN_NAME: &str = "zecbox-firewall-helper";
+
+#[cfg(target_os = "macos")]
 const HELPER_INSTALL_PATH: &str = "/Library/PrivilegedHelperTools/com.zecbox.firewall-helper";
+#[cfg(target_os = "macos")]
 const PLIST_INSTALL_PATH: &str = "/Library/LaunchDaemons/com.zecbox.firewall.plist";
+#[cfg(target_os = "macos")]
 const PLIST_LABEL: &str = "com.zecbox.firewall";
 
+#[cfg(target_os = "linux")]
+const HELPER_INSTALL_PATH: &str = "/usr/local/bin/zecbox-firewall-helper";
+#[cfg(target_os = "linux")]
+const SERVICE_INSTALL_PATH: &str = "/etc/systemd/system/com.zecbox.firewall.service";
+#[cfg(target_os = "linux")]
+const SERVICE_NAME: &str = "com.zecbox.firewall";
+
 /// Check if the firewall helper daemon is installed, reachable, and up to date.
-/// Returns false if the helper is missing, unreachable, or running an outdated version.
 pub fn is_helper_installed() -> bool {
     if let Ok(mut stream) = UnixStream::connect(SOCKET_PATH) {
         stream
@@ -38,7 +48,6 @@ pub fn is_helper_installed() -> bool {
             let mut reader = BufReader::new(&stream);
             let mut line = String::new();
             if reader.read_line(&mut line).is_ok() && line.contains("\"ok\":true") {
-                // Check version — old helpers won't include a version field
                 if let Ok(v) = serde_json::from_str::<serde_json::Value>(&line) {
                     let version = v["version"].as_str().unwrap_or("1");
                     if version == REQUIRED_HELPER_VERSION {
@@ -50,7 +59,6 @@ pub fn is_helper_installed() -> bool {
                     );
                     return false;
                 }
-                // Can't parse JSON but got ok:true — assume outdated (no version field)
                 return false;
             }
         }
@@ -61,7 +69,6 @@ pub fn is_helper_installed() -> bool {
 
 /// Install the firewall helper daemon. Requires admin password (one-time).
 pub fn install_helper(app_handle: &AppHandle) -> Result<(), String> {
-    // Resolve the helper binary path (bundled with the app)
     let helper_src = resolve_helper_binary_path(app_handle);
     if !helper_src.exists() {
         return Err(format!(
@@ -70,9 +77,27 @@ pub fn install_helper(app_handle: &AppHandle) -> Result<(), String> {
         ));
     }
 
+    #[cfg(target_os = "macos")]
+    install_helper_macos(&helper_src)?;
+
+    #[cfg(target_os = "linux")]
+    install_helper_linux(&helper_src)?;
+
+    // Wait briefly for daemon to start
+    std::thread::sleep(Duration::from_secs(1));
+
+    if !is_helper_installed() {
+        return Err("Helper installed but daemon not responding. Try restarting.".into());
+    }
+
+    log::info!("Firewall helper installed successfully");
+    Ok(())
+}
+
+#[cfg(target_os = "macos")]
+fn install_helper_macos(helper_src: &std::path::Path) -> Result<(), String> {
     let plist_content = generate_plist();
 
-    // Write plist to a temp file with unpredictable name
     let plist_tmp = format!(
         "{}/com.zecbox.firewall.{}.plist",
         std::env::temp_dir().display(),
@@ -81,7 +106,6 @@ pub fn install_helper(app_handle: &AppHandle) -> Result<(), String> {
     std::fs::write(&plist_tmp, &plist_content)
         .map_err(|e| format!("Failed to write plist: {}", e))?;
 
-    // Build the installation script with proper shell escaping
     let esc_helper_src = shell_escape(&helper_src.display().to_string());
     let esc_install_path = shell_escape(HELPER_INSTALL_PATH);
     let esc_plist_tmp = shell_escape(&plist_tmp);
@@ -105,7 +129,6 @@ launchctl bootstrap system {plist_dst}
         label_raw = PLIST_LABEL,
     );
 
-    // Write the script to a temp file and execute that, avoiding inline shell expansion
     let script_tmp = format!(
         "{}/com.zecbox.install.{}.sh",
         std::env::temp_dir().display(),
@@ -114,14 +137,12 @@ launchctl bootstrap system {plist_dst}
     std::fs::write(&script_tmp, &script)
         .map_err(|e| format!("Failed to write install script: {}", e))?;
 
-    // Make script executable
     #[cfg(unix)]
     {
         use std::os::unix::fs::PermissionsExt;
         let _ = std::fs::set_permissions(&script_tmp, std::fs::Permissions::from_mode(0o700));
     }
 
-    // Execute the script file with admin privileges via osascript
     let output = Command::new("osascript")
         .arg("-e")
         .arg(format!(
@@ -131,7 +152,6 @@ launchctl bootstrap system {plist_dst}
         .output()
         .map_err(|e| format!("Failed to run osascript: {}", e))?;
 
-    // Clean up temp files
     let _ = std::fs::remove_file(&plist_tmp);
     let _ = std::fs::remove_file(&script_tmp);
 
@@ -146,15 +166,84 @@ launchctl bootstrap system {plist_dst}
         ));
     }
 
-    // Wait briefly for daemon to start
-    std::thread::sleep(Duration::from_secs(1));
+    Ok(())
+}
 
-    if !is_helper_installed() {
-        return Err("Helper installed but daemon not responding. Try restarting.".into());
+#[cfg(target_os = "linux")]
+fn install_helper_linux(helper_src: &std::path::Path) -> Result<(), String> {
+    let service_content = generate_systemd_service();
+
+    let service_tmp = format!(
+        "{}/com.zecbox.firewall.{}.service",
+        std::env::temp_dir().display(),
+        std::process::id()
+    );
+    std::fs::write(&service_tmp, &service_content)
+        .map_err(|e| format!("Failed to write service file: {}", e))?;
+
+    let esc_helper_src = shell_escape(&helper_src.display().to_string());
+    let esc_install_path = shell_escape(HELPER_INSTALL_PATH);
+    let esc_service_tmp = shell_escape(&service_tmp);
+    let esc_service_install = shell_escape(SERVICE_INSTALL_PATH);
+    let script = format!(
+        r#"
+cp {src} {dst}
+chown root:root {dst}
+chmod 755 {dst}
+cp {svc_src} {svc_dst}
+chown root:root {svc_dst}
+chmod 644 {svc_dst}
+systemctl daemon-reload
+systemctl enable {svc_name}
+systemctl restart {svc_name}
+"#,
+        src = esc_helper_src,
+        dst = esc_install_path,
+        svc_src = esc_service_tmp,
+        svc_dst = esc_service_install,
+        svc_name = SERVICE_NAME,
+    );
+
+    let script_tmp = format!(
+        "{}/com.zecbox.install.{}.sh",
+        std::env::temp_dir().display(),
+        std::process::id()
+    );
+    std::fs::write(&script_tmp, &script)
+        .map_err(|e| format!("Failed to write install script: {}", e))?;
+
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let _ = std::fs::set_permissions(&script_tmp, std::fs::Permissions::from_mode(0o700));
     }
 
-    log::info!("Firewall helper installed successfully");
-    Ok(())
+    // Try pkexec first (graphical), fall back to informing user about sudo
+    let output = Command::new("pkexec")
+        .arg("/bin/sh")
+        .arg(&script_tmp)
+        .output();
+
+    let _ = std::fs::remove_file(&service_tmp);
+    let _ = std::fs::remove_file(&script_tmp);
+
+    match output {
+        Ok(out) if out.status.success() => Ok(()),
+        Ok(out) => {
+            let stderr = String::from_utf8_lossy(&out.stderr);
+            if stderr.contains("dismissed") || stderr.contains("Not authorized") {
+                Err("Installation canceled by user".into())
+            } else {
+                Err(format!(
+                    "System helper installation failed. Details: {}",
+                    stderr.lines().next().unwrap_or("Unknown error")
+                ))
+            }
+        }
+        Err(_) => {
+            Err("pkexec not found. Install polkit or run the install script manually with sudo.".into())
+        }
+    }
 }
 
 /// Send enable command to the firewall helper.
@@ -220,47 +309,10 @@ fn send_command_raw(cmd: &str) -> Result<String, String> {
 }
 
 fn resolve_helper_binary_path(app_handle: &AppHandle) -> std::path::PathBuf {
-    let target_triple = "aarch64-apple-darwin";
-    let binary_name_with_triple = format!("{}-{}", HELPER_BIN_NAME, target_triple);
-
-    // Dev mode: look in src-tauri/binaries/
-    if cfg!(debug_assertions) {
-        let dev_path = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-            .join("binaries")
-            .join(&binary_name_with_triple);
-        if dev_path.exists() {
-            return dev_path;
-        }
-    }
-
-    // Production: alongside the main executable
-    let exe_dir = std::env::current_exe()
-        .ok()
-        .and_then(|p| p.parent().map(|p| p.to_path_buf()));
-
-    if let Some(ref dir) = exe_dir {
-        let prod_path = dir.join(HELPER_BIN_NAME);
-        if prod_path.exists() {
-            return prod_path;
-        }
-        let prod_path = dir.join(&binary_name_with_triple);
-        if prod_path.exists() {
-            return prod_path;
-        }
-    }
-
-    if let Ok(resource_dir) = app_handle.path().resource_dir() {
-        let prod_path = resource_dir.join(HELPER_BIN_NAME);
-        if prod_path.exists() {
-            return prod_path;
-        }
-    }
-
-    exe_dir
-        .unwrap_or_default()
-        .join(HELPER_BIN_NAME)
+    crate::platform::resolve_sidecar_path(app_handle, HELPER_BIN_NAME)
 }
 
+#[cfg(target_os = "macos")]
 fn generate_plist() -> String {
     format!(
         r#"<?xml version="1.0" encoding="UTF-8"?>
@@ -284,4 +336,38 @@ fn generate_plist() -> String {
 "#,
         PLIST_LABEL, HELPER_INSTALL_PATH
     )
+}
+
+#[cfg(target_os = "linux")]
+fn generate_systemd_service() -> String {
+    format!(
+        "[Unit]\n\
+         Description=ZecBox Firewall Helper\n\
+         After=network.target\n\
+         \n\
+         [Service]\n\
+         Type=simple\n\
+         ExecStart={}\n\
+         Restart=always\n\
+         RestartSec=5\n\
+         StandardOutput=journal\n\
+         StandardError=journal\n\
+         \n\
+         [Install]\n\
+         WantedBy=multi-user.target\n",
+        HELPER_INSTALL_PATH
+    )
+}
+
+#[cfg(test)]
+mod tests {
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn test_generate_systemd_service() {
+        let svc = super::generate_systemd_service();
+        assert!(svc.contains("[Unit]"));
+        assert!(svc.contains("[Service]"));
+        assert!(svc.contains("[Install]"));
+        assert!(svc.contains("zecbox-firewall-helper"));
+    }
 }

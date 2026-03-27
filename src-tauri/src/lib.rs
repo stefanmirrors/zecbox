@@ -2,6 +2,7 @@ mod commands;
 mod config;
 mod health;
 mod network;
+pub mod platform;
 mod power;
 mod process;
 pub mod state;

@@ -252,50 +252,8 @@ pub async fn check_orphan(node: &NodeState) -> Result<(), String> {
 }
 
 /// Resolve the path to the zebrad binary.
-/// In development: looks relative to the Cargo manifest dir.
-/// In production: checks Contents/MacOS/ (where Tauri bundles externalBin).
 pub fn resolve_binary_path(app_handle: &AppHandle) -> PathBuf {
-    let target_triple = "aarch64-apple-darwin";
-    let binary_name_with_triple = format!("zebrad-{}", target_triple);
-    let binary_name = "zebrad";
-
-    // In dev mode, look in src-tauri/binaries/
-    if cfg!(debug_assertions) {
-        let dev_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-            .join("binaries")
-            .join(&binary_name_with_triple);
-        if dev_path.exists() {
-            return dev_path;
-        }
-    }
-
-    // Production: Tauri bundles externalBin alongside the main executable (Contents/MacOS/)
-    let exe_dir = std::env::current_exe()
-        .ok()
-        .and_then(|p| p.parent().map(|p| p.to_path_buf()));
-
-    if let Some(ref dir) = exe_dir {
-        // Tauri strips the target triple when bundling
-        let prod_path = dir.join(binary_name);
-        if prod_path.exists() {
-            return prod_path;
-        }
-        // Also check with target triple suffix
-        let prod_path = dir.join(&binary_name_with_triple);
-        if prod_path.exists() {
-            return prod_path;
-        }
-    }
-
-    // Fallback: resource dir
-    if let Ok(resource_dir) = app_handle.path().resource_dir() {
-        let prod_path = resource_dir.join(binary_name);
-        if prod_path.exists() {
-            return prod_path;
-        }
-    }
-
-    exe_dir.unwrap_or_default().join(binary_name)
+    crate::platform::resolve_sidecar_path(app_handle, "zebrad")
 }
 
 fn write_pid_file(data_dir: &Path, pid: u32) -> Result<(), std::io::Error> {

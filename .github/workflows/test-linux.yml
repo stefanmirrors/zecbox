@@ -1,0 +1,138 @@
+name: Test Linux
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test-linux:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libgtk-3-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev \
+            patchelf \
+            iptables
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      # Step 1: Compile checks
+      - name: Check main app compiles
+        run: cargo check -p zecbox
+
+      - name: Check firewall helper compiles
+        run: cargo check -p firewall-helper
+
+      - name: Check mock binaries compile
+        run: cargo check -p mock-zebrad -p mock-arti -p mock-zaino
+
+      # Step 2: Unit tests
+      - name: Run unit tests
+        run: cargo test -p zecbox -p firewall-helper
+
+      # Step 3: Build mock sidecars
+      - name: Build mock sidecars
+        run: |
+          TRIPLE="x86_64-unknown-linux-gnu"
+          for binary in zebrad arti zaino; do
+            cargo build -p "mock-${binary}" --release
+            cp "target/release/mock-${binary}" "src-tauri/binaries/${binary}-${TRIPLE}"
+            chmod +x "src-tauri/binaries/${binary}-${TRIPLE}"
+          done
+
+      - name: Build firewall helper
+        run: |
+          TRIPLE="x86_64-unknown-linux-gnu"
+          cargo build -p firewall-helper --release
+          cp target/release/zecbox-firewall-helper "src-tauri/binaries/zecbox-firewall-helper-${TRIPLE}"
+          chmod +x "src-tauri/binaries/zecbox-firewall-helper-${TRIPLE}"
+
+      # Step 4: Full app build
+      - name: Build Tauri app
+        run: npx tauri build
+
+      # Step 5: Artifact validation
+      - name: Validate AppImage
+        run: |
+          APPIMAGE=$(find target/release/bundle/appimage -name "*.AppImage" | head -1)
+          test -n "$APPIMAGE" && test -s "$APPIMAGE"
+          echo "AppImage: $APPIMAGE ($(du -h "$APPIMAGE" | cut -f1))"
+
+      - name: Validate deb package
+        run: |
+          DEB=$(find target/release/bundle/deb -name "*.deb" | head -1)
+          test -n "$DEB" && test -s "$DEB"
+          dpkg -c "$DEB" | grep zecbox
+          echo "Deb: $DEB ($(du -h "$DEB" | cut -f1))"
+
+      - name: Check shared libraries
+        run: |
+          MAIN_BIN="target/release/zecbox"
+          if [ -f "$MAIN_BIN" ]; then
+            MISSING=$(ldd "$MAIN_BIN" | grep "not found" || true)
+            if [ -n "$MISSING" ]; then
+              echo "Missing libraries:"
+              echo "$MISSING"
+              exit 1
+            fi
+            echo "All shared libraries resolved"
+          fi
+
+      # Step 6: Smoke tests
+      - name: Smoke test mock-zebrad
+        run: |
+          TRIPLE="x86_64-unknown-linux-gnu"
+          src-tauri/binaries/zebrad-${TRIPLE} &
+          PID=$!
+          sleep 2
+          curl -sf -X POST http://127.0.0.1:8232 \
+            -H "Content-Type: application/json" \
+            -d '{"jsonrpc":"2.0","method":"getinfo","params":[],"id":1}' | grep jsonrpc
+          kill $PID || true
+
+      - name: Smoke test mock-arti
+        run: |
+          TRIPLE="x86_64-unknown-linux-gnu"
+          src-tauri/binaries/arti-${TRIPLE} &
+          PID=$!
+          sleep 2
+          ss -tlnp | grep 9150
+          kill $PID || true
+
+      - name: Smoke test mock-zaino
+        run: |
+          TRIPLE="x86_64-unknown-linux-gnu"
+          src-tauri/binaries/zaino-${TRIPLE} &
+          PID=$!
+          sleep 2
+          ss -tlnp | grep 9067
+          kill $PID || true
+
+      # Step 7: iptables test
+      - name: Test iptables rules
+        run: |
+          sudo iptables -t nat -N ZECBOX_TEST
+          sudo iptables -t nat -A ZECBOX_TEST -p tcp --dport 8233 -j REDIRECT --to-port 9040
+          sudo iptables -t nat -L ZECBOX_TEST -n | grep 9040
+          sudo iptables -t nat -F ZECBOX_TEST
+          sudo iptables -t nat -X ZECBOX_TEST
+          echo "iptables rules created and cleaned up successfully"

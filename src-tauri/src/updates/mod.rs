@@ -14,10 +14,10 @@ use crate::state::{AppState, BinaryUpdateInfo, UpdateState, UpdateStatus};
 use crate::tor;
 
 const MANIFEST_URL: &str = "https://zecbox.io/updates/manifest.json";
-#[cfg(target_arch = "aarch64")]
-const TARGET_PLATFORM: &str = "aarch64-apple-darwin";
-#[cfg(target_arch = "x86_64")]
-const TARGET_PLATFORM: &str = "x86_64-apple-darwin";
+
+fn target_platform() -> &'static str {
+    crate::platform::target_triple()
+}
 
 /// Ed25519 public key for manifest signature verification.
 /// Generate a new keypair with: cargo run -p zecbox-keygen
@@ -160,7 +160,7 @@ pub fn resolve_binary_dir(app_handle: &AppHandle) -> PathBuf {
 pub fn cleanup_orphaned_update_files(app_handle: &AppHandle) {
     let binary_dir = resolve_binary_dir(app_handle);
     for name in &["zebrad", "zaino", "arti"] {
-        let filename = format!("{}-{}", name, TARGET_PLATFORM);
+        let filename = format!("{}-{}", name, target_platform());
 
         // Recovery: if active binary missing but backup exists, restore it
         let active = binary_dir.join(&filename);
@@ -187,7 +187,7 @@ pub fn cleanup_orphaned_update_files(app_handle: &AppHandle) {
 }
 
 fn binary_filename(name: &str) -> String {
-    format!("{}-{}", name, TARGET_PLATFORM)
+    format!("{}-{}", name, target_platform())
 }
 
 // --- Manifest check ---
@@ -203,7 +203,7 @@ pub async fn check_manifest(
     let mut updates = Vec::new();
 
     for entry in &manifest.binaries {
-        if entry.platform != TARGET_PLATFORM {
+        if entry.platform != target_platform() {
             continue;
         }
 

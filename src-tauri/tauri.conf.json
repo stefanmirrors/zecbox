@@ -39,7 +39,7 @@
   },
   "bundle": {
     "active": true,
-    "targets": ["dmg"],
+    "targets": ["dmg", "appimage", "deb"],
     "category": "public.app-category.utilities",
     "copyright": "zecbox Contributors",
     "externalBin": ["binaries/zebrad", "binaries/arti", "binaries/zaino", "binaries/zecbox-firewall-helper"],
@@ -54,6 +54,14 @@
       "entitlements": "Entitlements.plist",
       "signingIdentity": null,
       "minimumSystemVersion": "12.0"
+    },
+    "linux": {
+      "appimage": {
+        "bundleMediaFramework": false
+      },
+      "deb": {
+        "depends": ["libwebkit2gtk-4.1-0", "libgtk-3-0", "libayatana-appindicator3-1"]
+      }
     }
   }
 }

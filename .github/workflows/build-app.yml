@@ -181,8 +181,84 @@ jobs:
           name: update-meta-${{ matrix.arch }}
           path: /tmp/update-meta/
 
+  build-linux:
+    strategy:
+      matrix:
+        include:
+          - runner: ubuntu-22.04
+            arch: x86_64
+            triple: x86_64-unknown-linux-gnu
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.triple }}
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev libayatana-appindicator3-dev librsvg2-dev patchelf
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Fetch upstream binaries
+        run: |
+          chmod +x scripts/fetch-binaries.sh
+          TARGET_TRIPLE=${{ matrix.triple }} scripts/fetch-binaries.sh
+
+      - name: Build firewall helper
+        run: |
+          cargo build -p firewall-helper --release --target ${{ matrix.triple }}
+          cp target/${{ matrix.triple }}/release/zecbox-firewall-helper src-tauri/binaries/zecbox-firewall-helper-${{ matrix.triple }}
+          chmod +x src-tauri/binaries/zecbox-firewall-helper-${{ matrix.triple }}
+
+      - name: Build app
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: npx tauri build --target ${{ matrix.triple }}
+
+      - name: Find artifacts
+        id: artifacts
+        run: |
+          APPIMAGE=$(find target/${{ matrix.triple }}/release/bundle/appimage -name "*.AppImage" | head -1)
+          DEB=$(find target/${{ matrix.triple }}/release/bundle/deb -name "*.deb" | head -1)
+          echo "appimage=$APPIMAGE" >> "$GITHUB_OUTPUT"
+          echo "deb=$DEB" >> "$GITHUB_OUTPUT"
+
+      - name: Generate SHA256
+        run: |
+          mkdir -p target/${{ matrix.triple }}/release/bundle/linux-checksums
+          cd target/${{ matrix.triple }}/release/bundle
+          if [ -n "$(find appimage -name '*.AppImage' 2>/dev/null)" ]; then
+            sha256sum appimage/*.AppImage > linux-checksums/SHA256SUMS
+          fi
+          if [ -n "$(find deb -name '*.deb' 2>/dev/null)" ]; then
+            sha256sum deb/*.deb >> linux-checksums/SHA256SUMS
+          fi
+
+      - name: Upload Linux artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-${{ matrix.arch }}
+          path: |
+            target/${{ matrix.triple }}/release/bundle/appimage/*.AppImage
+            target/${{ matrix.triple }}/release/bundle/deb/*.deb
+            target/${{ matrix.triple }}/release/bundle/linux-checksums/SHA256SUMS
+
   release:
-    needs: build-macos
+    needs: [build-macos, build-linux]
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/')
     steps:
@@ -204,6 +280,9 @@ jobs:
             artifacts/dmg-x86_64/SHA256SUMS
             artifacts/sidecars-aarch64/*
             artifacts/sidecars-x86_64/*
+            artifacts/linux-x86_64/*.AppImage
+            artifacts/linux-x86_64/*.deb
+            artifacts/linux-x86_64/SHA256SUMS
 
       - name: Generate app update JSONs
         env:

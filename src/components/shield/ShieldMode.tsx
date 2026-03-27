@@ -15,7 +15,7 @@ export default function ShieldMode() {
             System Helper Required
           </h3>
           <p className="text-xs text-zec-muted mb-4">
-            Shield Mode uses macOS firewall rules to enforce Tor routing.
+            Shield Mode uses system firewall rules to enforce Tor routing.
             A one-time system helper installation is needed.
           </p>
           <button
@@ -102,14 +102,14 @@ export default function ShieldMode() {
         <h3 className="text-xs font-medium text-zec-muted">How it works</h3>
         <div className="space-y-3">
           <Info title="Network privacy" text="Your ISP cannot see you are running a Zcash node. Peers cannot see your real IP." />
-          <Info title="Firewall enforcement" text="macOS firewall rules redirect all P2P traffic through Tor. No traffic can bypass." />
+          <Info title="Firewall enforcement" text="System firewall rules redirect all P2P traffic through Tor. No traffic can bypass." />
           <Info title="Kill switch" text="If Tor or firewall rules drop, the node stops immediately to prevent clearnet exposure." />
           <Info title="Performance" text="Tor adds latency. Best used after initial sync is complete." />
         </div>
       </div>
 
       <p className="text-xs text-zec-muted/60">
-        Currently available on macOS. Windows and Linux support coming soon.
+        Available on macOS and Linux. Windows support coming soon.
       </p>
     </div>
   );

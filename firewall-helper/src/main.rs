@@ -1,16 +1,19 @@
 //! ZecBox Firewall Helper Daemon
 //!
-//! Privileged helper that runs as root via LaunchDaemon.
-//! Manages PF firewall rules and a transparent SOCKS5 redirector
-//! to force zebrad P2P traffic through Arti/Tor.
+//! Privileged helper that runs as root.
+//! macOS: LaunchDaemon, manages PF firewall rules
+//! Linux: systemd service, manages iptables rules
 //!
 //! Communication: Unix socket at /var/run/com.zecbox.firewall.sock
 //! Commands (JSON):
-//!   {"cmd":"enable"}  — Load PF anchor + start redirector
-//!   {"cmd":"disable"} — Flush PF anchor + stop redirector
+//!   {"cmd":"enable"}  — Load firewall rules + start redirector
+//!   {"cmd":"disable"} — Flush firewall rules + stop redirector
 //!   {"cmd":"status"}  — Return current state
 
+#[cfg(target_os = "macos")]
 mod pf;
+#[cfg(target_os = "linux")]
+mod iptables;
 mod redirector;
 mod socks5;
 
@@ -119,12 +122,16 @@ async fn handle_enable(state: &mut DaemonState) -> Response {
     // Give the redirector a moment to bind
     tokio::time::sleep(std::time::Duration::from_millis(100)).await;
 
-    // Load PF rules
-    if let Err(e) = pf::enable(REDIR_PORT) {
-        // Stop redirector if PF fails
+    // Load firewall rules
+    #[cfg(target_os = "macos")]
+    let fw_result = pf::enable(REDIR_PORT);
+    #[cfg(target_os = "linux")]
+    let fw_result = iptables::enable(REDIR_PORT);
+
+    if let Err(e) = fw_result {
         let _ = shutdown_tx.send(true);
         handle.abort();
-        return Response::error(format!("Failed to load PF rules: {}", e));
+        return Response::error(format!("Failed to load firewall rules: {}", e));
     }
 
     state.enabled = true;
@@ -140,10 +147,14 @@ async fn handle_disable(state: &mut DaemonState) -> Response {
         return Response::success();
     }
 
-    // Flush PF rules first
+    // Flush firewall rules first
+    #[cfg(target_os = "macos")]
     if let Err(e) = pf::disable() {
-        log::error!("Failed to flush PF rules: {}", e);
-        // Continue with shutdown even if PF flush fails
+        log::error!("Failed to flush firewall rules: {}", e);
+    }
+    #[cfg(target_os = "linux")]
+    if let Err(e) = iptables::disable() {
+        log::error!("Failed to flush firewall rules: {}", e);
     }
 
     // Stop redirector
@@ -189,15 +200,16 @@ async fn main() {
         }
     };
 
-    // Restrict socket to root and staff group (standard macOS interactive users)
+    // Restrict socket permissions
     if let Err(e) = fs::set_permissions(SOCKET_PATH, fs::Permissions::from_mode(0o660)) {
         log::warn!("Failed to set socket permissions: {}", e);
     }
-    // Set socket group to 'staff' so the unprivileged ZecBox app can connect
-    let staff_gid = get_staff_gid().unwrap_or(20); // 20 is default staff GID on macOS
+
+    // Set socket group so the unprivileged ZecBox app can connect
+    let app_gid = get_app_group_gid();
     unsafe {
         let c_path = std::ffi::CString::new(SOCKET_PATH).unwrap();
-        libc::chown(c_path.as_ptr(), 0, staff_gid);
+        libc::chown(c_path.as_ptr(), 0, app_gid);
     }
 
     log::info!("Listening on {}", SOCKET_PATH);
@@ -218,7 +230,6 @@ async fn main() {
     loop {
         match listener.accept().await {
             Ok((stream, _)) => {
-                // Verify peer credentials: only allow root or staff group members
                 if let Err(e) = verify_peer_credentials(&stream) {
                     log::warn!("Rejected connection: {}", e);
                     continue;
@@ -258,11 +269,28 @@ async fn main() {
     }
 }
 
-/// Resolve the GID of the 'staff' group on macOS.
-fn get_staff_gid() -> Option<u32> {
+// --- Platform-specific group and credential functions ---
+
+/// Get the GID of the group that app users belong to.
+fn get_app_group_gid() -> u32 {
+    #[cfg(target_os = "macos")]
+    {
+        // macOS: "staff" group (GID 20) includes all interactive users
+        resolve_group_gid("staff").unwrap_or(20)
+    }
+    #[cfg(target_os = "linux")]
+    {
+        // Linux: try "sudo" group (Debian/Ubuntu), then "wheel" (Fedora/Arch)
+        resolve_group_gid("sudo")
+            .or_else(|| resolve_group_gid("wheel"))
+            .unwrap_or(0) // fallback to root
+    }
+}
+
+fn resolve_group_gid(name: &str) -> Option<u32> {
     unsafe {
-        let name = std::ffi::CString::new("staff").ok()?;
-        let grp = libc::getgrnam(name.as_ptr());
+        let c_name = std::ffi::CString::new(name).ok()?;
+        let grp = libc::getgrnam(c_name.as_ptr());
         if grp.is_null() {
             None
         } else {
@@ -271,44 +299,62 @@ fn get_staff_gid() -> Option<u32> {
     }
 }
 
-/// Verify the connecting peer is root or a member of the staff group.
+/// Verify the connecting peer is root or a member of the app group.
 fn verify_peer_credentials(stream: &tokio::net::UnixStream) -> Result<(), String> {
     let raw_fd = stream.as_raw_fd();
-    let mut uid: libc::uid_t = 0;
-    let mut gid: libc::gid_t = 0;
 
-    let ret = unsafe { libc::getpeereid(raw_fd, &mut uid, &mut gid) };
-    if ret != 0 {
-        return Err(format!(
-            "getpeereid failed: {}",
-            std::io::Error::last_os_error()
-        ));
-    }
+    #[cfg(target_os = "macos")]
+    let (uid, gid) = {
+        let mut uid: libc::uid_t = 0;
+        let mut gid: libc::gid_t = 0;
+        let ret = unsafe { libc::getpeereid(raw_fd, &mut uid, &mut gid) };
+        if ret != 0 {
+            return Err(format!("getpeereid failed: {}", std::io::Error::last_os_error()));
+        }
+        (uid, gid)
+    };
+
+    #[cfg(target_os = "linux")]
+    let (uid, gid) = {
+        let mut cred: libc::ucred = unsafe { std::mem::zeroed() };
+        let mut len = std::mem::size_of::<libc::ucred>() as libc::socklen_t;
+        let ret = unsafe {
+            libc::getsockopt(
+                raw_fd,
+                libc::SOL_SOCKET,
+                libc::SO_PEERCRED,
+                &mut cred as *mut libc::ucred as *mut libc::c_void,
+                &mut len,
+            )
+        };
+        if ret != 0 {
+            return Err(format!("getsockopt SO_PEERCRED failed: {}", std::io::Error::last_os_error()));
+        }
+        (cred.uid, cred.gid)
+    };
 
     // Allow root
     if uid == 0 {
         return Ok(());
     }
 
-    // Allow members of the staff group
-    let staff_gid = get_staff_gid().unwrap_or(20);
-    if gid == staff_gid {
+    // Allow members of the app group
+    let app_gid = get_app_group_gid();
+    if gid == app_gid {
         return Ok(());
     }
 
-    // Also check supplementary groups — the user's primary GID might not be staff
-    // but they may still be a member
-    if is_uid_in_group(uid, staff_gid) {
+    // Check supplementary groups
+    if is_uid_in_group(uid, app_gid) {
         return Ok(());
     }
 
     Err(format!(
-        "Unauthorized: uid={} gid={} is not root or staff",
+        "Unauthorized: uid={} gid={} is not root or app group member",
         uid, gid
     ))
 }
 
-/// Check if a UID belongs to a given group (including supplementary groups).
 fn is_uid_in_group(uid: libc::uid_t, target_gid: libc::gid_t) -> bool {
     unsafe {
         let pw = libc::getpwuid(uid);
@@ -326,7 +372,6 @@ fn is_uid_in_group(uid: libc::uid_t, target_gid: libc::gid_t) -> bool {
         );
 
         if ret < 0 {
-            // Buffer too small, resize and retry
             groups.resize(ngroups as usize, 0);
             libc::getgrouplist(
                 (*pw).pw_name,

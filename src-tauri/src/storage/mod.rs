@@ -16,7 +16,8 @@ const PAUSE_THRESHOLD: u64 = 2_000_000_000;
 const MONITOR_INTERVAL: Duration = Duration::from_secs(60);
 
 /// macOS system volume mount points to filter out.
-const MACOS_SYSTEM_MOUNTS: &[&str] = &[
+#[cfg(target_os = "macos")]
+const SYSTEM_MOUNTS: &[&str] = &[
     "/System/Volumes/VM",
     "/System/Volumes/Preboot",
     "/System/Volumes/Update",
@@ -27,6 +28,22 @@ const MACOS_SYSTEM_MOUNTS: &[&str] = &[
     "/private/var/vm",
 ];
 
+/// Linux virtual/system mount points to filter out.
+#[cfg(target_os = "linux")]
+const SYSTEM_MOUNTS: &[&str] = &[
+    "/proc",
+    "/sys",
+    "/dev",
+    "/dev/shm",
+    "/dev/pts",
+    "/run",
+    "/run/lock",
+    "/run/user",
+    "/snap",
+    "/boot/efi",
+    "/boot",
+];
+
 pub fn enumerate_volumes() -> Vec<VolumeInfo> {
     let disks = Disks::new_with_refreshed_list();
     let mut volumes = Vec::new();
@@ -34,9 +51,16 @@ pub fn enumerate_volumes() -> Vec<VolumeInfo> {
     for disk in disks.list() {
         let mount = disk.mount_point().to_string_lossy().to_string();
 
-        // Filter out macOS internal system volumes
-        if MACOS_SYSTEM_MOUNTS.iter().any(|m| mount == *m) {
+        // Filter out system volumes
+        if SYSTEM_MOUNTS.iter().any(|m| mount == *m) {
             continue;
+        }
+        #[cfg(target_os = "linux")]
+        {
+            // Also filter /snap/* submounts and /run/user/* on Linux
+            if mount.starts_with("/snap/") || mount.starts_with("/run/user/") {
+                continue;
+            }
         }
         // Skip /dev mount points
         if mount.starts_with("/dev") {
@@ -46,7 +70,7 @@ pub fn enumerate_volumes() -> Vec<VolumeInfo> {
         let name = disk.name().to_string_lossy().to_string();
         let display_name = if name.is_empty() {
             if mount == "/" {
-                "Macintosh HD".to_string()
+                default_root_name().to_string()
             } else {
                 mount
                     .rsplit('/')
@@ -96,7 +120,7 @@ pub fn get_data_dir_storage(data_dir: &Path) -> Result<StorageInfo, String> {
     let name = disk.name().to_string_lossy().to_string();
     let display_name = if name.is_empty() {
         if mount_str == "/" {
-            "Macintosh HD".to_string()
+            default_root_name().to_string()
         } else {
             mount_str
                 .rsplit('/')
@@ -130,25 +154,60 @@ pub fn warning_level(available_bytes: u64) -> StorageWarningLevel {
     }
 }
 
+fn default_root_name() -> &'static str {
+    if cfg!(target_os = "macos") {
+        "Macintosh HD"
+    } else {
+        "System"
+    }
+}
+
 pub fn is_external_volume(mount_point: &Path) -> bool {
     let mount_str = mount_point.to_string_lossy();
-    mount_str.starts_with("/Volumes/")
+    if cfg!(target_os = "macos") {
+        mount_str.starts_with("/Volumes/")
+    } else {
+        // Linux: /media/ and /mnt/ are typical external mount points
+        mount_str.starts_with("/media/") || mount_str.starts_with("/mnt/")
+    }
 }
 
 pub fn is_mount_available(data_dir: &Path) -> bool {
-    // For the root volume, always available
-    if data_dir.starts_with("/Users") || data_dir.starts_with("/Applications") {
-        return true;
+    let path_str = data_dir.to_string_lossy();
+
+    #[cfg(target_os = "macos")]
+    {
+        // For the root volume, always available
+        if data_dir.starts_with("/Users") || data_dir.starts_with("/Applications") {
+            return true;
+        }
+
+        // For external volumes (/Volumes/X/...), check the mount point exists
+        if path_str.starts_with("/Volumes/") {
+            let parts: Vec<&str> = path_str.splitn(4, '/').collect();
+            if parts.len() >= 3 {
+                let mount_point = format!("/{}/{}", parts[1], parts[2]);
+                return Path::new(&mount_point).exists();
+            }
+        }
     }
 
-    // For external volumes (/Volumes/X/...), check the mount point exists
-    let path_str = data_dir.to_string_lossy();
-    if path_str.starts_with("/Volumes/") {
-        // Extract /Volumes/DriveName
-        let parts: Vec<&str> = path_str.splitn(4, '/').collect();
-        if parts.len() >= 3 {
-            let mount_point = format!("/{}/{}", parts[1], parts[2]);
-            return Path::new(&mount_point).exists();
+    #[cfg(target_os = "linux")]
+    {
+        // For the root volume, always available
+        if data_dir.starts_with("/home") {
+            return true;
+        }
+
+        // For external volumes (/media/user/drive or /mnt/drive), check mount exists
+        for prefix in &["/media/", "/mnt/"] {
+            if path_str.starts_with(prefix) {
+                let parts: Vec<&str> = path_str.splitn(4, '/').collect();
+                if parts.len() >= 3 {
+                    let mount_point = format!("/{}/{}", parts[1], parts[2]);
+                    return Path::new(&mount_point).exists();
+                }
+            }
         }
     }
 
