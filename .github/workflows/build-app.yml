@@ -38,6 +38,34 @@ jobs:
       - name: Install frontend dependencies
         run: npm ci
 
+      - name: Import Apple signing certificate
+        if: env.APPLE_CERTIFICATE != ''
+        env:
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+        run: |
+          KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
+          KEYCHAIN_PASSWORD=$(openssl rand -hex 12)
+
+          # Create temporary keychain
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+
+          # Import certificate
+          echo "$APPLE_CERTIFICATE" | base64 --decode > $RUNNER_TEMP/certificate.p12
+          security import $RUNNER_TEMP/certificate.p12 \
+            -P "$APPLE_CERTIFICATE_PASSWORD" \
+            -A -t cert -f pkcs12 \
+            -k "$KEYCHAIN_PATH"
+          security set-key-partition-list -S apple-tool:,apple: \
+            -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+
+          # Add to search list
+          security list-keychains -d user -s "$KEYCHAIN_PATH" login.keychain-db
+
+          rm -f $RUNNER_TEMP/certificate.p12
+
       - name: Fetch upstream binaries
         run: |
           chmod +x scripts/fetch-binaries.sh
@@ -49,8 +77,43 @@ jobs:
           cp target/${{ matrix.triple }}/release/zecbox-firewall-helper src-tauri/binaries/zecbox-firewall-helper-${{ matrix.triple }}
           chmod +x src-tauri/binaries/zecbox-firewall-helper-${{ matrix.triple }}
 
+      - name: Sign sidecar binaries
+        if: env.APPLE_SIGNING_IDENTITY != ''
+        env:
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+        run: |
+          for binary in zebrad arti zaino zecbox-firewall-helper; do
+            BINARY_PATH="src-tauri/binaries/${binary}-${{ matrix.triple }}"
+            if [ -f "$BINARY_PATH" ]; then
+              echo "Signing $BINARY_PATH..."
+              codesign --force --options runtime \
+                --entitlements src-tauri/Entitlements.plist \
+                --sign "$APPLE_SIGNING_IDENTITY" "$BINARY_PATH"
+            fi
+          done
+
       - name: Build app
+        env:
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         run: npx tauri build --target ${{ matrix.triple }}
+
+      - name: Notarize DMG
+        if: env.APPLE_ID != ''
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          DMG_PATH=$(find target/${{ matrix.triple }}/release/bundle/dmg -name "*.dmg" | head -1)
+          echo "Notarizing $DMG_PATH..."
+          xcrun notarytool submit "$DMG_PATH" \
+            --apple-id "$APPLE_ID" \
+            --password "$APPLE_PASSWORD" \
+            --team-id "$APPLE_TEAM_ID" \
+            --wait
+          xcrun stapler staple "$DMG_PATH"
 
       - name: Find DMG
         id: dmg
@@ -58,6 +121,18 @@ jobs:
           DMG_PATH=$(find target/${{ matrix.triple }}/release/bundle/dmg -name "*.dmg" | head -1)
           echo "path=$DMG_PATH" >> "$GITHUB_OUTPUT"
           echo "name=$(basename "$DMG_PATH")" >> "$GITHUB_OUTPUT"
+
+      - name: Find update signature
+        id: sig
+        run: |
+          SIG_FILE=$(find target/${{ matrix.triple }}/release/bundle/dmg -name "*.dmg.sig" 2>/dev/null | head -1 || true)
+          if [ -n "$SIG_FILE" ] && [ -f "$SIG_FILE" ]; then
+            SIG=$(cat "$SIG_FILE")
+            echo "signature=$SIG" >> "$GITHUB_OUTPUT"
+            echo "has_sig=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_sig=false" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Create fixed-name copy
         run: cp "${{ steps.dmg.outputs.path }}" "target/${{ matrix.triple }}/release/bundle/dmg/zecbox-macos-${{ matrix.arch }}.dmg"
@@ -67,7 +142,18 @@ jobs:
           cd "target/${{ matrix.triple }}/release/bundle/dmg"
           shasum -a 256 "${{ steps.dmg.outputs.name }}" "zecbox-macos-${{ matrix.arch }}.dmg" > SHA256SUMS
 
-      - name: Upload artifacts
+      - name: Copy sidecar binaries for release
+        run: |
+          mkdir -p target/${{ matrix.triple }}/release/bundle/sidecars
+          for binary in zebrad arti zaino; do
+            SRC="src-tauri/binaries/${binary}-${{ matrix.triple }}"
+            if [ -f "$SRC" ]; then
+              cp "$SRC" "target/${{ matrix.triple }}/release/bundle/sidecars/"
+              (cd "target/${{ matrix.triple }}/release/bundle/sidecars" && shasum -a 256 "${binary}-${{ matrix.triple }}" >> SHA256SUMS)
+            fi
+          done
+
+      - name: Upload DMG artifacts
         uses: actions/upload-artifact@v4
         with:
           name: dmg-${{ matrix.arch }}
@@ -76,11 +162,32 @@ jobs:
             target/${{ matrix.triple }}/release/bundle/dmg/zecbox-macos-${{ matrix.arch }}.dmg
             target/${{ matrix.triple }}/release/bundle/dmg/SHA256SUMS
 
+      - name: Upload sidecar artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: sidecars-${{ matrix.arch }}
+          path: target/${{ matrix.triple }}/release/bundle/sidecars/
+
+      - name: Save update metadata
+        run: |
+          mkdir -p /tmp/update-meta
+          echo "${{ steps.sig.outputs.has_sig }}" > /tmp/update-meta/has_sig
+          echo "${{ steps.sig.outputs.signature }}" > /tmp/update-meta/signature
+          echo "${{ steps.dmg.outputs.name }}" > /tmp/update-meta/dmg_name
+
+      - name: Upload update metadata
+        uses: actions/upload-artifact@v4
+        with:
+          name: update-meta-${{ matrix.arch }}
+          path: /tmp/update-meta/
+
   release:
     needs: build-macos
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/')
     steps:
+      - uses: actions/checkout@v4
+
       - uses: actions/download-artifact@v4
         with:
           path: artifacts
@@ -95,3 +202,45 @@ jobs:
             artifacts/dmg-aarch64/SHA256SUMS
             artifacts/dmg-x86_64/*.dmg
             artifacts/dmg-x86_64/SHA256SUMS
+            artifacts/sidecars-aarch64/*
+            artifacts/sidecars-x86_64/*
+
+      - name: Generate app update JSONs
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="${GITHUB_REF#refs/tags/}"
+          VERSION="${TAG#v}"
+          PUB_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          REPO_URL="https://github.com/${{ github.repository }}/releases/download/${TAG}"
+
+          for arch in aarch64 x86_64; do
+            DMG_NAME=$(cat "artifacts/update-meta-${arch}/dmg_name")
+            HAS_SIG=$(cat "artifacts/update-meta-${arch}/has_sig")
+            SIG=""
+            if [ "$HAS_SIG" = "true" ]; then
+              SIG=$(cat "artifacts/update-meta-${arch}/signature")
+            fi
+
+            cat > "site/public/updates/app-darwin-${arch}.json" <<EOF
+          {
+            "version": "${VERSION}",
+            "notes": "ZecBox ${VERSION}",
+            "pub_date": "${PUB_DATE}",
+            "platforms": {
+              "darwin-${arch}": {
+                "url": "${REPO_URL}/${DMG_NAME}",
+                "signature": "${SIG}"
+              }
+            }
+          }
+          EOF
+          done
+
+      - name: Commit and push app update JSONs
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add site/public/updates/app-darwin-*.json
+          git diff --cached --quiet || git commit -m "Update app update manifests for ${GITHUB_REF#refs/tags/}"
+          git push

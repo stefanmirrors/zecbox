@@ -32,9 +32,9 @@
   "plugins": {
     "updater": {
       "endpoints": [
-        "https://zecbox.io/updates/{{target}}/{{arch}}/{{current_version}}"
+        "https://zecbox.io/updates/app-{{target}}-{{arch}}.json"
       ],
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IFBMQUNFSE9MREVS"
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDFDMDVDRDQwRjQxRkEzREQKUldUZG94LzBRTTBGSENWb2NmK1BDazhub3RWNkpPS2dZMGR5a3JyL3FpVlROaStuS2JscXQ0K2YK"
     }
   },
   "bundle": {

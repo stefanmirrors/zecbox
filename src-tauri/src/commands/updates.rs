@@ -1,6 +1,7 @@
 //! Commands for app and binary update management.
 
 use tauri::{AppHandle, State};
+use tauri_plugin_updater::UpdaterExt;
 
 use crate::state::{AppState, BinaryUpdateInfo, UpdateStatus, VersionInfo};
 use crate::updates::{self, BinaryVersions};
@@ -137,9 +138,28 @@ pub async fn dismiss_updates(
 }
 
 #[tauri::command]
-pub async fn check_app_update() -> Result<bool, String> {
-    // Tauri updater plugin handles app-level updates.
-    // Without a real update server, this always returns false.
-    // In production, this will use tauri_plugin_updater::UpdaterExt to check.
-    Ok(false)
+pub async fn check_app_update(app_handle: AppHandle) -> Result<bool, String> {
+    let updater = app_handle
+        .updater_builder()
+        .build()
+        .map_err(|e| format!("Failed to initialize updater: {}", e))?;
+
+    match updater.check().await {
+        Ok(Some(update)) => {
+            log::info!(
+                "App update available: {} -> {}",
+                env!("CARGO_PKG_VERSION"),
+                update.version
+            );
+            Ok(true)
+        }
+        Ok(None) => {
+            log::debug!("No app update available");
+            Ok(false)
+        }
+        Err(e) => {
+            log::warn!("App update check failed: {}", e);
+            Err(format!("Failed to check for app updates: {}", e))
+        }
+    }
 }

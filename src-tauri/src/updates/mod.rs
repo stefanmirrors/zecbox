@@ -3,6 +3,7 @@
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
+use ed25519_dalek::{Signature, Verifier, VerifyingKey};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use tauri::{AppHandle, Emitter, Manager};
@@ -13,10 +14,30 @@ use crate::state::{AppState, BinaryUpdateInfo, UpdateState, UpdateStatus};
 use crate::tor;
 
 const MANIFEST_URL: &str = "https://zecbox.io/updates/manifest.json";
+#[cfg(target_arch = "aarch64")]
 const TARGET_PLATFORM: &str = "aarch64-apple-darwin";
+#[cfg(target_arch = "x86_64")]
+const TARGET_PLATFORM: &str = "x86_64-apple-darwin";
+
+/// Ed25519 public key for manifest signature verification.
+/// Generate a new keypair with: cargo run -p zecbox-keygen
+/// The private key goes to GitHub secrets as MANIFEST_SIGNING_KEY.
+const MANIFEST_SIGNING_PUBKEY: [u8; 32] = [55, 133, 232, 218, 149, 8, 70, 77, 39, 83, 222, 244, 82, 57, 146, 174, 46, 223, 250, 22, 93, 40, 68, 234, 213, 197, 55, 251, 179, 217, 26, 166];
 
 // --- Manifest types ---
 
+/// Wire format: what we receive from the server (includes optional signature).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SignedUpdateManifest {
+    pub app_version: String,
+    pub binaries: Vec<BinaryManifestEntry>,
+    /// Hex-encoded Ed25519 signature over the canonical payload.
+    #[serde(default)]
+    pub signature: Option<String>,
+}
+
+/// The canonical payload that gets signed (everything except the signature field).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct UpdateManifest {
@@ -245,13 +266,70 @@ async fn fetch_manifest(data_dir: &Path) -> Result<UpdateManifest, String> {
         return Err(format!("Manifest fetch returned {}", response.status()));
     }
 
-    // TODO: Add Ed25519 manifest signature verification before launch.
-    // The manifest should include a `signature` field verified against a pinned
-    // public key to prevent MITM attacks beyond TLS.
-    response
-        .json::<UpdateManifest>()
+    let signed: SignedUpdateManifest = response
+        .json()
         .await
-        .map_err(|e| format!("Failed to parse manifest: {}", e))
+        .map_err(|e| format!("Failed to parse manifest: {}", e))?;
+
+    verify_manifest_signature(&signed)?;
+
+    Ok(UpdateManifest {
+        app_version: signed.app_version,
+        binaries: signed.binaries,
+    })
+}
+
+/// Verify the Ed25519 signature on a manifest.
+/// The signature covers the canonical JSON of the unsigned payload (app_version + binaries).
+fn verify_manifest_signature(signed: &SignedUpdateManifest) -> Result<(), String> {
+    // All-zero pubkey means the real key hasn't been configured yet — skip verification.
+    if MANIFEST_SIGNING_PUBKEY == [0u8; 32] {
+        log::warn!("Manifest signature verification skipped: signing key not configured");
+        return Ok(());
+    }
+
+    let sig_hex = signed
+        .signature
+        .as_deref()
+        .ok_or("Manifest is missing required signature field")?;
+
+    // Reconstruct the canonical payload (everything except the signature)
+    let payload = UpdateManifest {
+        app_version: signed.app_version.clone(),
+        binaries: signed.binaries.clone(),
+    };
+    let canonical = serde_json::to_string(&payload)
+        .map_err(|e| format!("Failed to serialize manifest payload: {}", e))?;
+
+    // Decode hex signature
+    let sig_bytes = hex_decode(sig_hex)
+        .map_err(|e| format!("Invalid signature encoding: {}", e))?;
+    let signature = Signature::from_slice(&sig_bytes)
+        .map_err(|_| "Invalid Ed25519 signature length")?;
+
+    // Verify against pinned public key
+    let verifying_key = VerifyingKey::from_bytes(&MANIFEST_SIGNING_PUBKEY)
+        .map_err(|_| "Invalid pinned public key")?;
+
+    verifying_key
+        .verify(canonical.as_bytes(), &signature)
+        .map_err(|_| "Manifest signature verification failed — possible tampering")?;
+
+    log::info!("Manifest signature verified successfully");
+    Ok(())
+}
+
+fn hex_decode(hex: &str) -> Result<Vec<u8>, String> {
+    if hex.len() % 2 != 0 {
+        return Err("Odd-length hex string".into());
+    }
+    (0..hex.len())
+        .step_by(2)
+        .map(|i| {
+            u8::from_str_radix(&hex[i..i + 2], 16)
+                .map_err(|e| format!("Invalid hex at position {}: {}", i, e))
+        })
+        .collect()
 }
 
 fn version_is_newer(new: &str, current: &str) -> bool {

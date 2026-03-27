@@ -1,0 +1,168 @@
+name: Publish Binary Update
+
+on:
+  workflow_dispatch:
+    inputs:
+      binary:
+        description: "Binary to update (zebrad, zaino, arti)"
+        required: true
+        type: choice
+        options: [zebrad, zaino, arti]
+      version:
+        description: "Upstream version tag (e.g. 4.2.0, v0.2.0-rc.6)"
+        required: true
+        type: string
+      release_tag:
+        description: "GitHub Release tag to attach assets to (e.g. binaries-2026-03)"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  build-sidecar:
+    strategy:
+      matrix:
+        include:
+          - runner: macos-14
+            arch: aarch64
+            triple: aarch64-apple-darwin
+          - runner: macos-14
+            arch: x86_64
+            triple: x86_64-apple-darwin
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.triple }}
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      - name: Build sidecar binary
+        run: |
+          chmod +x scripts/fetch-binaries.sh
+          # Only build the requested binary by checking if it already exists
+          TARGET_TRIPLE=${{ matrix.triple }} scripts/fetch-binaries.sh
+
+      - name: Import Apple signing certificate
+        if: env.APPLE_CERTIFICATE != ''
+        env:
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+        run: |
+          KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
+          KEYCHAIN_PASSWORD=$(openssl rand -hex 12)
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          echo "$APPLE_CERTIFICATE" | base64 --decode > $RUNNER_TEMP/certificate.p12
+          security import $RUNNER_TEMP/certificate.p12 \
+            -P "$APPLE_CERTIFICATE_PASSWORD" \
+            -A -t cert -f pkcs12 \
+            -k "$KEYCHAIN_PATH"
+          security set-key-partition-list -S apple-tool:,apple: \
+            -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security list-keychains -d user -s "$KEYCHAIN_PATH" login.keychain-db
+          rm -f $RUNNER_TEMP/certificate.p12
+
+      - name: Sign binary
+        if: env.APPLE_SIGNING_IDENTITY != ''
+        env:
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+        run: |
+          BINARY_PATH="src-tauri/binaries/${{ inputs.binary }}-${{ matrix.triple }}"
+          if [ -f "$BINARY_PATH" ]; then
+            codesign --force --options runtime \
+              --entitlements src-tauri/Entitlements.plist \
+              --sign "$APPLE_SIGNING_IDENTITY" "$BINARY_PATH"
+          fi
+
+      - name: Compute SHA256 and size
+        id: hash
+        run: |
+          BINARY_PATH="src-tauri/binaries/${{ inputs.binary }}-${{ matrix.triple }}"
+          SHA=$(shasum -a 256 "$BINARY_PATH" | awk '{print $1}')
+          SIZE=$(stat -f%z "$BINARY_PATH")
+          echo "sha256=$SHA" >> "$GITHUB_OUTPUT"
+          echo "size=$SIZE" >> "$GITHUB_OUTPUT"
+
+      - name: Upload binary artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ inputs.binary }}-${{ matrix.triple }}
+          path: src-tauri/binaries/${{ inputs.binary }}-${{ matrix.triple }}
+
+      - name: Upload metadata
+        run: |
+          mkdir -p /tmp/meta
+          echo "${{ steps.hash.outputs.sha256 }}" > /tmp/meta/sha256
+          echo "${{ steps.hash.outputs.size }}" > /tmp/meta/size
+
+      - name: Upload metadata artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: meta-${{ inputs.binary }}-${{ matrix.triple }}
+          path: /tmp/meta/
+
+  publish:
+    needs: build-sidecar
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Upload binaries to GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Create release if it doesn't exist
+          gh release view "${{ inputs.release_tag }}" || \
+            gh release create "${{ inputs.release_tag }}" --title "Binary Updates" --notes "Sidecar binary updates" --draft
+
+          for triple in aarch64-apple-darwin x86_64-apple-darwin; do
+            BINARY="artifacts/${{ inputs.binary }}-${triple}/${{ inputs.binary }}-${triple}"
+            if [ -f "$BINARY" ]; then
+              gh release upload "${{ inputs.release_tag }}" "$BINARY" --clobber
+            fi
+          done
+
+      - name: Generate signed manifest
+        env:
+          MANIFEST_SIGNING_KEY: ${{ secrets.MANIFEST_SIGNING_KEY }}
+        run: |
+          REPO_URL="https://github.com/${{ github.repository }}/releases/download/${{ inputs.release_tag }}"
+          APP_VERSION=$(grep '"version"' src-tauri/tauri.conf.json | head -1 | grep -o '"[0-9][^"]*"' | tr -d '"')
+
+          ARGS="--app-version $APP_VERSION --output site/public/updates/manifest.json"
+
+          for triple in aarch64-apple-darwin x86_64-apple-darwin; do
+            SHA=$(cat "artifacts/meta-${{ inputs.binary }}-${triple}/sha256")
+            SIZE=$(cat "artifacts/meta-${{ inputs.binary }}-${triple}/size")
+            ARGS="$ARGS --binary ${{ inputs.binary }} --version ${{ inputs.version }}"
+            ARGS="$ARGS --platform ${triple}"
+            ARGS="$ARGS --url ${REPO_URL}/${{ inputs.binary }}-${triple}"
+            ARGS="$ARGS --sha256 ${SHA} --size ${SIZE}"
+          done
+
+          chmod +x scripts/generate-manifest.sh
+          bash scripts/generate-manifest.sh $ARGS
+
+      - name: Commit and push manifest
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add site/public/updates/manifest.json
+          git diff --cached --quiet || git commit -m "Update binary manifest: ${{ inputs.binary }} ${{ inputs.version }}"
+          git push
