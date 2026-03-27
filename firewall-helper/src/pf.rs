@@ -76,96 +76,95 @@ fn generate_rules(redir_port: u16) -> String {
     rules
 }
 
-/// Classify a PF rule line as translation (rdr/nat/binat) or filter (everything else).
-fn is_translation_rule(line: &str) -> bool {
-    let trimmed = line.trim();
-    trimmed.starts_with("rdr")
-        || trimmed.starts_with("nat")
-        || trimmed.starts_with("binat")
-        || trimmed.starts_with("rdr-anchor")
-        || trimmed.starts_with("nat-anchor")
-}
-
 /// Ensure our anchor is referenced in the main PF config.
-/// macOS PF requires anchors to be declared in the main ruleset.
-/// PF enforces strict rule ordering: translation rules (rdr/nat) before filter rules (pass/block/anchor).
+/// We read /etc/pf.conf directly (the authoritative source) and insert our
+/// anchor declarations in the correct positions, preserving all existing rules
+/// including scrub-anchor, dummynet-anchor, nat-anchor, and load anchor lines
+/// that pfctl -s queries would not return.
 fn ensure_anchor_registered() -> Result<(), String> {
-    let rdr_anchor = format!("rdr-anchor \"{}\"", ANCHOR_NAME);
-    let anchor = format!("anchor \"{}\"", ANCHOR_NAME);
+    let rdr_anchor_line = format!("rdr-anchor \"{}\"", ANCHOR_NAME);
+    let anchor_line = format!("anchor \"{}\"", ANCHOR_NAME);
 
-    // Query existing NAT/translation rules and filter rules separately
-    let nat_output = Command::new("pfctl")
-        .args(["-s", "nat"])
-        .output()
-        .map_err(|e| format!("Failed to query PF NAT rules: {}", e))?;
-    let nat_rules = String::from_utf8_lossy(&nat_output.stdout);
+    // Read the actual system PF config
+    let pf_conf = fs::read_to_string("/etc/pf.conf")
+        .map_err(|e| format!("Failed to read /etc/pf.conf: {}", e))?;
 
-    let filter_output = Command::new("pfctl")
-        .args(["-s", "rules"])
-        .output()
-        .map_err(|e| format!("Failed to query PF filter rules: {}", e))?;
-    let filter_rules = String::from_utf8_lossy(&filter_output.stdout);
-
-    // Check if already registered in both sections
-    if nat_rules.contains(&rdr_anchor) && filter_rules.contains(&anchor) {
+    // Check if already registered
+    if pf_conf.contains(&rdr_anchor_line) && pf_conf.contains(&anchor_line) {
         return Ok(());
     }
 
-    // Build config in correct PF order:
-    // 1. Translation rules (rdr, nat, binat, rdr-anchor, nat-anchor)
-    // 2. Filter rules (pass, block, anchor)
-    let mut translation_lines = Vec::new();
-    let mut filter_lines = Vec::new();
+    // Insert our anchors at the correct positions in the existing config.
+    // PF ordering: scrub → nat → rdr → dummynet → anchor → load anchor
+    // We insert rdr-anchor after the last rdr-anchor line,
+    // and anchor after the last anchor line (but before load anchor).
+    let mut lines: Vec<String> = pf_conf.lines().map(|l| l.to_string()).collect();
+    let mut rdr_inserted = pf_conf.contains(&rdr_anchor_line);
+    let mut anchor_inserted = pf_conf.contains(&anchor_line);
 
-    // Collect existing translation rules
-    for line in nat_rules.lines() {
-        let trimmed = line.trim();
-        if !trimmed.is_empty() && !trimmed.contains(ANCHOR_NAME) {
-            translation_lines.push(line.to_string());
+    if !rdr_inserted {
+        // Find the last rdr-anchor line and insert after it
+        let mut insert_pos = None;
+        for (i, line) in lines.iter().enumerate() {
+            let trimmed = line.trim();
+            if trimmed.starts_with("rdr-anchor") || trimmed.starts_with("rdr ") {
+                insert_pos = Some(i + 1);
+            }
+        }
+        // If no rdr-anchor found, insert before the first anchor line
+        if insert_pos.is_none() {
+            for (i, line) in lines.iter().enumerate() {
+                if line.trim().starts_with("anchor") {
+                    insert_pos = Some(i);
+                    break;
+                }
+            }
+        }
+        if let Some(pos) = insert_pos {
+            lines.insert(pos, rdr_anchor_line);
+            rdr_inserted = true;
         }
     }
 
-    // Collect existing filter rules, separating any misplaced translation rules
-    for line in filter_rules.lines() {
-        let trimmed = line.trim();
-        if trimmed.is_empty() || trimmed.contains(ANCHOR_NAME) {
-            continue;
+    if !anchor_inserted {
+        // Find the last "anchor" line (not rdr-anchor/nat-anchor/etc) and insert after it
+        let mut insert_pos = None;
+        for (i, line) in lines.iter().enumerate() {
+            let trimmed = line.trim();
+            if trimmed.starts_with("anchor ") && !trimmed.starts_with("anchor \"com.zecbox") {
+                insert_pos = Some(i + 1);
+            }
         }
-        if is_translation_rule(trimmed) {
-            translation_lines.push(line.to_string());
-        } else {
-            filter_lines.push(line.to_string());
+        // If no anchor found, append before load anchor or at end
+        if insert_pos.is_none() {
+            for (i, line) in lines.iter().enumerate() {
+                if line.trim().starts_with("load anchor") {
+                    insert_pos = Some(i);
+                    break;
+                }
+            }
+        }
+        if let Some(pos) = insert_pos {
+            lines.insert(pos, anchor_line);
+            anchor_inserted = true;
         }
     }
 
-    // Build the final config
-    let mut main_rules = String::new();
-
-    // Translation section: existing + our rdr-anchor
-    for line in &translation_lines {
-        main_rules.push_str(line);
-        main_rules.push('\n');
+    if !rdr_inserted || !anchor_inserted {
+        return Err("Could not determine where to insert PF anchor declarations".into());
     }
-    main_rules.push_str(&rdr_anchor);
-    main_rules.push('\n');
 
-    // Filter section: our anchor + existing
-    main_rules.push_str(&anchor);
-    main_rules.push('\n');
-    for line in &filter_lines {
-        main_rules.push_str(line);
-        main_rules.push('\n');
-    }
+    let new_conf = lines.join("\n") + "\n";
 
     ensure_secure_tmpdir();
     let main_path = format!("{}/pf-main.conf", SECURE_TMPDIR);
-    fs::write(&main_path, &main_rules)
-        .map_err(|e| format!("Failed to write main PF rules: {}", e))?;
+    fs::write(&main_path, &new_conf)
+        .map_err(|e| format!("Failed to write PF config: {}", e))?;
 
     let output = Command::new("pfctl")
         .args(["-f", &main_path])
         .output()
-        .map_err(|e| format!("Failed to load main PF rules: {}", e))?;
+        .map_err(|e| format!("Failed to load PF rules: {}", e))?;
 
     let _ = fs::remove_file(&main_path);
 
