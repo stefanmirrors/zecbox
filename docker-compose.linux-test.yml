@@ -3,16 +3,13 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.linux-test
-      target: test
     cap_add:
       - NET_ADMIN
-    network_mode: host
 
   build:
     build:
       context: .
       dockerfile: Dockerfile.linux-test
-      target: build
     volumes:
       - ./dist-linux:/output
     command: >
@@ -27,11 +24,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.linux-test
-      target: base
     cap_add:
       - NET_ADMIN
-    volumes:
-      - .:/app
     command: bash
     stdin_open: true
     tty: true

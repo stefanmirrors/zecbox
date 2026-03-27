@@ -363,24 +363,48 @@ fn is_uid_in_group(uid: libc::uid_t, target_gid: libc::gid_t) -> bool {
         }
 
         let mut ngroups: libc::c_int = 32;
-        let mut groups = vec![0i32; ngroups as usize];
-        let ret = libc::getgrouplist(
-            (*pw).pw_name,
-            (*pw).pw_gid as i32,
-            groups.as_mut_ptr(),
-            &mut ngroups,
-        );
 
-        if ret < 0 {
-            groups.resize(ngroups as usize, 0);
-            libc::getgrouplist(
+        // On macOS, getgrouplist uses i32 for groups; on Linux, it uses gid_t (u32)
+        #[cfg(target_os = "macos")]
+        {
+            let mut groups = vec![0i32; ngroups as usize];
+            let ret = libc::getgrouplist(
                 (*pw).pw_name,
                 (*pw).pw_gid as i32,
                 groups.as_mut_ptr(),
                 &mut ngroups,
             );
+            if ret < 0 {
+                groups.resize(ngroups as usize, 0);
+                libc::getgrouplist(
+                    (*pw).pw_name,
+                    (*pw).pw_gid as i32,
+                    groups.as_mut_ptr(),
+                    &mut ngroups,
+                );
+            }
+            groups[..ngroups as usize].contains(&(target_gid as i32))
         }
 
-        groups[..ngroups as usize].contains(&(target_gid as i32))
+        #[cfg(target_os = "linux")]
+        {
+            let mut groups = vec![0u32; ngroups as usize];
+            let ret = libc::getgrouplist(
+                (*pw).pw_name,
+                (*pw).pw_gid,
+                groups.as_mut_ptr(),
+                &mut ngroups,
+            );
+            if ret < 0 {
+                groups.resize(ngroups as usize, 0);
+                libc::getgrouplist(
+                    (*pw).pw_name,
+                    (*pw).pw_gid,
+                    groups.as_mut_ptr(),
+                    &mut ngroups,
+                );
+            }
+            groups[..ngroups as usize].contains(&target_gid)
+        }
     }
 }

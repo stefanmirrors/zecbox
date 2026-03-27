@@ -7,7 +7,8 @@ FAIL=0
 pass() { echo "  PASS: $1"; ((PASS++)); }
 fail() { echo "  FAIL: $1"; ((FAIL++)); }
 
-echo "=== ZecBox Linux Test Suite ==="
+TRIPLE=$(rustc -vV | grep host | awk '{print $2}')
+echo "=== ZecBox Linux Test Suite (target: $TRIPLE) ==="
 echo ""
 
 # --- 1. Compile checks ---
@@ -92,7 +93,7 @@ echo "--- Step 4: Smoke tests ---"
 BINARIES_DIR="src-tauri/binaries"
 
 # Test mock-zebrad
-ZEBRAD="$BINARIES_DIR/zebrad-x86_64-unknown-linux-gnu"
+ZEBRAD="$BINARIES_DIR/zebrad-$TRIPLE"
 if [ -x "$ZEBRAD" ]; then
     "$ZEBRAD" &
     ZEBRAD_PID=$!
@@ -113,7 +114,7 @@ else
 fi
 
 # Test mock-arti
-ARTI="$BINARIES_DIR/arti-x86_64-unknown-linux-gnu"
+ARTI="$BINARIES_DIR/arti-$TRIPLE"
 if [ -x "$ARTI" ]; then
     "$ARTI" &
     ARTI_PID=$!
@@ -132,7 +133,7 @@ else
 fi
 
 # Test mock-zaino
-ZAINO="$BINARIES_DIR/zaino-x86_64-unknown-linux-gnu"
+ZAINO="$BINARIES_DIR/zaino-$TRIPLE"
 if [ -x "$ZAINO" ]; then
     "$ZAINO" &
     ZAINO_PID=$!

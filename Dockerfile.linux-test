@@ -1,4 +1,4 @@
-FROM ubuntu:22.04 AS base
+FROM ubuntu:22.04
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV CARGO_HOME=/usr/local/cargo
@@ -21,65 +21,50 @@ RUN apt-get update && apt-get install -y \
     iptables \
     iproute2 \
     lsof \
+    socat \
     jq \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Rust
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable
-RUN rustup target add x86_64-unknown-linux-gnu
 
 # Install Node.js 20
 RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
     && apt-get install -y nodejs \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Tauri CLI
-RUN npm install -g @tauri-apps/cli@latest
+# Detect host triple and store it for subsequent RUN steps
+RUN echo $(rustc -vV | grep host | awk '{print $2}') > /tmp/target-triple
 
 WORKDIR /app
 
-# Copy dependency files first for caching
-COPY Cargo.toml Cargo.lock ./
-COPY src-tauri/Cargo.toml src-tauri/Cargo.toml
-COPY src-tauri/build.rs src-tauri/build.rs
-COPY firewall-helper/Cargo.toml firewall-helper/Cargo.toml
-COPY mock-zebrad/Cargo.toml mock-zebrad/Cargo.toml
-COPY mock-arti/Cargo.toml mock-arti/Cargo.toml
-COPY mock-zaino/Cargo.toml mock-zaino/Cargo.toml
-
-# Copy package.json for npm install caching
-COPY package.json package-lock.json ./
-
-RUN npm ci
-
-# Copy the full source
+# Copy everything (respects .dockerignore)
 COPY . .
 
-# ========================= Build Stage =========================
-FROM base AS build
+# Install frontend dependencies
+RUN npm ci
 
-# Build mock sidecars
-RUN for binary in zebrad arti zaino; do \
+# Create binaries dir (excluded by .dockerignore)
+RUN mkdir -p src-tauri/binaries
+
+# Build mock sidecars using detected triple
+RUN TRIPLE=$(cat /tmp/target-triple) && \
+    for binary in zebrad arti zaino; do \
         cargo build -p "mock-${binary}" --release && \
-        cp "target/release/mock-${binary}" "src-tauri/binaries/${binary}-x86_64-unknown-linux-gnu" && \
-        chmod +x "src-tauri/binaries/${binary}-x86_64-unknown-linux-gnu"; \
+        cp "target/release/mock-${binary}" "src-tauri/binaries/${binary}-${TRIPLE}" && \
+        chmod +x "src-tauri/binaries/${binary}-${TRIPLE}"; \
     done
 
 # Build firewall helper
-RUN cargo build -p firewall-helper --release && \
-    cp target/release/zecbox-firewall-helper src-tauri/binaries/zecbox-firewall-helper-x86_64-unknown-linux-gnu && \
-    chmod +x src-tauri/binaries/zecbox-firewall-helper-x86_64-unknown-linux-gnu
+RUN TRIPLE=$(cat /tmp/target-triple) && \
+    cargo build -p firewall-helper --release && \
+    cp target/release/zecbox-firewall-helper "src-tauri/binaries/zecbox-firewall-helper-${TRIPLE}" && \
+    chmod +x "src-tauri/binaries/zecbox-firewall-helper-${TRIPLE}"
 
 # Build the full Tauri app
-RUN npx tauri build 2>&1 || true
+RUN npx tauri build || true
 
-# ========================= Test Stage =========================
-FROM base AS test
+# Copy test script and make executable
+RUN chmod +x scripts/test-linux-docker.sh
 
-COPY --from=build /app/target /app/target
-COPY --from=build /app/src-tauri/binaries /app/src-tauri/binaries
-
-COPY scripts/test-linux-docker.sh /app/scripts/test-linux-docker.sh
-RUN chmod +x /app/scripts/test-linux-docker.sh
-
-CMD ["/app/scripts/test-linux-docker.sh"]
+CMD ["scripts/test-linux-docker.sh"]
