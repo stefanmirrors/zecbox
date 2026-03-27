@@ -27,6 +27,9 @@ use tokio::sync::{watch, Mutex};
 use tokio::task::JoinHandle;
 
 const SOCKET_PATH: &str = "/var/run/com.zecbox.firewall.sock";
+/// Bump this whenever the helper protocol or behavior changes.
+/// The app checks this to detect outdated helpers and prompt for reinstallation.
+const HELPER_VERSION: &str = "2";
 const REDIR_LISTEN: &str = "127.0.0.1:9040";
 const REDIR_PORT: u16 = 9040;
 const SOCKS_ADDR: &str = "127.0.0.1:9150";
@@ -45,6 +48,8 @@ struct Response {
     enabled: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     redirector_running: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    version: Option<String>,
 }
 
 impl Response {
@@ -54,6 +59,7 @@ impl Response {
             error: None,
             enabled: None,
             redirector_running: None,
+            version: None,
         }
     }
 
@@ -63,6 +69,7 @@ impl Response {
             error: Some(msg),
             enabled: None,
             redirector_running: None,
+            version: None,
         }
     }
 
@@ -72,6 +79,7 @@ impl Response {
             error: None,
             enabled: Some(enabled),
             redirector_running: Some(redirector_running),
+            version: Some(HELPER_VERSION.to_string()),
         }
     }
 }

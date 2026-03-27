@@ -3,7 +3,6 @@
 
 use std::io::{BufRead, BufReader, Write};
 use std::os::unix::net::UnixStream;
-use std::path::Path;
 use std::process::Command;
 use std::time::Duration;
 
@@ -17,14 +16,17 @@ const SOCKET_PATH: &str = "/var/run/com.zecbox.firewall.sock";
 fn shell_escape(s: &str) -> String {
     format!("'{}'", s.replace('\'', "'\\''"))
 }
+/// Must match HELPER_VERSION in firewall-helper/src/main.rs.
+/// Bump both when the helper protocol or behavior changes.
+const REQUIRED_HELPER_VERSION: &str = "2";
 const HELPER_BIN_NAME: &str = "zecbox-firewall-helper";
 const HELPER_INSTALL_PATH: &str = "/Library/PrivilegedHelperTools/com.zecbox.firewall-helper";
 const PLIST_INSTALL_PATH: &str = "/Library/LaunchDaemons/com.zecbox.firewall.plist";
 const PLIST_LABEL: &str = "com.zecbox.firewall";
 
-/// Check if the firewall helper daemon is installed and reachable.
+/// Check if the firewall helper daemon is installed, reachable, and up to date.
+/// Returns false if the helper is missing, unreachable, or running an outdated version.
 pub fn is_helper_installed() -> bool {
-    // Check if the socket exists and is connectable
     if let Ok(mut stream) = UnixStream::connect(SOCKET_PATH) {
         stream
             .set_read_timeout(Some(Duration::from_secs(2)))
@@ -35,14 +37,26 @@ pub fn is_helper_installed() -> bool {
         if stream.write_all(b"{\"cmd\":\"status\"}\n").is_ok() {
             let mut reader = BufReader::new(&stream);
             let mut line = String::new();
-            if reader.read_line(&mut line).is_ok() {
-                return line.contains("\"ok\":true");
+            if reader.read_line(&mut line).is_ok() && line.contains("\"ok\":true") {
+                // Check version — old helpers won't include a version field
+                if let Ok(v) = serde_json::from_str::<serde_json::Value>(&line) {
+                    let version = v["version"].as_str().unwrap_or("1");
+                    if version == REQUIRED_HELPER_VERSION {
+                        return true;
+                    }
+                    log::info!(
+                        "Firewall helper version mismatch: got {}, need {}",
+                        version, REQUIRED_HELPER_VERSION
+                    );
+                    return false;
+                }
+                // Can't parse JSON but got ok:true — assume outdated (no version field)
+                return false;
             }
         }
     }
 
-    // Fallback: check if the binary and plist exist
-    Path::new(HELPER_INSTALL_PATH).exists() && Path::new(PLIST_INSTALL_PATH).exists()
+    false
 }
 
 /// Install the firewall helper daemon. Requires admin password (one-time).
