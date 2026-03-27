@@ -96,34 +96,46 @@ jobs:
           fi
 
       # Step 6: Smoke tests
+      # mock-zebrad simulates ~19s startup before RPC_READY, so we poll with retries
       - name: Smoke test mock-zebrad
         run: |
           TRIPLE="x86_64-unknown-linux-gnu"
           src-tauri/binaries/zebrad-${TRIPLE} &
           PID=$!
-          sleep 2
-          curl -sf -X POST http://127.0.0.1:8232 \
-            -H "Content-Type: application/json" \
-            -d '{"jsonrpc":"2.0","method":"getinfo","params":[],"id":1}' | grep jsonrpc
-          kill $PID || true
+          READY=false
+          for i in $(seq 1 30); do
+            if curl -sf -X POST http://127.0.0.1:8232 \
+              -H "Content-Type: application/json" \
+              -d '{"jsonrpc":"2.0","method":"getinfo","params":[],"id":1}' 2>/dev/null | grep -q jsonrpc; then
+              echo "mock-zebrad responding after ${i}s"
+              READY=true
+              break
+            fi
+            sleep 1
+          done
+          kill $PID 2>/dev/null; wait $PID 2>/dev/null || true
+          if [ "$READY" != "true" ]; then
+            echo "mock-zebrad did not become ready within 30s"
+            exit 1
+          fi
 
       - name: Smoke test mock-arti
         run: |
           TRIPLE="x86_64-unknown-linux-gnu"
           src-tauri/binaries/arti-${TRIPLE} &
           PID=$!
-          sleep 2
+          sleep 3
           ss -tlnp | grep 9150
-          kill $PID || true
+          kill $PID 2>/dev/null; wait $PID 2>/dev/null || true
 
       - name: Smoke test mock-zaino
         run: |
           TRIPLE="x86_64-unknown-linux-gnu"
           src-tauri/binaries/zaino-${TRIPLE} &
           PID=$!
-          sleep 2
+          sleep 3
           ss -tlnp | grep 9067
-          kill $PID || true
+          kill $PID 2>/dev/null; wait $PID 2>/dev/null || true
 
       # Step 7: iptables test
       - name: Test iptables rules
