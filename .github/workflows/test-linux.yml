@@ -106,8 +106,8 @@ jobs:
           for i in $(seq 1 30); do
             if curl -sf -X POST http://127.0.0.1:8232 \
               -H "Content-Type: application/json" \
-              -d '{"jsonrpc":"2.0","method":"getinfo","params":[],"id":1}' 2>/dev/null | grep -q jsonrpc; then
-              echo "mock-zebrad responding after ${i}s"
+              -d '{"jsonrpc":"2.0","method":"getinfo","params":[],"id":1}' 2>/dev/null | grep -q '"result"'; then
+              echo "mock-zebrad JSON-RPC responding after ${i}s"
               READY=true
               break
             fi
