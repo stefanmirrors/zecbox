@@ -1,7 +1,7 @@
 {
   "version": "0.1.7",
   "notes": "ZecBox 0.1.7",
-  "pub_date": "2026-03-28T07:08:57Z",
+  "pub_date": "2026-03-28T07:57:11Z",
   "platforms": {
     "darwin-x86_64": {
       "url": "https://github.com/stefanmirrors/zecbox/releases/download/v0.1.7/zecbox_0.1.7_x64.dmg",
