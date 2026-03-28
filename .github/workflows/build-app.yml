@@ -240,25 +240,18 @@ jobs:
           echo "appimage=$APPIMAGE" >> "$GITHUB_OUTPUT"
           echo "deb=$DEB" >> "$GITHUB_OUTPUT"
 
-      - name: Generate SHA256
+      - name: Stage Linux artifacts
         run: |
-          mkdir -p target/${{ matrix.triple }}/release/bundle/linux-checksums
-          cd target/${{ matrix.triple }}/release/bundle
-          if [ -n "$(find appimage -name '*.AppImage' 2>/dev/null)" ]; then
-            sha256sum appimage/*.AppImage > linux-checksums/SHA256SUMS
-          fi
-          if [ -n "$(find deb -name '*.deb' 2>/dev/null)" ]; then
-            sha256sum deb/*.deb >> linux-checksums/SHA256SUMS
-          fi
+          mkdir -p staging
+          cp target/${{ matrix.triple }}/release/bundle/appimage/*.AppImage staging/ 2>/dev/null || true
+          cp target/${{ matrix.triple }}/release/bundle/deb/*.deb staging/ 2>/dev/null || true
+          cd staging && sha256sum * > SHA256SUMS-linux-${{ matrix.arch }}
 
       - name: Upload Linux artifacts
         uses: actions/upload-artifact@v4
         with:
           name: linux-${{ matrix.arch }}
-          path: |
-            target/${{ matrix.triple }}/release/bundle/appimage/*.AppImage
-            target/${{ matrix.triple }}/release/bundle/deb/*.deb
-            target/${{ matrix.triple }}/release/bundle/linux-checksums/SHA256SUMS
+          path: staging/
 
   release:
     needs: [build-macos, build-linux]
@@ -287,7 +280,7 @@ jobs:
             artifacts/sidecars-x86_64/*
             artifacts/linux-x86_64/*.AppImage
             artifacts/linux-x86_64/*.deb
-            artifacts/linux-x86_64/SHA256SUMS
+            artifacts/linux-x86_64/SHA256SUMS-*
 
       - name: Generate app update JSONs
         env:
