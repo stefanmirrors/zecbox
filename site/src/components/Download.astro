@@ -7,6 +7,33 @@ try {
     version = data.tag_name?.replace("v", "") ?? version;
   }
 } catch {}
+
+const downloads = {
+  macos: {
+    arm: {
+      url: "https://github.com/stefanmirrors/zecbox/releases/latest/download/zecbox-macos-aarch64.dmg",
+      label: "Download .dmg",
+      arch: "Apple Silicon (M1\u2013M4)",
+    },
+    intel: {
+      url: "https://github.com/stefanmirrors/zecbox/releases/latest/download/zecbox-macos-x86_64.dmg",
+      label: "Download .dmg",
+      arch: "Intel",
+    },
+  },
+  linux: {
+    x86_64: {
+      url: `https://github.com/stefanmirrors/zecbox/releases/latest/download/zecbox_${version}_amd64.AppImage`,
+      label: "Download .AppImage",
+      arch: "x86_64",
+    },
+    arm64: {
+      url: `https://github.com/stefanmirrors/zecbox/releases/latest/download/zecbox_${version}_aarch64.AppImage`,
+      label: "Download .AppImage",
+      arch: "ARM64",
+    },
+  },
+};
 ---
 
 <section class="px-4 sm:px-6 pt-6 sm:pt-10 pb-8 sm:pb-12">
@@ -16,106 +43,147 @@ try {
       <p class="text-zec-muted">v{version} · ~300 GB disk space required for the full blockchain</p>
     </div>
 
-    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-      <!-- macOS -->
-      <div class="border border-zec-border rounded-xl p-4">
-        <div class="flex items-center gap-2.5 mb-3">
-          <svg class="w-6 h-6 text-zec-text shrink-0" viewBox="0 0 24 24" fill="currentColor"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
-          <div>
-            <p class="text-sm font-semibold text-zec-text">macOS</p>
-            <p class="text-[11px] text-zec-muted">12+ required</p>
-          </div>
-        </div>
-        <div class="space-y-1.5">
-          <a
-            href="https://github.com/stefanmirrors/zecbox/releases/latest/download/zecbox-macos-aarch64.dmg"
-            target="_blank"
-            rel="noopener noreferrer"
-            class="flex items-center justify-between px-3 py-2 rounded-md bg-zec-yellow text-zec-dark font-semibold text-xs hover:brightness-110 transition-all no-underline"
-          >
-            Apple Silicon
-            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
-          </a>
-          <a
-            href="https://github.com/stefanmirrors/zecbox/releases/latest/download/zecbox-macos-x86_64.dmg"
-            target="_blank"
-            rel="noopener noreferrer"
-            class="flex items-center justify-between px-3 py-2 rounded-md border border-zec-border text-zec-text font-medium text-xs hover:border-zec-muted transition-all no-underline"
-          >
-            Intel
-            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
-          </a>
-        </div>
+    <!-- Download data for client-side detection -->
+    <script id="download-data" type="application/json" set:html={JSON.stringify(downloads)} />
+
+    <!-- Layer A: Auto-detected primary download (hidden until JS detects platform) -->
+    <div id="detected-download" class="hidden max-w-sm mx-auto text-center mb-6">
+      <div class="mb-4">
+        <svg data-os-icon="macos" class="w-10 h-10 text-zec-text mx-auto hidden" viewBox="0 0 24 24" fill="currentColor"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
+        <svg data-os-icon="linux" class="w-10 h-10 text-zec-text mx-auto hidden" viewBox="0 0 24 24" fill="currentColor"><path d="M12.504 0c-.155 0-.315.008-.48.021-4.226.333-3.105 4.807-3.17 6.298-.076 1.092-.3 1.953-1.05 3.02-.885 1.051-2.127 2.75-2.716 4.521-.278.832-.41 1.684-.287 2.489a11.966 11.966 0 00-2.517 2.453c-1.455 1.774-.41 3.178 1.382 3.178h1.369c.193 0 .398-.043.608-.13.573.402 1.181.756 1.82 1.05a8.41 8.41 0 002.596.738c.344.034.682.055 1.006.055.397 0 .776-.032 1.126-.089a8.476 8.476 0 002.847-.907 9.588 9.588 0 001.654-.942c.203.074.4.11.588.11h1.369c1.792 0 2.837-1.404 1.382-3.178a11.966 11.966 0 00-2.517-2.453c.123-.805-.01-1.657-.287-2.489-.59-1.771-1.831-3.47-2.716-4.521-.75-1.067-.974-1.928-1.05-3.02-.065-1.491 1.056-5.965-3.17-6.298A5.11 5.11 0 0012.504 0zm0 1.5c.076 0 .154.003.236.012 2.33.184 2.058 3.27 2.12 4.688.066 1.325.376 2.47 1.25 3.715.818.971 1.942 2.494 2.46 4.05.208.625.322 1.26.236 1.836-.56-.326-1.155-.604-1.779-.826a6.92 6.92 0 00-.754-.227c.21-.578.105-1.238-.31-1.787-.543-.717-1.47-1.088-2.459-1.088s-1.916.371-2.459 1.088c-.415.549-.52 1.209-.31 1.787a6.92 6.92 0 00-.754.227 10.164 10.164 0 00-1.779.826c-.086-.576.028-1.211.236-1.836.518-1.556 1.642-3.079 2.46-4.05.874-1.245 1.184-2.39 1.25-3.715.062-1.418-.21-4.504 2.12-4.688.082-.009.16-.012.236-.012z"/></svg>
+        <svg data-os-icon="windows" class="w-10 h-10 text-zec-text mx-auto hidden" viewBox="0 0 24 24" fill="currentColor"><path d="M3 12V6.75l8-1.25V12H3zm0 .5h8v6.5l-8-1.25V12.5zM11.5 5.34l9.5-1.34v8h-9.5V5.34zM11.5 12.5H21v7.5l-9.5-1.34V12.5z"/></svg>
       </div>
 
-      <!-- Linux -->
-      <div class="border border-zec-border rounded-xl p-4">
-        <div class="flex items-center gap-2.5 mb-3">
-          <svg class="w-6 h-6 text-zec-text shrink-0" viewBox="0 0 24 24" fill="currentColor"><path d="M12.504 0c-.155 0-.315.008-.48.021-4.226.333-3.105 4.807-3.17 6.298-.076 1.092-.3 1.953-1.05 3.02-.885 1.051-2.127 2.75-2.716 4.521-.278.832-.41 1.684-.287 2.489a11.966 11.966 0 00-2.517 2.453c-1.455 1.774-.41 3.178 1.382 3.178h1.369c.193 0 .398-.043.608-.13.573.402 1.181.756 1.82 1.05a8.41 8.41 0 002.596.738c.344.034.682.055 1.006.055.397 0 .776-.032 1.126-.089a8.476 8.476 0 002.847-.907 9.588 9.588 0 001.654-.942c.203.074.4.11.588.11h1.369c1.792 0 2.837-1.404 1.382-3.178a11.966 11.966 0 00-2.517-2.453c.123-.805-.01-1.657-.287-2.489-.59-1.771-1.831-3.47-2.716-4.521-.75-1.067-.974-1.928-1.05-3.02-.065-1.491 1.056-5.965-3.17-6.298A5.11 5.11 0 0012.504 0zm0 1.5c.076 0 .154.003.236.012 2.33.184 2.058 3.27 2.12 4.688.066 1.325.376 2.47 1.25 3.715.818.971 1.942 2.494 2.46 4.05.208.625.322 1.26.236 1.836-.56-.326-1.155-.604-1.779-.826a6.92 6.92 0 00-.754-.227c.21-.578.105-1.238-.31-1.787-.543-.717-1.47-1.088-2.459-1.088s-1.916.371-2.459 1.088c-.415.549-.52 1.209-.31 1.787a6.92 6.92 0 00-.754.227 10.164 10.164 0 00-1.779.826c-.086-.576.028-1.211.236-1.836.518-1.556 1.642-3.079 2.46-4.05.874-1.245 1.184-2.39 1.25-3.715.062-1.418-.21-4.504 2.12-4.688.082-.009.16-.012.236-.012z"/></svg>
-          <div>
-            <p class="text-sm font-semibold text-zec-text">Linux</p>
-          </div>
-        </div>
-        <p class="text-[10px] text-zec-muted mb-1.5 font-medium uppercase tracking-wider">x86_64</p>
-        <div class="space-y-1.5">
-          <a
-            href="https://github.com/stefanmirrors/zecbox/releases/latest/download/zecbox_0.1.7_amd64.AppImage"
-            target="_blank"
-            rel="noopener noreferrer"
-            class="flex items-center justify-between px-3 py-2 rounded-md bg-zec-yellow text-zec-dark font-semibold text-xs hover:brightness-110 transition-all no-underline"
-          >
-            AppImage
-            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
-          </a>
-          <a
-            href="https://github.com/stefanmirrors/zecbox/releases/latest/download/zecbox_0.1.7_amd64.deb"
-            target="_blank"
-            rel="noopener noreferrer"
-            class="flex items-center justify-between px-3 py-2 rounded-md border border-zec-border text-zec-text font-medium text-xs hover:border-zec-muted transition-all no-underline"
-          >
-            .deb
-            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
-          </a>
-        </div>
-        <p class="text-[10px] text-zec-muted mb-1.5 mt-3 font-medium uppercase tracking-wider">ARM64</p>
-        <div class="space-y-1.5">
-          <a
-            href="https://github.com/stefanmirrors/zecbox/releases/latest/download/zecbox_0.1.7_aarch64.AppImage"
-            target="_blank"
-            rel="noopener noreferrer"
-            class="flex items-center justify-between px-3 py-2 rounded-md bg-zec-yellow text-zec-dark font-semibold text-xs hover:brightness-110 transition-all no-underline"
-          >
-            AppImage
-            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
-          </a>
-          <a
-            href="https://github.com/stefanmirrors/zecbox/releases/latest/download/zecbox_0.1.7_arm64.deb"
-            target="_blank"
-            rel="noopener noreferrer"
-            class="flex items-center justify-between px-3 py-2 rounded-md border border-zec-border text-zec-text font-medium text-xs hover:border-zec-muted transition-all no-underline"
-          >
-            .deb
-            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
-          </a>
-        </div>
+      <h3 id="detected-os-label" class="text-xl font-bold text-zec-text mb-1" style="font-family: 'Montserrat', sans-serif;"></h3>
+      <p id="detected-arch-label" class="text-sm text-zec-muted mb-5"></p>
+
+      <a id="detected-download-btn"
+        href="#"
+        target="_blank"
+        rel="noopener noreferrer"
+        class="inline-flex items-center justify-center gap-2.5 px-8 py-3.5 rounded-lg bg-zec-yellow text-zec-dark font-bold text-base hover:brightness-110 transition-all no-underline"
+      >
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+        <span id="detected-btn-text"></span>
+      </a>
+
+      <p id="arch-helper" class="hidden text-xs text-zec-muted mt-3">
+        Not sure? Click <strong class="text-zec-text">&#63743;</strong> &gt; <strong class="text-zec-text">About This Mac</strong> to check your chip.
+      </p>
+
+      <div id="detected-windows-notice" class="hidden px-4 py-3 rounded-lg border border-zec-border text-sm text-zec-muted">
+        Windows support is coming soon.
       </div>
 
-      <!-- Windows -->
-      <div class="border border-zec-border/50 rounded-xl p-4 opacity-50">
-        <div class="flex items-center gap-2.5 mb-3">
-          <svg class="w-6 h-6 text-zec-text shrink-0" viewBox="0 0 24 24" fill="currentColor"><path d="M3 12V6.75l8-1.25V12H3zm0 .5h8v6.5l-8-1.25V12.5zM11.5 5.34l9.5-1.34v8h-9.5V5.34zM11.5 12.5H21v7.5l-9.5-1.34V12.5z"/></svg>
-          <div>
-            <p class="text-sm font-semibold text-zec-text">Windows</p>
-            <p class="text-[11px] text-zec-muted">Coming soon</p>
+      <div class="mt-5">
+        <button id="show-all-downloads" type="button" class="text-sm text-zec-muted hover:text-zec-text transition-colors cursor-pointer bg-transparent border-0 p-0">
+          Other downloads <span class="toggle-arrow">&darr;</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Layer B: All downloads grid (visible by default = no-JS fallback) -->
+    <div id="all-downloads">
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <!-- macOS -->
+        <div class="border border-zec-border rounded-xl p-4">
+          <div class="flex items-center gap-2.5 mb-3">
+            <svg class="w-6 h-6 text-zec-text shrink-0" viewBox="0 0 24 24" fill="currentColor"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
+            <div>
+              <p class="text-sm font-semibold text-zec-text">macOS</p>
+              <p class="text-[11px] text-zec-muted">12+ required</p>
+            </div>
+          </div>
+          <div class="space-y-1.5">
+            <a
+              href="https://github.com/stefanmirrors/zecbox/releases/latest/download/zecbox-macos-aarch64.dmg"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="flex items-center justify-between px-3 py-2 rounded-md bg-zec-yellow text-zec-dark font-semibold text-xs hover:brightness-110 transition-all no-underline"
+            >
+              Mac (M1, M2, M3, M4)
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+            </a>
+            <a
+              href="https://github.com/stefanmirrors/zecbox/releases/latest/download/zecbox-macos-x86_64.dmg"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="flex items-center justify-between px-3 py-2 rounded-md border border-zec-border text-zec-text font-medium text-xs hover:border-zec-muted transition-all no-underline"
+            >
+              Mac (Intel)
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+            </a>
           </div>
         </div>
-        <div class="px-3 py-2 rounded-md border border-zec-border/50 text-xs text-zec-muted text-center">
-          In development
+
+        <!-- Linux -->
+        <div class="border border-zec-border rounded-xl p-4">
+          <div class="flex items-center gap-2.5 mb-3">
+            <svg class="w-6 h-6 text-zec-text shrink-0" viewBox="0 0 24 24" fill="currentColor"><path d="M12.504 0c-.155 0-.315.008-.48.021-4.226.333-3.105 4.807-3.17 6.298-.076 1.092-.3 1.953-1.05 3.02-.885 1.051-2.127 2.75-2.716 4.521-.278.832-.41 1.684-.287 2.489a11.966 11.966 0 00-2.517 2.453c-1.455 1.774-.41 3.178 1.382 3.178h1.369c.193 0 .398-.043.608-.13.573.402 1.181.756 1.82 1.05a8.41 8.41 0 002.596.738c.344.034.682.055 1.006.055.397 0 .776-.032 1.126-.089a8.476 8.476 0 002.847-.907 9.588 9.588 0 001.654-.942c.203.074.4.11.588.11h1.369c1.792 0 2.837-1.404 1.382-3.178a11.966 11.966 0 00-2.517-2.453c.123-.805-.01-1.657-.287-2.489-.59-1.771-1.831-3.47-2.716-4.521-.75-1.067-.974-1.928-1.05-3.02-.065-1.491 1.056-5.965-3.17-6.298A5.11 5.11 0 0012.504 0zm0 1.5c.076 0 .154.003.236.012 2.33.184 2.058 3.27 2.12 4.688.066 1.325.376 2.47 1.25 3.715.818.971 1.942 2.494 2.46 4.05.208.625.322 1.26.236 1.836-.56-.326-1.155-.604-1.779-.826a6.92 6.92 0 00-.754-.227c.21-.578.105-1.238-.31-1.787-.543-.717-1.47-1.088-2.459-1.088s-1.916.371-2.459 1.088c-.415.549-.52 1.209-.31 1.787a6.92 6.92 0 00-.754.227 10.164 10.164 0 00-1.779.826c-.086-.576.028-1.211.236-1.836.518-1.556 1.642-3.079 2.46-4.05.874-1.245 1.184-2.39 1.25-3.715.062-1.418-.21-4.504 2.12-4.688.082-.009.16-.012.236-.012z"/></svg>
+            <div>
+              <p class="text-sm font-semibold text-zec-text">Linux</p>
+            </div>
+          </div>
+          <div class="space-y-1.5">
+            <a
+              href={`https://github.com/stefanmirrors/zecbox/releases/latest/download/zecbox_${version}_amd64.AppImage`}
+              target="_blank"
+              rel="noopener noreferrer"
+              class="flex items-center justify-between px-3 py-2 rounded-md bg-zec-yellow text-zec-dark font-semibold text-xs hover:brightness-110 transition-all no-underline"
+            >
+              AppImage (most computers)
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+            </a>
+            <a
+              href={`https://github.com/stefanmirrors/zecbox/releases/latest/download/zecbox_${version}_amd64.deb`}
+              target="_blank"
+              rel="noopener noreferrer"
+              class="flex items-center justify-between px-3 py-2 rounded-md border border-zec-border text-zec-text font-medium text-xs hover:border-zec-muted transition-all no-underline"
+            >
+              .deb (Debian / Ubuntu)
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+            </a>
+          </div>
+          <p class="text-[10px] text-zec-muted mt-3 mb-1.5 font-medium uppercase tracking-wider">ARM64</p>
+          <div class="space-y-1.5">
+            <a
+              href={`https://github.com/stefanmirrors/zecbox/releases/latest/download/zecbox_${version}_aarch64.AppImage`}
+              target="_blank"
+              rel="noopener noreferrer"
+              class="flex items-center justify-between px-3 py-2 rounded-md border border-zec-border text-zec-text font-medium text-xs hover:border-zec-muted transition-all no-underline"
+            >
+              AppImage
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+            </a>
+            <a
+              href={`https://github.com/stefanmirrors/zecbox/releases/latest/download/zecbox_${version}_arm64.deb`}
+              target="_blank"
+              rel="noopener noreferrer"
+              class="flex items-center justify-between px-3 py-2 rounded-md border border-zec-border text-zec-text font-medium text-xs hover:border-zec-muted transition-all no-underline"
+            >
+              .deb (Debian / Ubuntu)
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+            </a>
+          </div>
+        </div>
+
+        <!-- Windows -->
+        <div class="border border-zec-border/50 rounded-xl p-4 opacity-50">
+          <div class="flex items-center gap-2.5 mb-3">
+            <svg class="w-6 h-6 text-zec-text shrink-0" viewBox="0 0 24 24" fill="currentColor"><path d="M3 12V6.75l8-1.25V12H3zm0 .5h8v6.5l-8-1.25V12.5zM11.5 5.34l9.5-1.34v8h-9.5V5.34zM11.5 12.5H21v7.5l-9.5-1.34V12.5z"/></svg>
+            <div>
+              <p class="text-sm font-semibold text-zec-text">Windows</p>
+              <p class="text-[11px] text-zec-muted">Coming soon</p>
+            </div>
+          </div>
+          <div class="px-3 py-2 rounded-md border border-zec-border/50 text-xs text-zec-muted text-center">
+            In development
+          </div>
         </div>
       </div>
     </div>
 
-    <!-- Post-install steps -->
+    <!-- Layer C: Post-install instructions -->
     <div class="mt-6 bg-zec-surface border border-zec-border rounded-xl p-5">
       <div class="flex items-center gap-2 mb-5">
         <svg class="w-5 h-5 text-zec-yellow shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
@@ -123,7 +191,7 @@ try {
       </div>
 
       <!-- macOS -->
-      <div class="mb-5">
+      <div data-platform="macos" class="mb-5">
         <span class="text-[10px] font-medium text-zec-muted bg-zec-dark border border-zec-border rounded px-1.5 py-0.5">macOS</span>
         <ol class="space-y-3 text-sm text-zec-muted list-none m-0 p-0 mt-3">
           <li class="flex gap-3">
@@ -146,10 +214,10 @@ try {
         </ol>
       </div>
 
-      <div class="border-t border-zec-border my-5"></div>
+      <div data-platform-divider class="border-t border-zec-border my-5"></div>
 
       <!-- Linux -->
-      <div>
+      <div data-platform="linux">
         <span class="text-[10px] font-medium text-zec-muted bg-zec-dark border border-zec-border rounded px-1.5 py-0.5">Linux</span>
         <div class="mt-3 space-y-3">
           <div class="flex gap-3 text-sm text-zec-muted">
@@ -183,11 +251,108 @@ try {
     </div>
 
     <script>
-      // Generic copy handler for all copy buttons
+      // Platform detection and primary download button
+      (function () {
+        const data = JSON.parse(document.getElementById('download-data')?.textContent || '{}');
+        const ua = navigator.userAgent;
+        const platform = navigator.platform || '';
+        const uaData = (navigator as any).userAgentData;
+
+        let os = 'unknown';
+        let arch = 'unknown';
+
+        if (ua.includes('Mac OS X') || platform.startsWith('Mac')) {
+          os = 'macos';
+        } else if (ua.includes('Linux') && !ua.includes('Android')) {
+          os = 'linux';
+        } else if (ua.includes('Windows')) {
+          os = 'windows';
+        }
+
+        if (os === 'macos') {
+          arch = uaData?.architecture === 'x86' ? 'intel' : 'arm';
+        } else if (os === 'linux') {
+          if (uaData?.architecture === 'arm' || platform.includes('aarch64') || platform.includes('arm')) {
+            arch = 'arm64';
+          } else {
+            arch = 'x86_64';
+          }
+        }
+
+        if (os === 'unknown') return;
+
+        const primary = document.getElementById('detected-download');
+        const allDownloads = document.getElementById('all-downloads');
+        if (!primary || !allDownloads) return;
+
+        const icon = primary.querySelector(`[data-os-icon="${os}"]`);
+        if (icon) icon.classList.remove('hidden');
+
+        const osLabel = document.getElementById('detected-os-label')!;
+        const archLabel = document.getElementById('detected-arch-label')!;
+        const btn = document.getElementById('detected-download-btn') as HTMLAnchorElement;
+        const btnText = document.getElementById('detected-btn-text')!;
+        const windowsNotice = document.getElementById('detected-windows-notice')!;
+
+        if (os === 'windows') {
+          osLabel.textContent = 'Download for Windows';
+          archLabel.textContent = '';
+          btn.classList.add('hidden');
+          windowsNotice.classList.remove('hidden');
+        } else if (os === 'macos') {
+          const d = arch === 'intel' ? data.macos?.intel : data.macos?.arm;
+          osLabel.textContent = 'Download for macOS';
+          archLabel.textContent = d?.arch || '';
+          btn.href = d?.url || '#';
+          btnText.textContent = d?.label || 'Download';
+
+          const isSafari = !uaData && /Safari/.test(ua) && !/Chrome/.test(ua);
+          if (isSafari) {
+            document.getElementById('arch-helper')?.classList.remove('hidden');
+          }
+        } else if (os === 'linux') {
+          const d = arch === 'arm64' ? data.linux?.arm64 : data.linux?.x86_64;
+          osLabel.textContent = 'Download for Linux';
+          archLabel.textContent = d?.arch || '';
+          btn.href = d?.url || '#';
+          btnText.textContent = d?.label || 'Download';
+        }
+
+        primary.classList.remove('hidden');
+        allDownloads.classList.add('hidden');
+
+        // Hide irrelevant post-install instructions
+        document.querySelectorAll<HTMLElement>('[data-platform]').forEach(el => {
+          if (el.dataset.platform !== os) el.classList.add('hidden');
+        });
+        // Hide divider when only one platform shown
+        document.querySelector<HTMLElement>('[data-platform-divider]')?.classList.add('hidden');
+
+        // Toggle "Other downloads"
+        let expanded = false;
+        document.getElementById('show-all-downloads')?.addEventListener('click', () => {
+          expanded = !expanded;
+          allDownloads.classList.toggle('hidden', !expanded);
+          const arrow = document.querySelector('.toggle-arrow');
+          if (arrow) arrow.textContent = expanded ? '\u2191' : '\u2193';
+
+          if (expanded) {
+            document.querySelectorAll<HTMLElement>('[data-platform]').forEach(el => el.classList.remove('hidden'));
+            document.querySelector<HTMLElement>('[data-platform-divider]')?.classList.remove('hidden');
+          } else {
+            document.querySelectorAll<HTMLElement>('[data-platform]').forEach(el => {
+              if (el.dataset.platform !== os) el.classList.add('hidden');
+            });
+            document.querySelector<HTMLElement>('[data-platform-divider]')?.classList.add('hidden');
+          }
+        });
+      })();
+
+      // Copy-to-clipboard handler
       document.querySelectorAll('.copy-btn').forEach(btn => {
         btn.addEventListener('click', async () => {
           const targetId = btn.getAttribute('data-target');
-          const cmd = document.getElementById(targetId)?.textContent ?? '';
+          const cmd = document.getElementById(targetId ?? '')?.textContent ?? '';
           await navigator.clipboard.writeText(cmd);
           const copyIcon = btn.querySelector('.copy-icon');
           const checkIcon = btn.querySelector('.check-icon');
