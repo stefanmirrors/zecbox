@@ -232,14 +232,18 @@ const downloads = {
         <ol class="space-y-3 text-sm text-zec-muted list-none m-0 p-0 mt-3">
           <li class="flex gap-3">
             <span class="text-zec-yellow font-bold text-xs mt-0.5 shrink-0">1</span>
-            <span>Open a <strong class="text-zec-text">terminal</strong> and navigate to where you downloaded the file</span>
+            <span>Open your <strong class="text-zec-text">file manager</strong> and find the downloaded <strong class="text-zec-text">.AppImage</strong> file</span>
           </li>
           <li class="flex gap-3">
             <span class="text-zec-yellow font-bold text-xs mt-0.5 shrink-0">2</span>
+            <span>Open a <strong class="text-zec-text">terminal</strong> — on most distros press <kbd class="text-[11px] bg-zec-dark border border-zec-border rounded px-1.5 py-0.5 text-zec-text font-sans">Ctrl+Alt+T</kbd></span>
+          </li>
+          <li class="flex gap-3">
+            <span class="text-zec-yellow font-bold text-xs mt-0.5 shrink-0">3</span>
             <div class="flex-1 min-w-0">
-              <span>Paste this command and press Enter:</span>
+              <span>Make it executable and run it:</span>
               <div class="mt-1.5 flex items-center gap-2 bg-zec-dark border border-zec-border rounded-lg px-3 py-2">
-                <code class="text-xs font-mono text-zec-text select-all flex-1 min-w-0" id="linux-appimage-cmd">chmod +x zecbox*.AppImage && ./zecbox*.AppImage</code>
+                <code class="text-xs font-mono text-zec-text select-all flex-1 min-w-0" id="linux-appimage-cmd">chmod +x ~/Downloads/zecbox*.AppImage && ~/Downloads/zecbox*.AppImage</code>
                 <button type="button" class="shrink-0 p-1 rounded hover:bg-zec-border transition-colors text-zec-muted hover:text-zec-text copy-btn" data-target="linux-appimage-cmd" title="Copy to clipboard">
                   <svg class="w-4 h-4 copy-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" stroke-width="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" stroke-width="2"/></svg>
                   <svg class="w-4 h-4 check-icon hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
@@ -248,16 +252,23 @@ const downloads = {
             </div>
           </li>
         </ol>
+        <p class="mt-4 text-xs text-zec-muted">AppImages are portable — no installation needed. Just make it executable and run. Works on any distro.</p>
       </div>
+
+      <div data-platform-divider class="border-t border-zec-border my-5"></div>
 
       <!-- Linux .deb -->
       <div data-platform="linux-deb">
-        <span class="text-[10px] font-medium text-zec-muted bg-zec-dark border border-zec-border rounded px-1.5 py-0.5">Linux · .deb</span>
+        <span class="text-[10px] font-medium text-zec-muted bg-zec-dark border border-zec-border rounded px-1.5 py-0.5">Linux · .deb (Debian, Ubuntu, Mint)</span>
         <ol class="space-y-3 text-sm text-zec-muted list-none m-0 p-0 mt-3">
           <li class="flex gap-3">
             <span class="text-zec-yellow font-bold text-xs mt-0.5 shrink-0">1</span>
+            <span>Open a <strong class="text-zec-text">terminal</strong> — press <kbd class="text-[11px] bg-zec-dark border border-zec-border rounded px-1.5 py-0.5 text-zec-text font-sans">Ctrl+Alt+T</kbd></span>
+          </li>
+          <li class="flex gap-3">
+            <span class="text-zec-yellow font-bold text-xs mt-0.5 shrink-0">2</span>
             <div class="flex-1 min-w-0">
-              <span>Open a <strong class="text-zec-text">terminal</strong> and paste this command:</span>
+              <span>Install the package:</span>
               <div class="mt-1.5 flex items-center gap-2 bg-zec-dark border border-zec-border rounded-lg px-3 py-2">
                 <code class="text-xs font-mono text-zec-text select-all flex-1 min-w-0" id="linux-deb-cmd">sudo dpkg -i ~/Downloads/zecbox*.deb</code>
                 <button type="button" class="shrink-0 p-1 rounded hover:bg-zec-border transition-colors text-zec-muted hover:text-zec-text copy-btn" data-target="linux-deb-cmd" title="Copy to clipboard">
@@ -268,13 +279,12 @@ const downloads = {
             </div>
           </li>
           <li class="flex gap-3">
-            <span class="text-zec-yellow font-bold text-xs mt-0.5 shrink-0">2</span>
-            <span>Launch <strong class="text-zec-text">ZecBox</strong> from your application menu</span>
+            <span class="text-zec-yellow font-bold text-xs mt-0.5 shrink-0">3</span>
+            <span>Open <strong class="text-zec-text">ZecBox</strong> from your application menu</span>
           </li>
         </ol>
+        <p class="mt-4 text-xs text-zec-muted">The .deb package integrates with your system — adds a desktop entry so you can launch from your app menu or dock. Debian, Ubuntu, Pop!_OS, Linux Mint, and similar.</p>
       </div>
-
-      <p class="mt-5 text-xs text-zec-muted">Code signing is coming soon. Until then, macOS requires removing the quarantine flag and Linux AppImages need to be marked executable.</p>
     </div>
 
     <script>
