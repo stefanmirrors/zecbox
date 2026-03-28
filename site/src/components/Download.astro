@@ -24,13 +24,13 @@ const downloads = {
   linux: {
     x86_64: {
       url: `https://github.com/stefanmirrors/zecbox/releases/latest/download/zecbox_${version}_amd64.AppImage`,
-      label: "Download .AppImage",
-      arch: "x86_64",
+      label: "Download for Linux",
+      arch: "For most computers",
     },
     arm64: {
       url: `https://github.com/stefanmirrors/zecbox/releases/latest/download/zecbox_${version}_aarch64.AppImage`,
-      label: "Download .AppImage",
-      arch: "ARM64",
+      label: "Download for Linux",
+      arch: "ARM (Raspberry Pi, etc.)",
     },
   },
 };
@@ -276,96 +276,144 @@ const downloads = {
         const platform = navigator.platform || '';
         const uaData = (navigator as any).userAgentData;
 
+        // Skip mobile devices — no desktop app for these
+        if (/Android|iPhone|iPad|iPod|Mobile/i.test(ua)) return;
+
         let os = 'unknown';
         let arch = 'unknown';
+        let showSafariHelper = false;
 
+        // --- OS detection ---
         if (ua.includes('Mac OS X') || platform.startsWith('Mac')) {
           os = 'macos';
+        } else if (ua.includes('CrOS')) {
+          // ChromeOS can run Linux apps via Crostini
+          os = 'linux';
         } else if (ua.includes('Linux') && !ua.includes('Android')) {
           os = 'linux';
         } else if (ua.includes('Windows')) {
           os = 'windows';
         }
 
+        // --- Architecture detection ---
         if (os === 'macos') {
-          arch = uaData?.architecture === 'x86' ? 'intel' : 'arm';
-        } else if (os === 'linux') {
-          if (uaData?.architecture === 'arm' || platform.includes('aarch64') || platform.includes('arm')) {
-            arch = 'arm64';
+          // Chromium browsers expose architecture via userAgentData
+          if (uaData?.architecture === 'x86') {
+            arch = 'intel';
+          } else if (uaData?.architecture === 'arm') {
+            arch = 'arm';
           } else {
-            arch = 'x86_64';
+            // Safari and Firefox don't expose architecture
+            // navigator.platform is "MacIntel" even on Apple Silicon (Rosetta)
+            // Default to ARM — most Macs sold since late 2020 are Apple Silicon
+            arch = 'arm';
+            // Show helper so Intel users know where to find their download
+            const isSafari = /Safari/.test(ua) && !/Chrome/.test(ua);
+            const isFirefox = /Firefox/.test(ua);
+            if (isSafari || isFirefox) showSafariHelper = true;
           }
+        } else if (os === 'linux') {
+          // Check multiple sources for ARM detection:
+          // 1. userAgentData.architecture (Chromium browsers)
+          // 2. navigator.platform (Firefox, older browsers): "Linux aarch64", "Linux armv7l", "Linux armv8l"
+          // 3. UA string itself (some browsers include arch)
+          const isArm =
+            uaData?.architecture === 'arm' ||
+            /aarch64|armv[78]l/i.test(platform) ||
+            /aarch64|armv[78]l/i.test(ua);
+          arch = isArm ? 'arm64' : 'x86_64';
         }
 
         if (os === 'unknown') return;
 
-        const primary = document.getElementById('detected-download');
-        const allDownloads = document.getElementById('all-downloads');
-        if (!primary || !allDownloads) return;
+        // --- Try high-entropy API for precise detection (Chromium only) ---
+        // This is async but we update the UI immediately with our best guess,
+        // then correct if the high-entropy result differs
+        function applyDetection(detectedOs: string, detectedArch: string) {
+          const primary = document.getElementById('detected-download');
+          const allDownloads = document.getElementById('all-downloads');
+          if (!primary || !allDownloads) return;
 
-        const icon = primary.querySelector(`[data-os-icon="${os}"]`);
-        if (icon) icon.classList.remove('hidden');
+          const icon = primary.querySelector(`[data-os-icon="${detectedOs}"]`);
+          if (icon) icon.classList.remove('hidden');
 
-        const osLabel = document.getElementById('detected-os-label')!;
-        const archLabel = document.getElementById('detected-arch-label')!;
-        const btn = document.getElementById('detected-download-btn') as HTMLAnchorElement;
-        const btnText = document.getElementById('detected-btn-text')!;
-        const windowsNotice = document.getElementById('detected-windows-notice')!;
+          const osLabel = document.getElementById('detected-os-label')!;
+          const archLabel = document.getElementById('detected-arch-label')!;
+          const btn = document.getElementById('detected-download-btn') as HTMLAnchorElement;
+          const btnText = document.getElementById('detected-btn-text')!;
+          const windowsNotice = document.getElementById('detected-windows-notice')!;
 
-        if (os === 'windows') {
-          osLabel.textContent = 'Download for Windows';
-          archLabel.textContent = '';
-          btn.classList.add('hidden');
-          windowsNotice.classList.remove('hidden');
-        } else if (os === 'macos') {
-          const d = arch === 'intel' ? data.macos?.intel : data.macos?.arm;
-          osLabel.textContent = 'Download for macOS';
-          archLabel.textContent = d?.arch || '';
-          btn.href = d?.url || '#';
-          btnText.textContent = d?.label || 'Download';
-
-          const isSafari = !uaData && /Safari/.test(ua) && !/Chrome/.test(ua);
-          if (isSafari) {
-            document.getElementById('arch-helper')?.classList.remove('hidden');
+          if (detectedOs === 'windows') {
+            osLabel.textContent = 'Download for Windows';
+            archLabel.textContent = '';
+            btn.classList.add('hidden');
+            windowsNotice.classList.remove('hidden');
+          } else if (detectedOs === 'macos') {
+            const d = detectedArch === 'intel' ? data.macos?.intel : data.macos?.arm;
+            osLabel.textContent = 'Download for macOS';
+            archLabel.textContent = d?.arch || '';
+            btn.href = d?.url || '#';
+            btnText.textContent = d?.label || 'Download';
+            if (showSafariHelper) {
+              document.getElementById('arch-helper')?.classList.remove('hidden');
+            }
+          } else if (detectedOs === 'linux') {
+            const d = detectedArch === 'arm64' ? data.linux?.arm64 : data.linux?.x86_64;
+            osLabel.textContent = 'Download for Linux';
+            archLabel.textContent = d?.arch || '';
+            btn.href = d?.url || '#';
+            btnText.textContent = d?.label || 'Download';
           }
-        } else if (os === 'linux') {
-          const d = arch === 'arm64' ? data.linux?.arm64 : data.linux?.x86_64;
-          osLabel.textContent = 'Download for Linux';
-          archLabel.textContent = d?.arch || '';
-          btn.href = d?.url || '#';
-          btnText.textContent = d?.label || 'Download';
+
+          primary.classList.remove('hidden');
+          allDownloads.classList.add('hidden');
+
+          const showPlatforms = detectedOs === 'macos' ? ['macos'] : detectedOs === 'linux' ? ['linux-appimage'] : [];
+
+          document.querySelectorAll<HTMLElement>('[data-platform]').forEach(el => {
+            if (!showPlatforms.includes(el.dataset.platform!)) el.classList.add('hidden');
+          });
+          document.querySelector<HTMLElement>('[data-platform-divider]')?.classList.add('hidden');
+
+          let expanded = false;
+          document.getElementById('show-all-downloads')?.addEventListener('click', () => {
+            expanded = !expanded;
+            allDownloads.classList.toggle('hidden', !expanded);
+            const arrow = document.querySelector('.toggle-arrow');
+            if (arrow) arrow.textContent = expanded ? '\u2191' : '\u2193';
+
+            if (expanded) {
+              document.querySelectorAll<HTMLElement>('[data-platform]').forEach(el => el.classList.remove('hidden'));
+              document.querySelector<HTMLElement>('[data-platform-divider]')?.classList.remove('hidden');
+            } else {
+              document.querySelectorAll<HTMLElement>('[data-platform]').forEach(el => {
+                if (!showPlatforms.includes(el.dataset.platform!)) el.classList.add('hidden');
+              });
+              document.querySelector<HTMLElement>('[data-platform-divider]')?.classList.add('hidden');
+            }
+          });
         }
 
-        primary.classList.remove('hidden');
-        allDownloads.classList.add('hidden');
+        // Apply immediately with our best synchronous guess
+        applyDetection(os, arch);
 
-        // Determine which post-install sections to show
-        // macOS → show "macos", Linux → show "linux-appimage" (default download format)
-        const showPlatforms = os === 'macos' ? ['macos'] : os === 'linux' ? ['linux-appimage'] : [];
-
-        document.querySelectorAll<HTMLElement>('[data-platform]').forEach(el => {
-          if (!showPlatforms.includes(el.dataset.platform!)) el.classList.add('hidden');
-        });
-        document.querySelector<HTMLElement>('[data-platform-divider]')?.classList.add('hidden');
-
-        // Toggle "Other downloads"
-        let expanded = false;
-        document.getElementById('show-all-downloads')?.addEventListener('click', () => {
-          expanded = !expanded;
-          allDownloads.classList.toggle('hidden', !expanded);
-          const arrow = document.querySelector('.toggle-arrow');
-          if (arrow) arrow.textContent = expanded ? '\u2191' : '\u2193';
-
-          if (expanded) {
-            document.querySelectorAll<HTMLElement>('[data-platform]').forEach(el => el.classList.remove('hidden'));
-            document.querySelector<HTMLElement>('[data-platform-divider]')?.classList.remove('hidden');
-          } else {
-            document.querySelectorAll<HTMLElement>('[data-platform]').forEach(el => {
-              if (!showPlatforms.includes(el.dataset.platform!)) el.classList.add('hidden');
-            });
-            document.querySelector<HTMLElement>('[data-platform-divider]')?.classList.add('hidden');
-          }
-        });
+        // Then try the high-entropy API to refine (Chromium only, async)
+        // This catches edge cases like ARM VMs (UTM), Raspberry Pi on Chrome, etc.
+        if (uaData?.getHighEntropyValues) {
+          uaData.getHighEntropyValues(['architecture', 'platform']).then((values: any) => {
+            let refinedArch = arch;
+            if (os === 'macos') {
+              refinedArch = values.architecture === 'x86' ? 'intel' : 'arm';
+            } else if (os === 'linux') {
+              refinedArch = values.architecture === 'arm' ? 'arm64' : 'x86_64';
+            }
+            // Only re-apply if the refined result differs
+            if (refinedArch !== arch) {
+              showSafariHelper = false; // high-entropy confirmed, no ambiguity
+              applyDetection(os, refinedArch);
+            }
+          }).catch(() => {});
+        }
       })();
 
       // Copy-to-clipboard handler
