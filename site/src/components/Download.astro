@@ -25,12 +25,12 @@ const downloads = {
     x86_64: {
       url: "https://github.com/stefanmirrors/zecbox/releases/latest/download/zecbox-linux-x86_64.AppImage",
       label: "Download for Linux",
-      arch: "For most computers",
+      arch: "Detected: Intel/AMD (x86_64)",
     },
     arm64: {
       url: "https://github.com/stefanmirrors/zecbox/releases/latest/download/zecbox-linux-aarch64.AppImage",
       label: "Download for Linux",
-      arch: "ARM (Raspberry Pi, etc.)",
+      arch: "Detected: ARM (aarch64)",
     },
   },
 };
@@ -75,9 +75,9 @@ const downloads = {
         Windows support is coming soon.
       </div>
 
-      <div class="mt-5">
+      <div class="mt-5 space-y-1">
         <button id="show-all-downloads" type="button" class="text-sm text-zec-muted hover:text-zec-text transition-colors cursor-pointer bg-transparent border-0 p-0">
-          Other downloads <span class="toggle-arrow">&darr;</span>
+          Wrong download? Show all options <span class="toggle-arrow">&darr;</span>
         </button>
       </div>
     </div>
@@ -315,8 +315,9 @@ const downloads = {
       (function () {
         const data = JSON.parse(document.getElementById('download-data')?.textContent || '{}');
         const ua = navigator.userAgent;
-        const platform = navigator.platform || '';
+        const platform = (navigator.platform || '').trim();
         const uaData = (navigator as any).userAgentData;
+        console.log('ZecBox download detection:', { platform, ua: ua.substring(0, 120), uaData: uaData ? { arch: uaData.architecture, platform: uaData.platform } : 'unsupported' });
 
         // Skip mobile devices — no desktop app for these
         if (/Android|iPhone|iPad|iPod|Mobile/i.test(ua)) return;
