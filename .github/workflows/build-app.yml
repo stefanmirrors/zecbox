@@ -248,7 +248,11 @@ jobs:
           mkdir -p staging
           cp target/${{ matrix.triple }}/release/bundle/appimage/*.AppImage staging/ 2>/dev/null || true
           cp target/${{ matrix.triple }}/release/bundle/deb/*.deb staging/ 2>/dev/null || true
-          cd staging && sha256sum * > SHA256SUMS-linux-${{ matrix.arch }}
+          # Create fixed-name copies (version-independent, like macOS DMGs)
+          cd staging
+          for f in *.AppImage; do [ -f "$f" ] && cp "$f" "zecbox-linux-${{ matrix.arch }}.AppImage"; done
+          for f in *.deb; do [ -f "$f" ] && cp "$f" "zecbox-linux-${{ matrix.arch }}.deb"; done
+          sha256sum * > SHA256SUMS-linux-${{ matrix.arch }}
 
       - name: Upload Linux artifacts
         uses: actions/upload-artifact@v4
