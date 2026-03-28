@@ -15,6 +15,13 @@ const CRITICAL_THRESHOLD: u64 = 10_000_000_000;
 const PAUSE_THRESHOLD: u64 = 2_000_000_000;
 const MONITOR_INTERVAL: Duration = Duration::from_secs(60);
 
+/// Strip the Windows extended-length path prefix `\\?\` if present.
+/// Rust APIs (e.g. Tauri's app_data_dir) return paths with this prefix,
+/// but sysinfo disk mount points use plain `C:\` style paths.
+fn normalize_path_str(path: &str) -> &str {
+    path.strip_prefix(r"\\?\").unwrap_or(path)
+}
+
 /// macOS system volume mount points to filter out.
 #[cfg(target_os = "macos")]
 const SYSTEM_MOUNTS: &[&str] = &[
@@ -102,7 +109,8 @@ pub fn get_data_dir_storage(data_dir: &Path) -> Result<StorageInfo, String> {
     let disks = Disks::new_with_refreshed_list();
 
     // Find the disk containing this path by longest mount point prefix match
-    let data_dir_str = data_dir.to_string_lossy();
+    let data_dir_raw = data_dir.to_string_lossy();
+    let data_dir_str = normalize_path_str(&data_dir_raw);
     let mut best_match: Option<(&sysinfo::Disk, usize)> = None;
 
     for disk in disks.list() {
@@ -182,7 +190,8 @@ pub fn is_external_volume(mount_point: &Path) -> bool {
 }
 
 pub fn is_mount_available(data_dir: &Path) -> bool {
-    let path_str = data_dir.to_string_lossy();
+    let path_raw = data_dir.to_string_lossy();
+    let path_str = normalize_path_str(&path_raw);
 
     #[cfg(target_os = "macos")]
     {

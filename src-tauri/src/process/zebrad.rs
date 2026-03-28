@@ -288,15 +288,12 @@ fn parse_startup_message(line: &str) -> Option<StartupInfo> {
         };
         Some(StartupInfo { message: msg, progress: pct })
     } else if line.contains("sync_percent=") {
+        // Only extract progress number — checkpoint lines provide the user-facing message
         let pct = line.split("sync_percent=").nth(1)
             .and_then(|s| s.split_whitespace().next())
             .and_then(|s| s.strip_suffix('%').or(Some(s)))
             .and_then(|s| s.parse::<f64>().ok());
-        let msg = match pct {
-            Some(p) => format!("Downloading the blockchain — {:.1}%", p),
-            None => "Downloading the blockchain...".into(),
-        };
-        Some(StartupInfo { message: msg, progress: pct })
+        pct.map(|p| StartupInfo { message: String::new(), progress: Some(p) })
     } else if line.contains("Opened RPC endpoint") {
         Some(StartupInfo { message: "Almost ready...".into(), progress: None })
     } else {
@@ -371,7 +368,18 @@ async fn read_log_stream<R: tokio::io::AsyncRead + Unpin>(
             if matches!(*status, NodeStatus::Starting { .. }) {
                 drop(status);
                 if let Some(info) = parse_startup_message(&line) {
-                    let new_status = NodeStatus::Starting { message: Some(info.message), progress: info.progress };
+                    // If message is empty (progress-only update), keep the previous message
+                    let message = if info.message.is_empty() {
+                        let status = node.status.lock().await;
+                        if let NodeStatus::Starting { ref message, .. } = *status {
+                            message.clone()
+                        } else {
+                            Some(info.message)
+                        }
+                    } else {
+                        Some(info.message)
+                    };
+                    let new_status = NodeStatus::Starting { message, progress: info.progress };
                     {
                         let mut status = node.status.lock().await;
                         *status = new_status.clone();
