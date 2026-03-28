@@ -33,6 +33,13 @@ const downloads = {
       arch: "Detected: ARM (aarch64)",
     },
   },
+  windows: {
+    x86_64: {
+      url: "https://github.com/stefanmirrors/zecbox/releases/latest/download/zecbox-windows-x86_64.exe",
+      label: "Download for Windows",
+      arch: "Detected: Intel/AMD (x86_64)",
+    },
+  },
 };
 ---
 
@@ -70,10 +77,6 @@ const downloads = {
       <p id="arch-helper" class="hidden text-xs text-zec-muted mt-3">
         Not sure? Click <strong class="text-zec-text">&#63743;</strong> &gt; <strong class="text-zec-text">About This Mac</strong> to check your chip.
       </p>
-
-      <div id="detected-windows-notice" class="hidden px-4 py-3 rounded-lg border border-zec-border text-sm text-zec-muted">
-        Windows support is coming soon.
-      </div>
 
       <div class="mt-5 space-y-1">
         <button id="show-all-downloads" type="button" class="text-sm text-zec-muted hover:text-zec-text transition-colors cursor-pointer bg-transparent border-0 p-0">
@@ -171,16 +174,24 @@ const downloads = {
         </div>
 
         <!-- Windows -->
-        <div class="border border-zec-border/50 rounded-xl p-4 opacity-50">
+        <div class="border border-zec-border rounded-xl p-4">
           <div class="flex items-center gap-2.5 mb-3">
             <svg class="w-6 h-6 text-zec-text shrink-0" viewBox="0 0 24 24" fill="currentColor"><path d="M3 12V6.75l8-1.25V12H3zm0 .5h8v6.5l-8-1.25V12.5zM11.5 5.34l9.5-1.34v8h-9.5V5.34zM11.5 12.5H21v7.5l-9.5-1.34V12.5z"/></svg>
             <div>
               <p class="text-sm font-semibold text-zec-text">Windows</p>
-              <p class="text-[11px] text-zec-muted">Coming soon</p>
+              <p class="text-[11px] text-zec-muted">10+ required</p>
             </div>
           </div>
-          <div class="px-3 py-2 rounded-md border border-zec-border/50 text-xs text-zec-muted text-center">
-            In development
+          <div class="space-y-1.5">
+            <a
+              href="https://github.com/stefanmirrors/zecbox/releases/latest/download/zecbox-windows-x86_64.exe"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="flex items-center justify-between px-3 py-2 rounded-md bg-zec-yellow text-zec-dark font-semibold text-xs hover:brightness-110 transition-all no-underline"
+            >
+              PC/Laptop (Intel/AMD)
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+            </a>
           </div>
         </div>
       </div>
@@ -296,6 +307,31 @@ const downloads = {
         </ol>
         <p class="mt-4 text-xs text-zec-muted">The .deb package integrates with your system — adds a desktop entry so you can launch from your app menu or dock. Debian, Ubuntu, Pop!_OS, Linux Mint, and similar.</p>
       </div>
+
+      <div data-platform-divider class="border-t border-zec-border my-5"></div>
+
+      <!-- Windows -->
+      <div data-platform="windows">
+        <div class="flex items-center gap-2.5 mb-3">
+          <svg class="w-6 h-6 text-zec-text shrink-0" viewBox="0 0 24 24" fill="currentColor"><path d="M3 12V6.75l8-1.25V12H3zm0 .5h8v6.5l-8-1.25V12.5zM11.5 5.34l9.5-1.34v8h-9.5V5.34zM11.5 12.5H21v7.5l-9.5-1.34V12.5z"/></svg>
+          <span class="text-lg font-black text-zec-text tracking-tight">Windows</span>
+        </div>
+        <ol class="space-y-3 text-sm text-zec-muted list-none m-0 p-0">
+          <li class="flex gap-3">
+            <span class="text-zec-yellow font-bold text-xs mt-0.5 shrink-0">1</span>
+            <span>Run the downloaded <strong class="text-zec-text">.exe</strong> installer</span>
+          </li>
+          <li class="flex gap-3">
+            <span class="text-zec-yellow font-bold text-xs mt-0.5 shrink-0">2</span>
+            <span>If Windows SmartScreen appears, click <strong class="text-zec-text">More info</strong> then <strong class="text-zec-text">Run anyway</strong></span>
+          </li>
+          <li class="flex gap-3">
+            <span class="text-zec-yellow font-bold text-xs mt-0.5 shrink-0">3</span>
+            <span>Open <strong class="text-zec-text">ZecBox</strong> from the Start menu or desktop shortcut</span>
+          </li>
+        </ol>
+        <p class="mt-4 text-xs text-zec-muted">Windows may show a SmartScreen warning for unsigned apps. Code signing is coming soon.</p>
+      </div>
     </div>
 
     <script>
@@ -372,13 +408,13 @@ const downloads = {
           const archLabel = document.getElementById('detected-arch-label')!;
           const btn = document.getElementById('detected-download-btn') as HTMLAnchorElement;
           const btnText = document.getElementById('detected-btn-text')!;
-          const windowsNotice = document.getElementById('detected-windows-notice')!;
 
           if (detectedOs === 'windows') {
+            const d = data.windows?.x86_64;
             osLabel.textContent = 'Download for Windows';
-            archLabel.textContent = '';
-            btn.classList.add('hidden');
-            windowsNotice.classList.remove('hidden');
+            archLabel.textContent = d?.arch || '';
+            btn.href = d?.url || '#';
+            btnText.textContent = d?.label || 'Download';
           } else if (detectedOs === 'macos') {
             const d = detectedArch === 'intel' ? data.macos?.intel : data.macos?.arm;
             osLabel.textContent = 'Download for macOS';
@@ -399,7 +435,7 @@ const downloads = {
           primary.classList.remove('hidden');
           allDownloads.classList.add('hidden');
 
-          const showPlatforms = detectedOs === 'macos' ? ['macos'] : detectedOs === 'linux' ? ['linux-appimage'] : [];
+          const showPlatforms = detectedOs === 'macos' ? ['macos'] : detectedOs === 'linux' ? ['linux-appimage'] : detectedOs === 'windows' ? ['windows'] : [];
 
           document.querySelectorAll<HTMLElement>('[data-platform]').forEach(el => {
             if (!showPlatforms.includes(el.dataset.platform!)) el.classList.add('hidden');

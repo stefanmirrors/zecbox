@@ -4,7 +4,37 @@ export default function ShieldMode() {
   const {
     status, toggling, error, toggle, clearError,
     helperInstalled, installing, installHelper,
+    platformSupported,
   } = useShieldMode();
+
+  if (platformSupported === false) {
+    return (
+      <div className="space-y-6">
+        <div className="border border-zec-border rounded-xl p-6 space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-base font-semibold text-zec-text">Shield Mode</h2>
+              <p className="text-xs text-zec-muted mt-0.5">Route node traffic through Tor</p>
+            </div>
+            <span className="text-xs text-zec-muted bg-zec-border/30 px-2.5 py-1 rounded-full">Coming Soon</span>
+          </div>
+          <p className="text-sm text-zec-muted">
+            Shield Mode is not yet available on Windows. It requires system-level firewall integration that is currently supported on macOS and Linux.
+          </p>
+        </div>
+
+        <div className="space-y-4">
+          <h3 className="text-xs font-medium text-zec-muted">How it works</h3>
+          <div className="space-y-3">
+            <Info title="Network privacy" text="Your ISP cannot see you are running a Zcash node. Peers cannot see your real IP." />
+            <Info title="Firewall enforcement" text="System firewall rules redirect all P2P traffic through Tor. No traffic can bypass." />
+            <Info title="Kill switch" text="If Tor or firewall rules drop, the node stops immediately to prevent clearnet exposure." />
+            <Info title="Performance" text="Tor adds latency. Best used after initial sync is complete." />
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -108,9 +138,6 @@ export default function ShieldMode() {
         </div>
       </div>
 
-      <p className="text-xs text-zec-muted/60">
-        Available on macOS and Linux. Windows support coming soon.
-      </p>
     </div>
   );
 }

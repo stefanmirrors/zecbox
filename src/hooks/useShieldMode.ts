@@ -7,6 +7,7 @@ import {
   disableShieldMode,
   isFirewallHelperInstalled,
   installFirewallHelper,
+  isShieldSupported,
 } from "../lib/tauri";
 
 export function useShieldMode() {
@@ -18,8 +19,13 @@ export function useShieldMode() {
   const [error, setError] = useState<string | null>(null);
   const [helperInstalled, setHelperInstalled] = useState<boolean | null>(null);
   const [installing, setInstalling] = useState(false);
+  const [platformSupported, setPlatformSupported] = useState<boolean | null>(null);
 
   useEffect(() => {
+    isShieldSupported()
+      .then(setPlatformSupported)
+      .catch(() => setPlatformSupported(false));
+
     getShieldStatus()
       .then(setStatus)
       .catch((e) => setError(String(e)));
@@ -95,5 +101,6 @@ export function useShieldMode() {
     helperInstalled,
     installing,
     installHelper,
+    platformSupported,
   };
 }

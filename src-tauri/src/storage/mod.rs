@@ -44,6 +44,10 @@ const SYSTEM_MOUNTS: &[&str] = &[
     "/boot",
 ];
 
+/// Windows has no virtual mount points to filter — drive letters are always real.
+#[cfg(target_os = "windows")]
+const SYSTEM_MOUNTS: &[&str] = &[];
+
 pub fn enumerate_volumes() -> Vec<VolumeInfo> {
     let disks = Disks::new_with_refreshed_list();
     let mut volumes = Vec::new();
@@ -69,12 +73,12 @@ pub fn enumerate_volumes() -> Vec<VolumeInfo> {
 
         let name = disk.name().to_string_lossy().to_string();
         let display_name = if name.is_empty() {
-            if mount == "/" {
+            if mount == "/" || (cfg!(windows) && mount.len() <= 3) {
                 default_root_name().to_string()
             } else {
                 mount
-                    .rsplit('/')
-                    .next()
+                    .rsplit(|c: char| c == '/' || c == '\\')
+                    .find(|s| !s.is_empty())
                     .unwrap_or("Unknown")
                     .to_string()
             }
@@ -119,12 +123,12 @@ pub fn get_data_dir_storage(data_dir: &Path) -> Result<StorageInfo, String> {
     let mount_str = disk.mount_point().to_string_lossy().to_string();
     let name = disk.name().to_string_lossy().to_string();
     let display_name = if name.is_empty() {
-        if mount_str == "/" {
+        if mount_str == "/" || (cfg!(windows) && mount_str.len() <= 3) {
             default_root_name().to_string()
         } else {
             mount_str
-                .rsplit('/')
-                .next()
+                .rsplit(|c: char| c == '/' || c == '\\')
+                .find(|s| !s.is_empty())
                 .unwrap_or("Unknown")
                 .to_string()
         }
@@ -157,6 +161,8 @@ pub fn warning_level(available_bytes: u64) -> StorageWarningLevel {
 fn default_root_name() -> &'static str {
     if cfg!(target_os = "macos") {
         "Macintosh HD"
+    } else if cfg!(target_os = "windows") {
+        "Local Disk (C:)"
     } else {
         "System"
     }
@@ -166,6 +172,9 @@ pub fn is_external_volume(mount_point: &Path) -> bool {
     let mount_str = mount_point.to_string_lossy();
     if cfg!(target_os = "macos") {
         mount_str.starts_with("/Volumes/")
+    } else if cfg!(target_os = "windows") {
+        // On Windows, rely on sysinfo::Disk::is_removable() in enumerate_volumes
+        false
     } else {
         // Linux: /media/ and /mnt/ are typical external mount points
         mount_str.starts_with("/media/") || mount_str.starts_with("/mnt/")
@@ -208,6 +217,21 @@ pub fn is_mount_available(data_dir: &Path) -> bool {
                     return Path::new(&mount_point).exists();
                 }
             }
+        }
+    }
+
+    #[cfg(target_os = "windows")]
+    {
+        // System drive (usually C:) is always available
+        let system_drive = std::env::var("SystemDrive").unwrap_or_else(|_| "C:".to_string());
+        if path_str.starts_with(&system_drive) {
+            return true;
+        }
+
+        // For other drives, check if the drive root exists (e.g. D:\)
+        if path_str.len() >= 2 && path_str.as_bytes()[1] == b':' {
+            let drive_root = format!("{}\\", &path_str[..2]);
+            return Path::new(&drive_root).exists();
         }
     }
 

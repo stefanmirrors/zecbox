@@ -174,3 +174,8 @@ pub async fn install_firewall_helper(
 pub async fn is_firewall_helper_installed() -> Result<bool, String> {
     Ok(firewall::is_helper_installed())
 }
+
+#[tauri::command]
+pub async fn is_shield_supported() -> Result<bool, String> {
+    Ok(cfg!(unix))
+}
