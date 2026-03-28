@@ -23,7 +23,7 @@ pub fn is_process_named(pid: u32, expected: &str) -> bool {
 /// Uses CreateToolhelp32Snapshot to enumerate processes on Windows.
 #[cfg(windows)]
 pub fn is_process_named(pid: u32, expected: &str) -> bool {
-    use windows_sys::Win32::Foundation::CloseHandle;
+    use windows_sys::Win32::Foundation::{CloseHandle, INVALID_HANDLE_VALUE};
     use windows_sys::Win32::System::Diagnostics::ToolHelp::{
         CreateToolhelp32Snapshot, Process32FirstW, Process32NextW, PROCESSENTRY32W,
         TH32CS_SNAPPROCESS,
@@ -31,7 +31,7 @@ pub fn is_process_named(pid: u32, expected: &str) -> bool {
 
     unsafe {
         let snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
-        if snapshot == -1_isize as usize as _ {
+        if snapshot == INVALID_HANDLE_VALUE {
             return false;
         }
 
