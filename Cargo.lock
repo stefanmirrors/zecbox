@@ -6230,7 +6230,7 @@ dependencies = [
 
 [[package]]
 name = "zecbox"
-version = "0.1.6"
+version = "0.1.8"
 dependencies = [
  "base64 0.22.1",
  "chrono",
@@ -6254,6 +6254,7 @@ dependencies = [
  "tauri-plugin-updater",
  "tokio",
  "toml 0.8.2",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]

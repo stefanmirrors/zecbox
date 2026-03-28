@@ -3,8 +3,6 @@ use std::path::{Path, PathBuf};
 use std::process::Stdio;
 use std::sync::Arc;
 
-use nix::sys::signal::{self, Signal};
-use nix::unistd::Pid;
 use tauri::{AppHandle, Emitter, Manager};
 use tokio::io::{AsyncBufReadExt, BufReader};
 
@@ -158,29 +156,11 @@ pub async fn stop_zebrad(
         }
     }
 
-    // Send SIGTERM, wait, then SIGKILL if needed
+    // Gracefully stop: SIGTERM → wait → force kill
     {
         let mut proc = node.process.lock().await;
         if let Some(ref mut child) = *proc {
-            if let Some(pid) = child.id() {
-                let nix_pid = Pid::from_raw(pid as i32);
-                let _ = signal::kill(nix_pid, Signal::SIGTERM);
-
-                // Wait up to 10 seconds
-                let wait_result = tokio::time::timeout(
-                    std::time::Duration::from_secs(10),
-                    child.wait(),
-                )
-                .await;
-
-                if wait_result.is_err() {
-                    log::warn!("zebrad did not exit after SIGTERM, sending SIGKILL");
-                    let _ = child.kill().await;
-                }
-            } else {
-                // No PID available, try kill directly
-                let _ = child.kill().await;
-            }
+            super::platform::graceful_stop(child, std::time::Duration::from_secs(10)).await;
         }
         *proc = None;
     }
@@ -225,10 +205,7 @@ pub async fn stop_zebrad(
 pub async fn check_orphan(node: &NodeState) -> Result<(), String> {
     let data_dir = node.data_dir.lock().await.clone();
     if let Some(pid) = read_pid_file(&data_dir) {
-        let nix_pid = Pid::from_raw(pid as i32);
-        // Check if process is alive (signal 0 = check existence)
-        if signal::kill(nix_pid, None).is_ok() {
-            // Verify the process is actually zebrad before killing
+        if super::platform::is_process_alive(pid) {
             if !super::is_process_named(pid, "zebrad") {
                 log::warn!("PID {} from zebrad.pid is not a zebrad process, removing stale PID file", pid);
                 let _ = remove_pid_file(&data_dir);
@@ -236,14 +213,12 @@ pub async fn check_orphan(node: &NodeState) -> Result<(), String> {
             }
 
             log::warn!("Found orphaned zebrad process (PID {}), killing it", pid);
-            let _ = signal::kill(nix_pid, Signal::SIGTERM);
+            super::platform::send_term(pid);
 
-            // Wait briefly for termination
             tokio::time::sleep(std::time::Duration::from_secs(3)).await;
 
-            // Force kill if still alive
-            if signal::kill(nix_pid, None).is_ok() {
-                let _ = signal::kill(nix_pid, Signal::SIGKILL);
+            if super::platform::is_process_alive(pid) {
+                super::platform::force_kill(pid);
             }
         }
         let _ = remove_pid_file(&data_dir);

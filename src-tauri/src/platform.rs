@@ -8,23 +8,45 @@ pub fn target_triple() -> &'static str {
     env!("TARGET")
 }
 
+/// Append `.exe` to a binary name on Windows, return as-is on other platforms.
+fn exe_name(name: &str) -> String {
+    if cfg!(windows) {
+        format!("{}.exe", name)
+    } else {
+        name.to_string()
+    }
+}
+
 /// Resolve the path to a sidecar binary by name (e.g. "zebrad", "zaino", "arti").
 ///
 /// Search order:
-/// 1. Dev mode: `src-tauri/binaries/{name}-{target_triple}`
-/// 2. Production: alongside the main executable (with and without triple suffix)
+/// 1. Dev mode: `src-tauri/binaries/{name}-{target_triple}[.exe]`
+/// 2. Production: alongside the main executable (with and without triple suffix, with and without .exe)
 /// 3. Fallback: Tauri resource directory
 pub fn resolve_sidecar_path(app_handle: &AppHandle, name: &str) -> PathBuf {
     let triple = target_triple();
     let name_with_triple = format!("{}-{}", name, triple);
 
+    // Build candidate names (with .exe on Windows)
+    let candidates: Vec<String> = if cfg!(windows) {
+        vec![
+            exe_name(&name_with_triple),
+            name_with_triple.clone(),
+            exe_name(name),
+            name.to_string(),
+        ]
+    } else {
+        vec![name_with_triple.clone(), name.to_string()]
+    };
+
     // In dev mode, look in src-tauri/binaries/
     if cfg!(debug_assertions) {
-        let dev_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-            .join("binaries")
-            .join(&name_with_triple);
-        if dev_path.exists() {
-            return dev_path;
+        let bin_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("binaries");
+        for candidate in &candidates {
+            let path = bin_dir.join(candidate);
+            if path.exists() {
+                return path;
+            }
         }
     }
 
@@ -34,26 +56,26 @@ pub fn resolve_sidecar_path(app_handle: &AppHandle, name: &str) -> PathBuf {
         .and_then(|p| p.parent().map(|p| p.to_path_buf()));
 
     if let Some(ref dir) = exe_dir {
-        // Tauri may strip the target triple when bundling
-        let prod_path = dir.join(name);
-        if prod_path.exists() {
-            return prod_path;
-        }
-        let prod_path = dir.join(&name_with_triple);
-        if prod_path.exists() {
-            return prod_path;
+        for candidate in &candidates {
+            let path = dir.join(candidate);
+            if path.exists() {
+                return path;
+            }
         }
     }
 
     // Fallback: resource dir
     if let Ok(resource_dir) = app_handle.path().resource_dir() {
-        let prod_path = resource_dir.join(name);
-        if prod_path.exists() {
-            return prod_path;
+        for candidate in &candidates {
+            let path = resource_dir.join(candidate);
+            if path.exists() {
+                return path;
+            }
         }
     }
 
-    exe_dir.unwrap_or_default().join(name)
+    // Default: return the platform-appropriate name in the exe dir
+    exe_dir.unwrap_or_default().join(exe_name(name))
 }
 
 #[cfg(test)]

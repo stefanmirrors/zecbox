@@ -4,8 +4,6 @@ use std::process::Stdio;
 use std::sync::Arc;
 use std::time::Duration;
 
-use nix::sys::signal::{self, Signal};
-use nix::unistd::Pid;
 use tauri::{AppHandle, Emitter, Manager};
 use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::task::JoinHandle;
@@ -156,27 +154,11 @@ pub async fn stop_zaino(
         }
     }
 
-    // Send SIGTERM, wait, then SIGKILL
+    // Gracefully stop: SIGTERM → wait → force kill
     {
         let mut proc = wallet.process.lock().await;
         if let Some(ref mut child) = *proc {
-            if let Some(pid) = child.id() {
-                let nix_pid = Pid::from_raw(pid as i32);
-                let _ = signal::kill(nix_pid, Signal::SIGTERM);
-
-                let wait_result = tokio::time::timeout(
-                    Duration::from_secs(5),
-                    child.wait(),
-                )
-                .await;
-
-                if wait_result.is_err() {
-                    log::warn!("Zaino did not exit after SIGTERM, sending SIGKILL");
-                    let _ = child.kill().await;
-                }
-            } else {
-                let _ = child.kill().await;
-            }
+            super::platform::graceful_stop(child, Duration::from_secs(5)).await;
         }
         *proc = None;
     }
@@ -212,9 +194,7 @@ pub async fn stop_zaino(
 /// Check for and clean up orphaned Zaino process from a prior crash.
 pub async fn check_zaino_orphan(data_dir: &Path) -> Result<(), String> {
     if let Some(pid) = read_pid_file(data_dir) {
-        let nix_pid = Pid::from_raw(pid as i32);
-        if signal::kill(nix_pid, None).is_ok() {
-            // Verify the process is actually zaino before killing
+        if super::platform::is_process_alive(pid) {
             if !super::is_process_named(pid, "zaino") {
                 log::warn!("PID {} from zaino.pid is not a zaino process, removing stale PID file", pid);
                 let _ = remove_pid_file(data_dir);
@@ -222,12 +202,12 @@ pub async fn check_zaino_orphan(data_dir: &Path) -> Result<(), String> {
             }
 
             log::warn!("Found orphaned Zaino process (PID {}), killing it", pid);
-            let _ = signal::kill(nix_pid, Signal::SIGTERM);
+            super::platform::send_term(pid);
 
             tokio::time::sleep(Duration::from_secs(3)).await;
 
-            if signal::kill(nix_pid, None).is_ok() {
-                let _ = signal::kill(nix_pid, Signal::SIGKILL);
+            if super::platform::is_process_alive(pid) {
+                super::platform::force_kill(pid);
             }
         }
         let _ = remove_pid_file(data_dir);

@@ -2,23 +2,32 @@
 //! The helper manages firewall rules and a transparent SOCKS5 redirector.
 //! macOS: PF rules via LaunchDaemon
 //! Linux: iptables rules via systemd service
+//! Windows: not yet supported (Shield Mode coming soon)
 
+#[cfg(unix)]
 use std::io::{BufRead, BufReader, Write};
+#[cfg(unix)]
 use std::os::unix::net::UnixStream;
+#[cfg(unix)]
 use std::process::Command;
+#[cfg(unix)]
 use std::time::Duration;
 
 use tauri::AppHandle;
 
+#[cfg(unix)]
 const SOCKET_PATH: &str = "/var/run/com.zecbox.firewall.sock";
 
+#[cfg(unix)]
 /// Escape a string for safe use inside a single-quoted shell argument.
 fn shell_escape(s: &str) -> String {
     format!("'{}'", s.replace('\'', "'\\''"))
 }
 
+#[cfg(unix)]
 /// Must match HELPER_VERSION in firewall-helper/src/main.rs.
 const REQUIRED_HELPER_VERSION: &str = "2";
+#[cfg(unix)]
 const HELPER_BIN_NAME: &str = "zecbox-firewall-helper";
 
 #[cfg(target_os = "macos")]
@@ -35,7 +44,10 @@ const SERVICE_INSTALL_PATH: &str = "/etc/systemd/system/com.zecbox.firewall.serv
 #[cfg(target_os = "linux")]
 const SERVICE_NAME: &str = "com.zecbox.firewall";
 
+// ===== Public API =====
+
 /// Check if the firewall helper daemon is installed, reachable, and up to date.
+#[cfg(unix)]
 pub fn is_helper_installed() -> bool {
     if let Ok(mut stream) = UnixStream::connect(SOCKET_PATH) {
         stream
@@ -67,7 +79,13 @@ pub fn is_helper_installed() -> bool {
     false
 }
 
+#[cfg(windows)]
+pub fn is_helper_installed() -> bool {
+    false
+}
+
 /// Install the firewall helper daemon. Requires admin password (one-time).
+#[cfg(unix)]
 pub fn install_helper(app_handle: &AppHandle) -> Result<(), String> {
     let helper_src = resolve_helper_binary_path(app_handle);
     if !helper_src.exists() {
@@ -92,6 +110,100 @@ pub fn install_helper(app_handle: &AppHandle) -> Result<(), String> {
 
     log::info!("Firewall helper installed successfully");
     Ok(())
+}
+
+#[cfg(windows)]
+pub fn install_helper(_app_handle: &AppHandle) -> Result<(), String> {
+    Err("Shield Mode is not yet available on Windows.".into())
+}
+
+/// Send enable command to the firewall helper.
+#[cfg(unix)]
+pub fn enable_firewall() -> Result<(), String> {
+    send_command("enable")
+}
+
+#[cfg(windows)]
+pub fn enable_firewall() -> Result<(), String> {
+    Err("Shield Mode is not yet available on Windows.".into())
+}
+
+/// Send disable command to the firewall helper.
+#[cfg(unix)]
+pub fn disable_firewall() -> Result<(), String> {
+    send_command("disable")
+}
+
+#[cfg(windows)]
+pub fn disable_firewall() -> Result<(), String> {
+    Ok(()) // No-op: nothing to disable
+}
+
+/// Query firewall status from the helper.
+#[cfg(unix)]
+pub fn firewall_status() -> Result<(bool, bool), String> {
+    let response = send_command_raw("status")?;
+    let v: serde_json::Value =
+        serde_json::from_str(&response).map_err(|e| format!("Invalid status response: {}", e))?;
+
+    let enabled = v["enabled"].as_bool().unwrap_or(false);
+    let redirector = v["redirector_running"].as_bool().unwrap_or(false);
+    Ok((enabled, redirector))
+}
+
+#[cfg(windows)]
+pub fn firewall_status() -> Result<(bool, bool), String> {
+    Ok((false, false))
+}
+
+// ===== Unix-only internals =====
+
+#[cfg(unix)]
+fn send_command(cmd: &str) -> Result<(), String> {
+    let response = send_command_raw(cmd)?;
+    let v: serde_json::Value =
+        serde_json::from_str(&response).map_err(|_| "Firewall helper returned an unexpected response. Try restarting zecbox.".to_string())?;
+
+    if v["ok"].as_bool() == Some(true) {
+        Ok(())
+    } else {
+        let err = v["error"]
+            .as_str()
+            .unwrap_or("Unknown error")
+            .to_string();
+        Err(err)
+    }
+}
+
+#[cfg(unix)]
+fn send_command_raw(cmd: &str) -> Result<String, String> {
+    let mut stream = UnixStream::connect(SOCKET_PATH)
+        .map_err(|e| format!("Cannot connect to firewall helper at {}: {}", SOCKET_PATH, e))?;
+
+    stream
+        .set_read_timeout(Some(Duration::from_secs(5)))
+        .ok();
+    stream
+        .set_write_timeout(Some(Duration::from_secs(5)))
+        .ok();
+
+    let msg = format!("{{\"cmd\":\"{}\"}}\n", cmd);
+    stream
+        .write_all(msg.as_bytes())
+        .map_err(|e| format!("Failed to send command: {}", e))?;
+
+    let mut reader = BufReader::new(&stream);
+    let mut line = String::new();
+    reader
+        .read_line(&mut line)
+        .map_err(|e| format!("Failed to read response: {}", e))?;
+
+    Ok(line)
+}
+
+#[cfg(unix)]
+fn resolve_helper_binary_path(app_handle: &AppHandle) -> std::path::PathBuf {
+    crate::platform::resolve_sidecar_path(app_handle, HELPER_BIN_NAME)
 }
 
 #[cfg(target_os = "macos")]
@@ -244,72 +356,6 @@ systemctl restart {svc_name}
             Err("pkexec not found. Install polkit or run the install script manually with sudo.".into())
         }
     }
-}
-
-/// Send enable command to the firewall helper.
-pub fn enable_firewall() -> Result<(), String> {
-    send_command("enable")
-}
-
-/// Send disable command to the firewall helper.
-pub fn disable_firewall() -> Result<(), String> {
-    send_command("disable")
-}
-
-/// Query firewall status from the helper.
-pub fn firewall_status() -> Result<(bool, bool), String> {
-    let response = send_command_raw("status")?;
-    let v: serde_json::Value =
-        serde_json::from_str(&response).map_err(|e| format!("Invalid status response: {}", e))?;
-
-    let enabled = v["enabled"].as_bool().unwrap_or(false);
-    let redirector = v["redirector_running"].as_bool().unwrap_or(false);
-    Ok((enabled, redirector))
-}
-
-fn send_command(cmd: &str) -> Result<(), String> {
-    let response = send_command_raw(cmd)?;
-    let v: serde_json::Value =
-        serde_json::from_str(&response).map_err(|_| "Firewall helper returned an unexpected response. Try restarting zecbox.".to_string())?;
-
-    if v["ok"].as_bool() == Some(true) {
-        Ok(())
-    } else {
-        let err = v["error"]
-            .as_str()
-            .unwrap_or("Unknown error")
-            .to_string();
-        Err(err)
-    }
-}
-
-fn send_command_raw(cmd: &str) -> Result<String, String> {
-    let mut stream = UnixStream::connect(SOCKET_PATH)
-        .map_err(|e| format!("Cannot connect to firewall helper at {}: {}", SOCKET_PATH, e))?;
-
-    stream
-        .set_read_timeout(Some(Duration::from_secs(5)))
-        .ok();
-    stream
-        .set_write_timeout(Some(Duration::from_secs(5)))
-        .ok();
-
-    let msg = format!("{{\"cmd\":\"{}\"}}\n", cmd);
-    stream
-        .write_all(msg.as_bytes())
-        .map_err(|e| format!("Failed to send command: {}", e))?;
-
-    let mut reader = BufReader::new(&stream);
-    let mut line = String::new();
-    reader
-        .read_line(&mut line)
-        .map_err(|e| format!("Failed to read response: {}", e))?;
-
-    Ok(line)
-}
-
-fn resolve_helper_binary_path(app_handle: &AppHandle) -> std::path::PathBuf {
-    crate::platform::resolve_sidecar_path(app_handle, HELPER_BIN_NAME)
 }
 
 #[cfg(target_os = "macos")]

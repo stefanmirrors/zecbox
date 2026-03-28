@@ -118,6 +118,10 @@ export async function isFirewallHelperInstalled(): Promise<boolean> {
   return invoke<boolean>("is_firewall_helper_installed");
 }
 
+export async function isShieldSupported(): Promise<boolean> {
+  return invoke<boolean>("is_shield_supported");
+}
+
 export async function getNetworkServeStatus(): Promise<NetworkServeStatusInfo> {
   return invoke<NetworkServeStatusInfo>("get_network_serve_status");
 }

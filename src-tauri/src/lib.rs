@@ -309,6 +309,7 @@ pub fn run() {
             commands::settings::set_auto_start,
             commands::shield::install_firewall_helper,
             commands::shield::is_firewall_helper_installed,
+            commands::shield::is_shield_supported,
             commands::network::get_network_serve_status,
             commands::network::enable_network_serve,
             commands::network::disable_network_serve,
