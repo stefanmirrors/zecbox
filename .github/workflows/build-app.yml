@@ -143,7 +143,7 @@ jobs:
       - name: Generate SHA256
         run: |
           cd "target/${{ matrix.triple }}/release/bundle/dmg"
-          shasum -a 256 "${{ steps.dmg.outputs.name }}" "zecbox-macos-${{ matrix.arch }}.dmg" > SHA256SUMS
+          shasum -a 256 "${{ steps.dmg.outputs.name }}" "zecbox-macos-${{ matrix.arch }}.dmg" > SHA256SUMS-macos-${{ matrix.arch }}
 
       - name: Copy sidecar binaries for release
         run: |
@@ -163,7 +163,7 @@ jobs:
           path: |
             ${{ steps.dmg.outputs.path }}
             target/${{ matrix.triple }}/release/bundle/dmg/zecbox-macos-${{ matrix.arch }}.dmg
-            target/${{ matrix.triple }}/release/bundle/dmg/SHA256SUMS
+            target/${{ matrix.triple }}/release/bundle/dmg/SHA256SUMS-macos-${{ matrix.arch }}
 
       - name: Upload sidecar artifacts
         uses: actions/upload-artifact@v4
@@ -359,9 +359,9 @@ jobs:
           generate_release_notes: true
           files: |
             artifacts/dmg-aarch64/*.dmg
-            artifacts/dmg-aarch64/SHA256SUMS
+            artifacts/dmg-aarch64/SHA256SUMS-*
             artifacts/dmg-x86_64/*.dmg
-            artifacts/dmg-x86_64/SHA256SUMS
+            artifacts/dmg-x86_64/SHA256SUMS-*
             artifacts/sidecars-aarch64/*
             artifacts/sidecars-x86_64/*
             artifacts/linux-x86_64/*.AppImage
