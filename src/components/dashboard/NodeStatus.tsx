@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import { useNodeStatus } from "../../hooks/useNodeStatus";
-import { useShieldMode } from "../../hooks/useShieldMode";
+import { useStealthMode } from "../../hooks/useStealthMode";
 import { useNetworkServe } from "../../hooks/useNetworkServe";
 import { startNode, stopNode } from "../../lib/tauri";
 import { InfoTip } from "../shared/InfoTip";
@@ -12,7 +12,7 @@ export function NodeStatus() {
   const isSynced = isRunning && ns.syncPercentage != null && ns.syncPercentage >= 99.9;
   const isStarting = ns.status === "starting";
   const isBusy = isStarting || ns.status === "stopping";
-  const shield = useShieldMode();
+  const shield = useStealthMode();
   const network = useNetworkServe();
   const [toggling, setToggling] = useState(false);
   const [toggleError, setToggleError] = useState<string | null>(null);

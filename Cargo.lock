@@ -2388,6 +2388,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "mock-wireguard"
+version = "0.1.0"
+
+[[package]]
 name = "mock-zaino"
 version = "0.1.0"
 dependencies = [
@@ -6181,6 +6185,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "x25519-dalek"
+version = "2.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c7e468321c81fb07fa7f4c636c3972b9100f0346e5b6a9f2bd0603a52f7ed277"
+dependencies = [
+ "curve25519-dalek",
+ "rand_core 0.6.4",
+ "serde",
+ "zeroize",
+]
+
+[[package]]
 name = "xattr"
 version = "1.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6230,7 +6246,7 @@ dependencies = [
 
 [[package]]
 name = "zecbox"
-version = "0.1.8"
+version = "0.1.10"
 dependencies = [
  "base64 0.22.1",
  "chrono",
@@ -6255,6 +6271,7 @@ dependencies = [
  "tokio",
  "toml 0.8.2",
  "windows-sys 0.59.0",
+ "x25519-dalek",
 ]
 
 [[package]]
@@ -6303,6 +6320,20 @@ name = "zeroize"
 version = "1.8.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b97154e67e32c85465826e8bcc1c59429aaaf107c1e4a9e53c8d8ccd5eff88d0"
+dependencies = [
+ "zeroize_derive",
+]
+
+[[package]]
+name = "zeroize_derive"
+version = "1.4.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "85a5b4158499876c763cb03bc4e49185d3cccbabb15b33c627f7884f43db852e"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.117",
+]
 
 [[package]]
 name = "zerotrie"

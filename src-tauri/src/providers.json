@@ -1,0 +1,50 @@
+[
+  {
+    "name": "NiceVPS",
+    "url": "https://nicevps.net",
+    "acceptsZec": true,
+    "noKyc": true,
+    "locations": ["Offshore"],
+    "description": "Owns hardware, supports Tor hosting, disk encryption available.",
+    "tiers": [
+      { "useCase": "proxy", "minRamMb": 512, "minStorageGb": 1, "estimatedCost": "$3-5/mo" },
+      { "useCase": "cloud", "minRamMb": 4096, "minStorageGb": 400, "estimatedCost": "$10-15/mo" }
+    ]
+  },
+  {
+    "name": "Servury",
+    "url": "https://servury.com",
+    "acceptsZec": true,
+    "noKyc": true,
+    "locations": ["7 locations worldwide"],
+    "description": "Zero identity signup — random credentials only. Accepts crypto.",
+    "tiers": [
+      { "useCase": "proxy", "minRamMb": 512, "minStorageGb": 1, "estimatedCost": "$4-6/mo" },
+      { "useCase": "cloud", "minRamMb": 4096, "minStorageGb": 400, "estimatedCost": "$8-15/mo" }
+    ]
+  },
+  {
+    "name": "FlokiNET",
+    "url": "https://flokinet.is",
+    "acceptsZec": true,
+    "noKyc": true,
+    "locations": ["Iceland", "Romania", "Finland"],
+    "description": "Founded for free speech and whistleblower protection. Crypto accepted.",
+    "tiers": [
+      { "useCase": "proxy", "minRamMb": 512, "minStorageGb": 1, "estimatedCost": "$5-7/mo" },
+      { "useCase": "cloud", "minRamMb": 4096, "minStorageGb": 400, "estimatedCost": "$10-20/mo" }
+    ]
+  },
+  {
+    "name": "1984 Hosting",
+    "url": "https://1984hosting.com",
+    "acceptsZec": true,
+    "noKyc": true,
+    "locations": ["Iceland"],
+    "description": "Strong Icelandic privacy laws. Crypto payments accepted.",
+    "tiers": [
+      { "useCase": "proxy", "minRamMb": 512, "minStorageGb": 1, "estimatedCost": "$5-8/mo" },
+      { "useCase": "cloud", "minRamMb": 4096, "minStorageGb": 400, "estimatedCost": "$10-18/mo" }
+    ]
+  }
+]

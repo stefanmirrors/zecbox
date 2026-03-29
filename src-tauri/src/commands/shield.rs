@@ -1,50 +1,52 @@
-//! Commands for Shield Mode (Tor) toggle.
+//! Commands for Stealth Mode (Tor) toggle.
+//! Note: The module is still named "shield" for file-level backward compatibility,
+//! but all public types and commands use "stealth" naming.
 
 use tauri::{AppHandle, State};
 
 use crate::config::app_config::AppConfig;
 use crate::process::zebrad;
-use crate::state::{AppState, NetworkServeStatus, ShieldStatus};
+use crate::state::{AppState, NetworkServeStatus, PrivacyMode, StealthStatus};
 use crate::tor;
 use crate::tor::firewall;
 
 #[derive(serde::Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct ShieldStatusInfo {
+pub struct StealthStatusInfo {
     pub enabled: bool,
     pub status: String,
     pub bootstrap_progress: Option<u8>,
     pub message: Option<String>,
 }
 
-impl From<&ShieldStatus> for ShieldStatusInfo {
-    fn from(status: &ShieldStatus) -> Self {
+impl From<&StealthStatus> for StealthStatusInfo {
+    fn from(status: &StealthStatus) -> Self {
         match status {
-            ShieldStatus::Disabled => ShieldStatusInfo {
+            StealthStatus::Disabled => StealthStatusInfo {
                 enabled: false,
                 status: "disabled".into(),
                 bootstrap_progress: None,
                 message: None,
             },
-            ShieldStatus::Bootstrapping { progress } => ShieldStatusInfo {
+            StealthStatus::Bootstrapping { progress } => StealthStatusInfo {
                 enabled: false,
                 status: "bootstrapping".into(),
                 bootstrap_progress: Some(*progress),
                 message: None,
             },
-            ShieldStatus::Active => ShieldStatusInfo {
+            StealthStatus::Active => StealthStatusInfo {
                 enabled: true,
                 status: "active".into(),
                 bootstrap_progress: None,
                 message: None,
             },
-            ShieldStatus::Error { message } => ShieldStatusInfo {
+            StealthStatus::Error { message } => StealthStatusInfo {
                 enabled: false,
                 status: "error".into(),
                 bootstrap_progress: None,
                 message: Some(message.clone()),
             },
-            ShieldStatus::Interrupted => ShieldStatusInfo {
+            StealthStatus::Interrupted => StealthStatusInfo {
                 enabled: false,
                 status: "interrupted".into(),
                 bootstrap_progress: None,
@@ -58,15 +60,15 @@ impl From<&ShieldStatus> for ShieldStatusInfo {
 }
 
 #[tauri::command]
-pub async fn get_shield_status(
+pub async fn get_stealth_status(
     state: State<'_, AppState>,
-) -> Result<ShieldStatusInfo, String> {
-    let status = state.shield.status.lock().await;
-    Ok(ShieldStatusInfo::from(&*status))
+) -> Result<StealthStatusInfo, String> {
+    let status = state.stealth.status.lock().await;
+    Ok(StealthStatusInfo::from(&*status))
 }
 
 #[tauri::command]
-pub async fn enable_shield_mode(
+pub async fn enable_stealth_mode(
     app_handle: AppHandle,
     state: State<'_, AppState>,
 ) -> Result<(), String> {
@@ -74,13 +76,13 @@ pub async fn enable_shield_mode(
     {
         let net_status = state.network.status.lock().await;
         if matches!(*net_status, NetworkServeStatus::Active { .. }) {
-            return Err("Disable Serve the Network first. Shield Mode cannot be enabled while accepting inbound connections.".into());
+            return Err("Disable Serve the Network first. Stealth Mode cannot be enabled while accepting inbound connections via UPnP.".into());
         }
     }
 
     // Check if firewall helper is installed
     if !firewall::is_helper_installed() {
-        return Err("Firewall helper not installed. Install it first to enable Shield Mode.".into());
+        return Err("Firewall helper not installed. Install it first to enable Stealth Mode.".into());
     }
 
     let node_was_running = {
@@ -92,7 +94,7 @@ pub async fn enable_shield_mode(
     };
 
     // Start Arti SOCKS proxy
-    tor::start_arti(app_handle.clone(), &state.shield).await?;
+    tor::start_arti(app_handle.clone(), &state.stealth).await?;
 
     // Enable PF firewall rules + transparent redirector
     firewall::enable_firewall()
@@ -102,28 +104,28 @@ pub async fn enable_shield_mode(
     if let Err(e) = tor::verify_tor_path().await {
         log::error!("Traffic verification failed: {}", e);
         let _ = firewall::disable_firewall();
-        let _ = tor::stop_arti(&app_handle, &state.shield).await;
-        return Err(format!("Shield Mode failed traffic verification: {}. Disabled for safety.", e));
+        let _ = tor::stop_arti(&app_handle, &state.stealth).await;
+        return Err(format!("Stealth Mode failed traffic verification: {}. Disabled for safety.", e));
     }
 
-    // If node was running, restart it with shield config
+    // If node was running, restart it with stealth config
     if node_was_running {
         zebrad::stop_zebrad(&app_handle, &state.node).await?;
         zebrad::start_zebrad(app_handle.clone(), &state.node).await?;
     }
 
-    // Persist shield_mode setting
+    // Persist privacy mode
     let mut config = AppConfig::load(&state.default_data_dir)
         .unwrap_or_else(|_| AppConfig::default_for(&state.default_data_dir));
-    config.shield_mode = true;
+    config.privacy_mode = PrivacyMode::Stealth;
     config.save(&state.default_data_dir)?;
 
-    log::info!("Shield Mode enabled (PF firewall active)");
+    log::info!("Stealth Mode enabled (PF firewall active)");
     Ok(())
 }
 
 #[tauri::command]
-pub async fn disable_shield_mode(
+pub async fn disable_stealth_mode(
     app_handle: AppHandle,
     state: State<'_, AppState>,
 ) -> Result<(), String> {
@@ -146,20 +148,20 @@ pub async fn disable_shield_mode(
     }
 
     // Stop Arti
-    tor::stop_arti(&app_handle, &state.shield).await?;
+    tor::stop_arti(&app_handle, &state.stealth).await?;
 
     // Restart node with clearnet config if it was running
     if node_was_running {
         zebrad::start_zebrad(app_handle.clone(), &state.node).await?;
     }
 
-    // Persist shield_mode setting
+    // Persist privacy mode
     let mut config = AppConfig::load(&state.default_data_dir)
         .unwrap_or_else(|_| AppConfig::default_for(&state.default_data_dir));
-    config.shield_mode = false;
+    config.privacy_mode = PrivacyMode::Standard;
     config.save(&state.default_data_dir)?;
 
-    log::info!("Shield Mode disabled (PF firewall removed)");
+    log::info!("Stealth Mode disabled (PF firewall removed)");
     Ok(())
 }
 
@@ -176,6 +178,6 @@ pub async fn is_firewall_helper_installed() -> Result<bool, String> {
 }
 
 #[tauri::command]
-pub async fn is_shield_supported() -> Result<bool, String> {
+pub async fn is_stealth_supported() -> Result<bool, String> {
     Ok(cfg!(unix))
 }

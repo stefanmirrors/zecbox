@@ -46,10 +46,10 @@ pub async fn handle_wake_events(
             }
         }
 
-        // Check Arti if shield mode was active
-        if state.shield.is_active().await {
+        // Check Arti if stealth mode was active
+        if state.stealth.is_active().await {
             let arti_alive = {
-                let mut proc = state.shield.process.lock().await;
+                let mut proc = state.stealth.process.lock().await;
                 if let Some(ref mut child) = *proc {
                     child.try_wait().ok().flatten().is_none()
                 } else {
@@ -57,9 +57,9 @@ pub async fn handle_wake_events(
                 }
             };
             if !arti_alive {
-                log::warn!("Arti unresponsive after wake, restarting shield mode");
-                let _ = tor::stop_arti(&app_handle, &state.shield).await;
-                let _ = tor::start_arti(app_handle.clone(), &state.shield).await;
+                log::warn!("Arti unresponsive after wake, restarting stealth mode");
+                let _ = tor::stop_arti(&app_handle, &state.stealth).await;
+                let _ = tor::start_arti(app_handle.clone(), &state.stealth).await;
             }
         }
 

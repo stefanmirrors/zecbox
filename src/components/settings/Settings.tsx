@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { useNodeStatus } from "../../hooks/useNodeStatus";
 import { useStorage } from "../../hooks/useStorage";
-import { useShieldMode } from "../../hooks/useShieldMode";
+import { useStealthMode } from "../../hooks/useStealthMode";
 import { useUpdates } from "../../hooks/useUpdates";
 import { formatBytes } from "../../lib/format";
 import { getAutoStartEnabled, setAutoStart, rebuildDatabase, resetOnboarding } from "../../lib/tauri";
@@ -14,7 +14,7 @@ interface SettingsProps {
 export function Settings({ onResetToOnboarding }: SettingsProps) {
   const nodeStatus = useNodeStatus();
   const { storageInfo } = useStorage();
-  const { status: shieldStatus } = useShieldMode();
+  const { status: stealthStatus } = useStealthMode();
   const [autoStartEnabled, setAutoStartEnabled] = useState(false);
   const [autoStartLoading, setAutoStartLoading] = useState(false);
   const [rebuildConfirm, setRebuildConfirm] = useState(false);
@@ -74,7 +74,7 @@ export function Settings({ onResetToOnboarding }: SettingsProps) {
       <Section title="About">
         <Row label="Version" value={versions?.app ?? "..."} />
         <Row label="Node" value={capitalize(nodeStatus.status)} />
-        <Row label="Shield" value={shieldStatus.enabled ? "Active (Tor)" : capitalize(shieldStatus.status)} />
+        <Row label="Privacy" value={stealthStatus.enabled ? "Stealth (Tor)" : capitalize(stealthStatus.status)} />
         {storageInfo && <Row label="Data" value={storageInfo.dataDir} mono />}
       </Section>
 

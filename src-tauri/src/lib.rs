@@ -82,6 +82,9 @@ pub fn run() {
                 if let Err(e) = tor::check_arti_orphan(&node_data_dir).await {
                     log::warn!("Arti orphan check failed: {}", e);
                 }
+                if let Err(e) = process::wireguard::check_wireguard_orphan(&node_data_dir).await {
+                    log::warn!("WireGuard orphan check failed: {}", e);
+                }
             });
 
             // Clean up orphaned update files from interrupted binary swaps
@@ -124,7 +127,7 @@ pub fn run() {
             }
 
             // Restore network serve if previously enabled
-            if app_config.serve_network && !app_config.shield_mode {
+            if app_config.serve_network && !app_config.is_stealth_active() {
                 let app_handle = app.handle().clone();
                 let net_arc = app.state::<AppState>().network.clone();
                 let ddd = app.state::<AppState>().default_data_dir.clone();
@@ -206,11 +209,12 @@ pub fn run() {
                 .show_menu_on_left_click(false)
                 .on_menu_event(|app, event| match event.id.as_ref() {
                     "quit" => {
-                        // Graceful shutdown: stop Zaino, zebrad, Arti, storage monitor
+                        // Graceful shutdown: stop all processes
                         let state = app.state::<AppState>();
                         let node = state.node.clone();
                         let storage = state.storage.clone();
-                        let shield = state.shield.clone();
+                        let stealth = state.stealth.clone();
+                        let proxy = state.proxy.clone();
                         let wallet = state.wallet.clone();
                         let update = state.update.clone();
                         let network_state = state.network.clone();
@@ -253,8 +257,10 @@ pub fn run() {
                             let _ =
                                 process::zebrad::stop_zebrad(&app_handle, &node)
                                     .await;
+                            // Stop WireGuard if running
+                            let _ = process::wireguard::stop_wireguard(&app_handle, &proxy, &data_dir).await;
                             // Stop Arti if running
-                            let _ = tor::stop_arti(&app_handle, &shield).await;
+                            let _ = tor::stop_arti(&app_handle, &stealth).await;
                             // Disable PF firewall rules if active
                             let _ = tor::firewall::disable_firewall();
                         });
@@ -291,9 +297,9 @@ pub fn run() {
             commands::onboarding::complete_onboarding,
             commands::onboarding::reset_onboarding,
             commands::logs::get_logs,
-            commands::shield::get_shield_status,
-            commands::shield::enable_shield_mode,
-            commands::shield::disable_shield_mode,
+            commands::shield::get_stealth_status,
+            commands::shield::enable_stealth_mode,
+            commands::shield::disable_stealth_mode,
             commands::wallet::get_wallet_status,
             commands::wallet::enable_wallet_server,
             commands::wallet::disable_wallet_server,
@@ -309,11 +315,21 @@ pub fn run() {
             commands::settings::set_auto_start,
             commands::shield::install_firewall_helper,
             commands::shield::is_firewall_helper_installed,
-            commands::shield::is_shield_supported,
+            commands::shield::is_stealth_supported,
             commands::network::get_network_serve_status,
             commands::network::enable_network_serve,
             commands::network::disable_network_serve,
             commands::network::recheck_reachability,
+            commands::privacy::get_privacy_mode,
+            commands::privacy::set_privacy_mode,
+            commands::proxy::get_proxy_status,
+            commands::proxy::start_proxy_setup,
+            commands::proxy::get_proxy_setup_config,
+            commands::proxy::enable_proxy_mode,
+            commands::proxy::disable_proxy_mode,
+            commands::proxy::verify_proxy_connection,
+            commands::proxy::reset_proxy_config,
+            commands::proxy::get_vps_providers,
         ])
         .run(tauri::generate_context!())
         .expect("zecbox failed to launch. Please reinstall the application.");

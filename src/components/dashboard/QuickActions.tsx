@@ -1,12 +1,12 @@
-import { useShieldMode } from "../../hooks/useShieldMode";
+import { useStealthMode } from "../../hooks/useStealthMode";
 
 export function QuickActions() {
-  const { status, toggling, toggle } = useShieldMode();
+  const { status, toggling, toggle } = useStealthMode();
 
   return (
     <div className="flex items-center gap-6 border border-zec-border rounded-xl px-5 py-3">
       <Toggle
-        label="Shield Mode"
+        label="Stealth Mode"
         enabled={status.enabled}
         loading={toggling || status.status === "bootstrapping"}
         onToggle={toggle}

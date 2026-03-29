@@ -1,11 +1,11 @@
-import { useShieldMode } from "../../hooks/useShieldMode";
+import { useStealthMode } from "../../hooks/useStealthMode";
 
 export default function ShieldMode() {
   const {
     status, toggling, error, toggle, clearError,
     helperInstalled, installing, installHelper,
     platformSupported,
-  } = useShieldMode();
+  } = useStealthMode();
 
   if (platformSupported === false) {
     return (

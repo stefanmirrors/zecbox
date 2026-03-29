@@ -2,6 +2,8 @@ pub mod logs;
 pub mod network;
 pub mod node;
 pub mod onboarding;
+pub mod privacy;
+pub mod proxy;
 pub mod settings;
 pub mod shield;
 pub mod storage;

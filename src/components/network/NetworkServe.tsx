@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { useNetworkServe } from "../../hooks/useNetworkServe";
 import { useNodeStatus } from "../../hooks/useNodeStatus";
-import { useShieldMode } from "../../hooks/useShieldMode";
+import { useStealthMode } from "../../hooks/useStealthMode";
 
 function maskIp(ip: string): string {
   const parts = ip.split(".");
@@ -14,9 +14,9 @@ function maskIp(ip: string): string {
 export default function NetworkServe() {
   const { status, toggling, error, toggle, recheck, clearError } = useNetworkServe();
   const nodeStatus = useNodeStatus();
-  const { status: shieldStatus } = useShieldMode();
+  const { status: stealthStatus } = useStealthMode();
   const nodeRunning = nodeStatus.status === "running";
-  const shieldActive = shieldStatus.status === "active" || shieldStatus.status === "bootstrapping";
+  const stealthActive = stealthStatus.status === "active" || stealthStatus.status === "bootstrapping";
   const [rechecking, setRechecking] = useState(false);
   const [showIp, setShowIp] = useState(false);
   const displayIp = useMemo(() => {
@@ -30,7 +30,7 @@ export default function NetworkServe() {
     setRechecking(false);
   };
 
-  const isDisabled = toggling || !nodeRunning || shieldActive || status.status === "enabling";
+  const isDisabled = toggling || !nodeRunning || stealthActive || status.status === "enabling";
 
   return (
     <div className="space-y-6">
@@ -52,7 +52,7 @@ export default function NetworkServe() {
             className={`relative w-10 h-5.5 rounded-full transition-colors shrink-0 ${
               toggling || status.status === "enabling"
                 ? "bg-zec-border/50 cursor-wait"
-                : !nodeRunning || shieldActive
+                : !nodeRunning || stealthActive
                   ? "bg-zec-border/30 cursor-not-allowed"
                   : status.enabled
                     ? "bg-emerald-400"
@@ -85,12 +85,12 @@ export default function NetworkServe() {
         </div>
       </div>
 
-      {/* Shield Mode warning */}
-      {shieldActive && (
+      {/* Stealth Mode warning */}
+      {stealthActive && (
         <div className="border border-zec-yellow/20 rounded-xl p-4">
           <p className="text-sm text-zec-yellow/80">
-            Shield Mode is active. Accepting inbound connections is not possible while routing through Tor.
-            Disable Shield Mode first to serve the network.
+            Stealth Mode is active. Accepting inbound connections is not possible while routing through Tor.
+            Disable Stealth Mode first to serve the network.
           </p>
         </div>
       )}
@@ -235,13 +235,13 @@ export default function NetworkServe() {
             text="Your router needs to allow incoming connections on port 8233. ZecBox tries to set this up automatically via UPnP. If that fails, you can configure it manually."
           />
           <Info
-            title="Shield Mode conflict"
-            text="This feature cannot be used with Shield Mode. Tor routes traffic through onion relays which prevent direct inbound connections."
+            title="Stealth Mode conflict"
+            text="This feature cannot be used with Stealth Mode. Tor routes traffic through onion relays which prevent direct inbound connections."
           />
         </div>
       </div>
 
-      {!nodeRunning && !shieldActive && status.status === "disabled" && (
+      {!nodeRunning && !stealthActive && status.status === "disabled" && (
         <p className="text-xs text-zec-muted/60">
           Start the node from the Dashboard to enable network serving.
         </p>
