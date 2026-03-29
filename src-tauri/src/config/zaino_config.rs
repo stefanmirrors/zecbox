@@ -16,7 +16,7 @@ listen_addr = "0.0.0.0:9067"
 [state]
 index_dir = "{index_dir}"
 "#,
-        index_dir = index_dir.display()
+        index_dir = super::toml_path(&index_dir)
     )
 }
 
