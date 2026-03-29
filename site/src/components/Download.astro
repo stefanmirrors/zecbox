@@ -8,39 +8,6 @@ try {
   }
 } catch {}
 
-const downloads = {
-  macos: {
-    arm: {
-      url: "https://github.com/stefanmirrors/zecbox/releases/latest/download/zecbox-macos-aarch64.dmg",
-      label: "Download .dmg",
-      arch: "Apple Silicon (M1\u2013M4)",
-    },
-    intel: {
-      url: "https://github.com/stefanmirrors/zecbox/releases/latest/download/zecbox-macos-x86_64.dmg",
-      label: "Download .dmg",
-      arch: "Intel",
-    },
-  },
-  linux: {
-    x86_64: {
-      url: "https://github.com/stefanmirrors/zecbox/releases/latest/download/zecbox-linux-x86_64.AppImage",
-      label: "Download for Linux",
-      arch: "Detected: Intel/AMD (x86_64)",
-    },
-    arm64: {
-      url: "https://github.com/stefanmirrors/zecbox/releases/latest/download/zecbox-linux-aarch64.AppImage",
-      label: "Download for Linux",
-      arch: "Detected: ARM (aarch64)",
-    },
-  },
-  windows: {
-    x86_64: {
-      url: "https://github.com/stefanmirrors/zecbox/releases/latest/download/zecbox-windows-x86_64.exe",
-      label: "Download for Windows",
-      arch: "Detected: Intel/AMD (x86_64)",
-    },
-  },
-};
 ---
 
 <section class="px-4 sm:px-6 pt-6 sm:pt-10 pb-8 sm:pb-12">
@@ -50,46 +17,12 @@ const downloads = {
       <p class="text-zec-muted">v{version} · ~300 GB disk space required for the full blockchain</p>
     </div>
 
-    <!-- Download data for client-side detection -->
-    <script id="download-data" type="application/json" set:html={JSON.stringify(downloads)} />
-
-    <!-- Layer A: Auto-detected primary download (hidden until JS detects platform) -->
-    <div id="detected-download" class="hidden max-w-sm mx-auto text-center mb-6">
-      <div class="mb-4">
-        <svg data-os-icon="macos" class="w-10 h-10 text-zec-text mx-auto hidden" viewBox="0 0 24 24" fill="currentColor"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
-        <svg data-os-icon="linux" class="w-10 h-10 text-zec-text mx-auto hidden" viewBox="0 0 24 24" fill="currentColor"><path d="M12.504 0c-.155 0-.315.008-.48.021-4.226.333-3.105 4.807-3.17 6.298-.076 1.092-.3 1.953-1.05 3.02-.885 1.051-2.127 2.75-2.716 4.521-.278.832-.41 1.684-.287 2.489a11.966 11.966 0 00-2.517 2.453c-1.455 1.774-.41 3.178 1.382 3.178h1.369c.193 0 .398-.043.608-.13.573.402 1.181.756 1.82 1.05a8.41 8.41 0 002.596.738c.344.034.682.055 1.006.055.397 0 .776-.032 1.126-.089a8.476 8.476 0 002.847-.907 9.588 9.588 0 001.654-.942c.203.074.4.11.588.11h1.369c1.792 0 2.837-1.404 1.382-3.178a11.966 11.966 0 00-2.517-2.453c.123-.805-.01-1.657-.287-2.489-.59-1.771-1.831-3.47-2.716-4.521-.75-1.067-.974-1.928-1.05-3.02-.065-1.491 1.056-5.965-3.17-6.298A5.11 5.11 0 0012.504 0zm0 1.5c.076 0 .154.003.236.012 2.33.184 2.058 3.27 2.12 4.688.066 1.325.376 2.47 1.25 3.715.818.971 1.942 2.494 2.46 4.05.208.625.322 1.26.236 1.836-.56-.326-1.155-.604-1.779-.826a6.92 6.92 0 00-.754-.227c.21-.578.105-1.238-.31-1.787-.543-.717-1.47-1.088-2.459-1.088s-1.916.371-2.459 1.088c-.415.549-.52 1.209-.31 1.787a6.92 6.92 0 00-.754.227 10.164 10.164 0 00-1.779.826c-.086-.576.028-1.211.236-1.836.518-1.556 1.642-3.079 2.46-4.05.874-1.245 1.184-2.39 1.25-3.715.062-1.418-.21-4.504 2.12-4.688.082-.009.16-.012.236-.012z"/></svg>
-        <svg data-os-icon="windows" class="w-10 h-10 text-zec-text mx-auto hidden" viewBox="0 0 24 24" fill="currentColor"><path d="M3 12V6.75l8-1.25V12H3zm0 .5h8v6.5l-8-1.25V12.5zM11.5 5.34l9.5-1.34v8h-9.5V5.34zM11.5 12.5H21v7.5l-9.5-1.34V12.5z"/></svg>
-      </div>
-
-      <h3 id="detected-os-label" class="text-xl font-bold text-zec-text mb-1" style="font-family: 'Montserrat', sans-serif;"></h3>
-      <p id="detected-arch-label" class="text-sm text-zec-muted mb-5"></p>
-
-      <a id="detected-download-btn"
-        href="#"
-        target="_blank"
-        rel="noopener noreferrer"
-        class="inline-flex items-center justify-center gap-2.5 px-8 py-3.5 rounded-lg bg-zec-yellow text-zec-dark font-bold text-base hover:brightness-110 transition-all no-underline"
-      >
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
-        <span id="detected-btn-text"></span>
-      </a>
-
-      <p id="arch-helper" class="hidden text-xs text-zec-muted mt-3">
-        Not sure? Click <strong class="text-zec-text">&#63743;</strong> &gt; <strong class="text-zec-text">About This Mac</strong> to check your chip.
-      </p>
-
-      <div class="mt-5 space-y-1">
-        <button id="show-all-downloads" type="button" class="text-sm text-zec-muted hover:text-zec-text transition-colors cursor-pointer bg-transparent border-0 p-0">
-          Wrong download? Show all options <span class="toggle-arrow">&darr;</span>
-        </button>
-      </div>
-    </div>
-
-    <!-- Layer B: All downloads grid (visible by default = no-JS fallback) -->
+    <!-- All downloads grid (always visible) -->
     <div id="all-downloads">
       <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <!-- macOS -->
-        <div class="border border-zec-border rounded-xl p-4">
+        <div data-platform-card="macos" class="border border-zec-border rounded-xl p-4 relative">
+          <span data-detected-badge class="hidden absolute top-2.5 right-2.5 text-[10px] font-semibold uppercase tracking-wider text-zec-yellow">Detected</span>
           <div class="flex items-center gap-2.5 mb-3">
             <svg class="w-6 h-6 text-zec-text shrink-0" viewBox="0 0 24 24" fill="currentColor"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
             <div>
@@ -120,7 +53,8 @@ const downloads = {
         </div>
 
         <!-- Linux -->
-        <div class="border border-zec-border rounded-xl p-4">
+        <div data-platform-card="linux" class="border border-zec-border rounded-xl p-4 relative">
+          <span data-detected-badge class="hidden absolute top-2.5 right-2.5 text-[10px] font-semibold uppercase tracking-wider text-zec-yellow">Detected</span>
           <div class="flex items-center gap-2.5 mb-3">
             <svg class="w-6 h-6 text-zec-text shrink-0" viewBox="0 0 24 24" fill="currentColor"><path d="M12.504 0c-.155 0-.315.008-.48.021-4.226.333-3.105 4.807-3.17 6.298-.076 1.092-.3 1.953-1.05 3.02-.885 1.051-2.127 2.75-2.716 4.521-.278.832-.41 1.684-.287 2.489a11.966 11.966 0 00-2.517 2.453c-1.455 1.774-.41 3.178 1.382 3.178h1.369c.193 0 .398-.043.608-.13.573.402 1.181.756 1.82 1.05a8.41 8.41 0 002.596.738c.344.034.682.055 1.006.055.397 0 .776-.032 1.126-.089a8.476 8.476 0 002.847-.907 9.588 9.588 0 001.654-.942c.203.074.4.11.588.11h1.369c1.792 0 2.837-1.404 1.382-3.178a11.966 11.966 0 00-2.517-2.453c.123-.805-.01-1.657-.287-2.489-.59-1.771-1.831-3.47-2.716-4.521-.75-1.067-.974-1.928-1.05-3.02-.065-1.491 1.056-5.965-3.17-6.298A5.11 5.11 0 0012.504 0zm0 1.5c.076 0 .154.003.236.012 2.33.184 2.058 3.27 2.12 4.688.066 1.325.376 2.47 1.25 3.715.818.971 1.942 2.494 2.46 4.05.208.625.322 1.26.236 1.836-.56-.326-1.155-.604-1.779-.826a6.92 6.92 0 00-.754-.227c.21-.578.105-1.238-.31-1.787-.543-.717-1.47-1.088-2.459-1.088s-1.916.371-2.459 1.088c-.415.549-.52 1.209-.31 1.787a6.92 6.92 0 00-.754.227 10.164 10.164 0 00-1.779.826c-.086-.576.028-1.211.236-1.836.518-1.556 1.642-3.079 2.46-4.05.874-1.245 1.184-2.39 1.25-3.715.062-1.418-.21-4.504 2.12-4.688.082-.009.16-.012.236-.012z"/></svg>
             <div>
@@ -174,7 +108,8 @@ const downloads = {
         </div>
 
         <!-- Windows -->
-        <div class="border border-zec-border rounded-xl p-4">
+        <div data-platform-card="windows" class="border border-zec-border rounded-xl p-4 relative">
+          <span data-detected-badge class="hidden absolute top-2.5 right-2.5 text-[10px] font-semibold uppercase tracking-wider text-zec-yellow">Detected</span>
           <div class="flex items-center gap-2.5 mb-3">
             <svg class="w-6 h-6 text-zec-text shrink-0" viewBox="0 0 24 24" fill="currentColor"><path d="M3 12V6.75l8-1.25V12H3zm0 .5h8v6.5l-8-1.25V12.5zM11.5 5.34l9.5-1.34v8h-9.5V5.34zM11.5 12.5H21v7.5l-9.5-1.34V12.5z"/></svg>
             <div>
@@ -335,151 +270,31 @@ const downloads = {
     </div>
 
     <script>
-      // Platform detection and primary download button
+      // Platform detection — highlight the detected platform card with a badge
       (function () {
-        const data = JSON.parse(document.getElementById('download-data')?.textContent || '{}');
         const ua = navigator.userAgent;
         const platform = (navigator.platform || '').trim();
-        const uaData = (navigator as any).userAgentData;
-        console.log('ZecBox download detection:', { platform, ua: ua.substring(0, 120), uaData: uaData ? { arch: uaData.architecture, platform: uaData.platform } : 'unsupported' });
 
-        // Skip mobile devices — no desktop app for these
         if (/Android|iPhone|iPad|iPod|Mobile/i.test(ua)) return;
 
         let os = 'unknown';
-        let arch = 'unknown';
-        let showSafariHelper = false;
-
-        // --- OS detection ---
         if (ua.includes('Mac OS X') || platform.startsWith('Mac')) {
           os = 'macos';
-        } else if (ua.includes('CrOS')) {
-          // ChromeOS can run Linux apps via Crostini
-          os = 'linux';
-        } else if (ua.includes('Linux') && !ua.includes('Android')) {
+        } else if (ua.includes('CrOS') || (ua.includes('Linux') && !ua.includes('Android'))) {
           os = 'linux';
         } else if (ua.includes('Windows')) {
           os = 'windows';
         }
 
-        // --- Architecture detection ---
-        if (os === 'macos') {
-          // Chromium browsers expose architecture via userAgentData
-          if (uaData?.architecture === 'x86') {
-            arch = 'intel';
-          } else if (uaData?.architecture === 'arm') {
-            arch = 'arm';
-          } else {
-            // Safari and Firefox don't expose architecture
-            // navigator.platform is "MacIntel" even on Apple Silicon (Rosetta)
-            // Default to ARM — most Macs sold since late 2020 are Apple Silicon
-            arch = 'arm';
-            // Show helper so Intel users know where to find their download
-            const isSafari = /Safari/.test(ua) && !/Chrome/.test(ua);
-            const isFirefox = /Firefox/.test(ua);
-            if (isSafari || isFirefox) showSafariHelper = true;
-          }
-        } else if (os === 'linux') {
-          // Check multiple sources for ARM detection:
-          // 1. userAgentData.architecture (Chromium browsers)
-          // 2. navigator.platform (Firefox, older browsers): "Linux aarch64", "Linux armv7l", "Linux armv8l"
-          // 3. UA string itself (some browsers include arch)
-          const isArm =
-            uaData?.architecture === 'arm' ||
-            /aarch64|armv[78]l/i.test(platform) ||
-            /aarch64|armv[78]l/i.test(ua);
-          arch = isArm ? 'arm64' : 'x86_64';
-        }
-
         if (os === 'unknown') return;
 
-        // --- Try high-entropy API for precise detection (Chromium only) ---
-        // This is async but we update the UI immediately with our best guess,
-        // then correct if the high-entropy result differs
-        function applyDetection(detectedOs: string, detectedArch: string) {
-          const primary = document.getElementById('detected-download');
-          const allDownloads = document.getElementById('all-downloads');
-          if (!primary || !allDownloads) return;
-
-          const icon = primary.querySelector(`[data-os-icon="${detectedOs}"]`);
-          if (icon) icon.classList.remove('hidden');
-
-          const osLabel = document.getElementById('detected-os-label')!;
-          const archLabel = document.getElementById('detected-arch-label')!;
-          const btn = document.getElementById('detected-download-btn') as HTMLAnchorElement;
-          const btnText = document.getElementById('detected-btn-text')!;
-
-          if (detectedOs === 'windows') {
-            const d = data.windows?.x86_64;
-            osLabel.textContent = 'Download for Windows';
-            archLabel.textContent = d?.arch || '';
-            btn.href = d?.url || '#';
-            btnText.textContent = d?.label || 'Download';
-          } else if (detectedOs === 'macos') {
-            const d = detectedArch === 'intel' ? data.macos?.intel : data.macos?.arm;
-            osLabel.textContent = 'Download for macOS';
-            archLabel.textContent = d?.arch || '';
-            btn.href = d?.url || '#';
-            btnText.textContent = d?.label || 'Download';
-            if (showSafariHelper) {
-              document.getElementById('arch-helper')?.classList.remove('hidden');
-            }
-          } else if (detectedOs === 'linux') {
-            const d = detectedArch === 'arm64' ? data.linux?.arm64 : data.linux?.x86_64;
-            osLabel.textContent = 'Download for Linux';
-            archLabel.textContent = d?.arch || '';
-            btn.href = d?.url || '#';
-            btnText.textContent = d?.label || 'Download';
-          }
-
-          primary.classList.remove('hidden');
-          allDownloads.classList.add('hidden');
-
-          const showPlatforms = detectedOs === 'macos' ? ['macos'] : detectedOs === 'linux' ? ['linux-appimage'] : detectedOs === 'windows' ? ['windows'] : [];
-
-          document.querySelectorAll<HTMLElement>('[data-platform]').forEach(el => {
-            if (!showPlatforms.includes(el.dataset.platform!)) el.classList.add('hidden');
-          });
-          document.querySelector<HTMLElement>('[data-platform-divider]')?.classList.add('hidden');
-
-          let expanded = false;
-          document.getElementById('show-all-downloads')?.addEventListener('click', () => {
-            expanded = !expanded;
-            allDownloads.classList.toggle('hidden', !expanded);
-            const arrow = document.querySelector('.toggle-arrow');
-            if (arrow) arrow.textContent = expanded ? '\u2191' : '\u2193';
-
-            if (expanded) {
-              document.querySelectorAll<HTMLElement>('[data-platform]').forEach(el => el.classList.remove('hidden'));
-              document.querySelector<HTMLElement>('[data-platform-divider]')?.classList.remove('hidden');
-            } else {
-              document.querySelectorAll<HTMLElement>('[data-platform]').forEach(el => {
-                if (!showPlatforms.includes(el.dataset.platform!)) el.classList.add('hidden');
-              });
-              document.querySelector<HTMLElement>('[data-platform-divider]')?.classList.add('hidden');
-            }
-          });
-        }
-
-        // Apply immediately with our best synchronous guess
-        applyDetection(os, arch);
-
-        // Then try the high-entropy API to refine (Chromium only, async)
-        // This catches edge cases like ARM VMs (UTM), Raspberry Pi on Chrome, etc.
-        if (uaData?.getHighEntropyValues) {
-          uaData.getHighEntropyValues(['architecture', 'platform']).then((values: any) => {
-            let refinedArch = arch;
-            if (os === 'macos') {
-              refinedArch = values.architecture === 'x86' ? 'intel' : 'arm';
-            } else if (os === 'linux') {
-              refinedArch = values.architecture === 'arm' ? 'arm64' : 'x86_64';
-            }
-            // Only re-apply if the refined result differs
-            if (refinedArch !== arch) {
-              showSafariHelper = false; // high-entropy confirmed, no ambiguity
-              applyDetection(os, refinedArch);
-            }
-          }).catch(() => {});
+        // Show "Detected" badge on the matching platform card and highlight its border
+        const card = document.querySelector(`[data-platform-card="${os}"]`) as HTMLElement;
+        if (card) {
+          const badge = card.querySelector('[data-detected-badge]') as HTMLElement;
+          if (badge) badge.classList.remove('hidden');
+          card.classList.remove('border-zec-border');
+          card.classList.add('border-zec-yellow/40');
         }
       })();
 
