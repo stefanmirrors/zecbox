@@ -71,10 +71,15 @@ pub async fn rebuild_database(
         log::info!("Deleted chain data directory: {:?}", zebra_dir);
     }
 
-    // Reset backoff state so node can start fresh
+    // Reset backoff state and stats so node can start fresh
     {
         let mut backoff = state.node.backoff.lock().await;
         backoff.reset();
+    }
+    {
+        let mut stats = state.node.stats.lock().await;
+        *stats = NodeStats::default();
+        stats.save(&data_dir);
     }
 
     Ok(())

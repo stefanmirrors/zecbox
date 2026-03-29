@@ -100,7 +100,16 @@ pub struct NodeState {
 
 impl NodeState {
     pub fn new(data_dir: PathBuf) -> Self {
-        let stats = NodeStats::load(&data_dir);
+        let mut stats = NodeStats::load(&data_dir);
+
+        // Reset stats if the chain database doesn't exist (fresh install or rebuild)
+        let zebra_dir = data_dir.join("zebra");
+        let is_fresh = !zebra_dir.exists() || zebra_dir.read_dir().map_or(true, |mut d| d.next().is_none());
+        if is_fresh {
+            stats = NodeStats::default();
+            stats.save(&data_dir);
+        }
+
         Self {
             status: Mutex::new(NodeStatus::Stopped),
             process: Mutex::new(None),
