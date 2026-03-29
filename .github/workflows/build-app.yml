@@ -286,16 +286,9 @@ jobs:
       - name: Install frontend dependencies
         run: npm ci
 
-      - name: Build mock sidecar binaries
-        shell: pwsh
-        run: |
-          $BinDir = "src-tauri/binaries"
-          New-Item -ItemType Directory -Force -Path $BinDir | Out-Null
-          foreach ($binary in @("zebrad", "arti", "zaino")) {
-            Write-Host "Building mock-${binary}..."
-            cargo build -p "mock-${binary}" --release
-            Copy-Item "target/release/mock-${binary}.exe" "$BinDir/${binary}-${{ matrix.triple }}.exe"
-          }
+      - name: Fetch upstream binaries
+        shell: bash
+        run: TARGET_TRIPLE=${{ matrix.triple }} bash scripts/fetch-binaries.sh
 
       - name: Create firewall-helper stub
         shell: pwsh
