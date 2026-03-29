@@ -626,13 +626,13 @@ async fn stop_binary_process(
             Ok(true)
         }
         "arti" => {
-            let status = state.stealth.status.lock().await;
-            let is_active = matches!(*status, crate::state::StealthStatus::Active);
+            let status = state.shield.status.lock().await;
+            let is_active = matches!(*status, crate::state::ShieldStatus::Active);
             drop(status);
             if !is_active {
                 return Ok(false);
             }
-            tor::stop_arti(app_handle, &state.stealth).await?;
+            tor::stop_arti(app_handle, &state.shield).await?;
             Ok(true)
         }
         _ => Err(format!("Unknown binary: {}", name)),
@@ -653,7 +653,7 @@ async fn start_binary_process(
             process::zaino::start_zaino(app_handle.clone(), &state.wallet, &data_dir).await
         }
         "arti" => {
-            tor::start_arti(app_handle.clone(), &state.stealth).await
+            tor::start_arti(app_handle.clone(), &state.shield).await
         }
         _ => Err(format!("Unknown binary: {}", name)),
     }
@@ -679,10 +679,10 @@ async fn start_and_verify(
             !status.is_stopped_or_error()
         }
         "arti" => {
-            let status = state.stealth.status.lock().await;
+            let status = state.shield.status.lock().await;
             matches!(
                 *status,
-                crate::state::StealthStatus::Active | crate::state::StealthStatus::Bootstrapping { .. }
+                crate::state::ShieldStatus::Active | crate::state::ShieldStatus::Bootstrapping { .. }
             )
         }
         _ => false,

@@ -1,4 +1,4 @@
-export type View = "dashboard" | "privacy" | "wallet" | "network" | "logs" | "settings";
+export type View = "dashboard" | "shield" | "wallet" | "network" | "logs" | "settings";
 
 interface NavItem {
   id: View | string;
@@ -25,8 +25,8 @@ const navItems: NavItem[] = [
     ),
   },
   {
-    id: "privacy",
-    label: "Privacy",
+    id: "shield",
+    label: "Shield Mode",
     icon: (
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
         <path d="M12 2L3 7v5c0 5.5 3.8 10.7 9 12 5.2-1.3 9-6.5 9-12V7z" />

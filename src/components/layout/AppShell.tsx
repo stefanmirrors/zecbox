@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { Sidebar, type View } from "./Sidebar";
 import { TitleBar } from "./TitleBar";
 import { Dashboard } from "../dashboard/Dashboard";
-import Privacy from "../privacy/Privacy";
+import ShieldMode from "../shield/ShieldMode";
 import WalletServer from "../wallet/WalletServer";
 import NetworkServe from "../network/NetworkServe";
 import { LogViewer } from "../logs/LogViewer";
@@ -10,7 +10,7 @@ import { Settings } from "../settings/Settings";
 
 const titles: Record<View, string> = {
   dashboard: "Dashboard",
-  privacy: "Privacy",
+  shield: "Shield Mode",
   wallet: "Wallet Server",
   network: "Serve the Network",
   logs: "Logs",
@@ -55,7 +55,7 @@ export function AppShell({ onResetToOnboarding }: AppShellProps) {
           }`}
         >
           {activeView === "dashboard" && <Dashboard onNavigate={handleNavigate} />}
-          {activeView === "privacy" && <Privacy />}
+          {activeView === "shield" && <ShieldMode />}
           {activeView === "wallet" && <WalletServer />}
           {activeView === "network" && <NetworkServe />}
           {activeView === "logs" && <LogViewer />}

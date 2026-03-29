@@ -278,8 +278,8 @@ pub fn spawn_storage_monitor(
                         if !state.wallet.status.lock().await.is_stopped_or_error() {
                             let _ = zaino::stop_zaino(&app_handle, &state.wallet, &data_dir).await;
                         }
-                        if state.stealth.is_active().await {
-                            let _ = tor::stop_arti(&app_handle, &state.stealth).await;
+                        if state.shield.is_active().await {
+                            let _ = tor::stop_arti(&app_handle, &state.shield).await;
                         }
                     }
                 }

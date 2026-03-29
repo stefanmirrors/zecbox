@@ -1,52 +1,57 @@
-//! Commands for Stealth Mode (Tor) toggle.
-//! Note: The module is still named "shield" for file-level backward compatibility,
-//! but all public types and commands use "stealth" naming.
+//! Commands for Shield Mode (Tor + hidden service) toggle.
 
 use tauri::{AppHandle, State};
 
 use crate::config::app_config::AppConfig;
 use crate::process::zebrad;
-use crate::state::{AppState, NetworkServeStatus, PrivacyMode, StealthStatus};
+use crate::state::{AppState, NetworkServeStatus, ShieldStatus};
 use crate::tor;
 use crate::tor::firewall;
 
 #[derive(serde::Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct StealthStatusInfo {
+pub struct ShieldStatusInfo {
     pub enabled: bool,
     pub status: String,
     pub bootstrap_progress: Option<u8>,
     pub message: Option<String>,
+    pub onion_address: Option<String>,
 }
 
-impl From<&StealthStatus> for StealthStatusInfo {
-    fn from(status: &StealthStatus) -> Self {
-        match status {
-            StealthStatus::Disabled => StealthStatusInfo {
+impl ShieldStatusInfo {
+    pub async fn from_state(state: &crate::state::ShieldState) -> Self {
+        let status = state.status.lock().await;
+        let onion = state.onion_address.lock().await.clone();
+        match &*status {
+            ShieldStatus::Disabled => ShieldStatusInfo {
                 enabled: false,
                 status: "disabled".into(),
                 bootstrap_progress: None,
                 message: None,
+                onion_address: None,
             },
-            StealthStatus::Bootstrapping { progress } => StealthStatusInfo {
+            ShieldStatus::Bootstrapping { progress } => ShieldStatusInfo {
                 enabled: false,
                 status: "bootstrapping".into(),
                 bootstrap_progress: Some(*progress),
                 message: None,
+                onion_address: None,
             },
-            StealthStatus::Active => StealthStatusInfo {
+            ShieldStatus::Active => ShieldStatusInfo {
                 enabled: true,
                 status: "active".into(),
                 bootstrap_progress: None,
                 message: None,
+                onion_address: onion,
             },
-            StealthStatus::Error { message } => StealthStatusInfo {
+            ShieldStatus::Error { message } => ShieldStatusInfo {
                 enabled: false,
                 status: "error".into(),
                 bootstrap_progress: None,
                 message: Some(message.clone()),
+                onion_address: None,
             },
-            StealthStatus::Interrupted => StealthStatusInfo {
+            ShieldStatus::Interrupted => ShieldStatusInfo {
                 enabled: false,
                 status: "interrupted".into(),
                 bootstrap_progress: None,
@@ -54,21 +59,29 @@ impl From<&StealthStatus> for StealthStatusInfo {
                     "Tor proxy stopped unexpectedly. Node stopped to prevent clearnet exposure."
                         .into(),
                 ),
+                onion_address: None,
             },
         }
     }
 }
 
 #[tauri::command]
-pub async fn get_stealth_status(
+pub async fn get_shield_status(
     state: State<'_, AppState>,
-) -> Result<StealthStatusInfo, String> {
-    let status = state.stealth.status.lock().await;
-    Ok(StealthStatusInfo::from(&*status))
+) -> Result<ShieldStatusInfo, String> {
+    Ok(ShieldStatusInfo::from_state(&state.shield).await)
 }
 
 #[tauri::command]
-pub async fn enable_stealth_mode(
+pub async fn get_onion_address(
+    state: State<'_, AppState>,
+) -> Result<Option<String>, String> {
+    let addr = state.shield.onion_address.lock().await;
+    Ok(addr.clone())
+}
+
+#[tauri::command]
+pub async fn enable_shield_mode(
     app_handle: AppHandle,
     state: State<'_, AppState>,
 ) -> Result<(), String> {
@@ -76,13 +89,13 @@ pub async fn enable_stealth_mode(
     {
         let net_status = state.network.status.lock().await;
         if matches!(*net_status, NetworkServeStatus::Active { .. }) {
-            return Err("Disable Serve the Network first. Stealth Mode cannot be enabled while accepting inbound connections via UPnP.".into());
+            return Err("Disable Serve the Network first. Shield Mode cannot be enabled while accepting inbound connections via UPnP.".into());
         }
     }
 
     // Check if firewall helper is installed
     if !firewall::is_helper_installed() {
-        return Err("Firewall helper not installed. Install it first to enable Stealth Mode.".into());
+        return Err("Firewall helper not installed. Install it first to enable Shield Mode.".into());
     }
 
     let node_was_running = {
@@ -93,8 +106,8 @@ pub async fn enable_stealth_mode(
         )
     };
 
-    // Start Arti SOCKS proxy
-    tor::start_arti(app_handle.clone(), &state.stealth).await?;
+    // Start Arti SOCKS proxy + hidden service
+    tor::start_arti(app_handle.clone(), &state.shield).await?;
 
     // Enable PF firewall rules + transparent redirector
     firewall::enable_firewall()
@@ -104,28 +117,28 @@ pub async fn enable_stealth_mode(
     if let Err(e) = tor::verify_tor_path().await {
         log::error!("Traffic verification failed: {}", e);
         let _ = firewall::disable_firewall();
-        let _ = tor::stop_arti(&app_handle, &state.stealth).await;
-        return Err(format!("Stealth Mode failed traffic verification: {}. Disabled for safety.", e));
+        let _ = tor::stop_arti(&app_handle, &state.shield).await;
+        return Err(format!("Shield Mode failed traffic verification: {}. Disabled for safety.", e));
     }
 
-    // If node was running, restart it with stealth config
+    // If node was running, restart it with shield config (includes onion external_addr)
     if node_was_running {
         zebrad::stop_zebrad(&app_handle, &state.node).await?;
         zebrad::start_zebrad(app_handle.clone(), &state.node).await?;
     }
 
-    // Persist privacy mode
+    // Persist shield_mode setting
     let mut config = AppConfig::load(&state.default_data_dir)
         .unwrap_or_else(|_| AppConfig::default_for(&state.default_data_dir));
-    config.privacy_mode = PrivacyMode::Stealth;
+    config.shield_mode = true;
     config.save(&state.default_data_dir)?;
 
-    log::info!("Stealth Mode enabled (PF firewall active)");
+    log::info!("Shield Mode enabled (PF firewall + hidden service active)");
     Ok(())
 }
 
 #[tauri::command]
-pub async fn disable_stealth_mode(
+pub async fn disable_shield_mode(
     app_handle: AppHandle,
     state: State<'_, AppState>,
 ) -> Result<(), String> {
@@ -148,20 +161,26 @@ pub async fn disable_stealth_mode(
     }
 
     // Stop Arti
-    tor::stop_arti(&app_handle, &state.stealth).await?;
+    tor::stop_arti(&app_handle, &state.shield).await?;
+
+    // Clear onion address
+    {
+        let mut addr = state.shield.onion_address.lock().await;
+        *addr = None;
+    }
 
     // Restart node with clearnet config if it was running
     if node_was_running {
         zebrad::start_zebrad(app_handle.clone(), &state.node).await?;
     }
 
-    // Persist privacy mode
+    // Persist shield_mode setting
     let mut config = AppConfig::load(&state.default_data_dir)
         .unwrap_or_else(|_| AppConfig::default_for(&state.default_data_dir));
-    config.privacy_mode = PrivacyMode::Standard;
+    config.shield_mode = false;
     config.save(&state.default_data_dir)?;
 
-    log::info!("Stealth Mode disabled (PF firewall removed)");
+    log::info!("Shield Mode disabled (PF firewall removed)");
     Ok(())
 }
 
@@ -178,6 +197,6 @@ pub async fn is_firewall_helper_installed() -> Result<bool, String> {
 }
 
 #[tauri::command]
-pub async fn is_stealth_supported() -> Result<bool, String> {
+pub async fn is_shield_supported() -> Result<bool, String> {
     Ok(cfg!(unix))
 }

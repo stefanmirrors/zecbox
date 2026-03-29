@@ -31,67 +31,24 @@ export interface StorageInfo {
   warningLevel: StorageWarningLevel;
 }
 
-export type PrivacyMode = "standard" | "stealth" | "proxy" | "shield";
-
 export interface AppConfig {
   dataDir: string;
   firstRunComplete: boolean;
-  privacyMode: PrivacyMode;
+  shieldMode: boolean;
   walletServer: boolean;
   autoStart: boolean;
   serveNetwork: boolean;
 }
 
-// --- Stealth Mode (Tor) types ---
+export type ShieldStatusTag = "disabled" | "bootstrapping" | "active" | "error" | "interrupted";
 
-export type StealthStatusTag = "disabled" | "bootstrapping" | "active" | "error" | "interrupted";
-
-export interface StealthStatusInfo {
+export interface ShieldStatusInfo {
   enabled: boolean;
-  status: StealthStatusTag;
+  status: ShieldStatusTag;
   bootstrapProgress?: number;
   message?: string;
+  onionAddress?: string;
 }
-
-// --- Proxy Mode (VPS relay) types ---
-
-export type ProxyStatusTag = "disabled" | "setup" | "connecting" | "active" | "error" | "interrupted";
-
-export interface ProxyStatusInfo {
-  enabled: boolean;
-  status: ProxyStatusTag;
-  vpsIp?: string;
-  lastHandshakeSecs?: number;
-  relayReachable?: boolean;
-  message?: string;
-  step?: string;
-}
-
-export interface ProxySetupConfig {
-  vpsWgConf: string;
-  dockerCompose: string;
-  installCommand: string;
-  homeWgConf: string;
-}
-
-export interface VpsProvider {
-  name: string;
-  url: string;
-  acceptsZec: boolean;
-  noKyc: boolean;
-  locations: string[];
-  description: string;
-  tiers: VpsTier[];
-}
-
-export interface VpsTier {
-  useCase: string;
-  minRamMb: number;
-  minStorageGb: number;
-  estimatedCost: string;
-}
-
-// --- Wallet Server types ---
 
 export type WalletStatusTag = "stopped" | "starting" | "running" | "stopping" | "error";
 
@@ -101,8 +58,6 @@ export interface WalletStatusInfo {
   endpoint?: string;
   message?: string;
 }
-
-// --- Update types ---
 
 export type UpdateStatusTag =
   | "idle"
@@ -136,8 +91,6 @@ export interface VersionInfo {
   zaino: string;
   arti: string;
 }
-
-// --- Network Serve types ---
 
 export type NetworkServeStatusTag = "disabled" | "enabling" | "active" | "error";
 

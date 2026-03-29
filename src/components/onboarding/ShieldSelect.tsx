@@ -1,16 +1,17 @@
 import { useEffect, useState } from "react";
-import type { PrivacyMode } from "../../lib/types";
 import {
   isFirewallHelperInstalled,
   installFirewallHelper,
-  isStealthSupported,
+  isShieldSupported,
 } from "../../lib/tauri";
 
 interface Props {
-  onSelect: (privacyMode: PrivacyMode) => void;
+  onSelect: (shieldMode: boolean) => void;
 }
 
-const choices: { id: PrivacyMode; label: string; tag?: string; oneLiner: string; benefits: string[]; tradeoffs: string[]; needsStealth?: boolean; needsProxy?: boolean }[] = [
+type Choice = "standard" | "shield";
+
+const choices: { id: Choice; label: string; tag?: string; oneLiner: string; benefits: string[]; tradeoffs: string[] }[] = [
   {
     id: "standard",
     label: "Standard",
@@ -19,39 +20,24 @@ const choices: { id: PrivacyMode; label: string; tag?: string; oneLiner: string;
     tradeoffs: ["Your home IP is visible to other Zcash nodes"],
   },
   {
-    id: "stealth",
-    label: "Stealth",
-    tag: "Tor",
-    oneLiner: "All traffic routed through Tor",
-    benefits: ["Your IP is hidden from all peers and your ISP"],
-    tradeoffs: ["Cannot accept incoming connections", "Slower sync"],
-    needsStealth: true,
-  },
-  {
-    id: "proxy",
-    label: "Proxy",
-    tag: "VPS",
-    oneLiner: "VPS relay hides your IP from the network",
-    benefits: ["Full network participation while staying private", "Help decentralize Zcash"],
-    tradeoffs: ["Requires a VPS ($3-5/mo)", "Outbound still uses home IP"],
-    needsProxy: true,
-  },
-  {
     id: "shield",
-    label: "Shield",
-    tag: "Stealth + Proxy",
-    oneLiner: "Maximum privacy in both directions",
-    benefits: ["Complete IP privacy — hidden inbound and outbound", "Full network participation"],
-    tradeoffs: ["Requires a VPS ($3-5/mo)", "Slower sync from Tor"],
-    needsStealth: true,
-    needsProxy: true,
+    label: "Shield Mode",
+    tag: "Tor",
+    oneLiner: "Full privacy — hidden IP, full network participation",
+    benefits: [
+      "Your IP is hidden from all peers and your ISP",
+      "Accept incoming connections via .onion hidden service",
+      "Full network participation while staying private",
+      "No VPS or extra cost — uses the Tor network directly",
+    ],
+    tradeoffs: ["Initial sync will be slower due to Tor overhead"],
   },
 ];
 
 export function ShieldSelect({ onSelect }: Props) {
-  const [selected, setSelected] = useState<PrivacyMode>("standard");
+  const [selected, setSelected] = useState<Choice>("standard");
   const [helperInstalled, setHelperInstalled] = useState<boolean | null>(null);
-  const [stealthSupported, setStealthSupported] = useState<boolean | null>(null);
+  const [shieldSupported, setShieldSupported] = useState<boolean | null>(null);
   const [installing, setInstalling] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -59,9 +45,9 @@ export function ShieldSelect({ onSelect }: Props) {
     isFirewallHelperInstalled()
       .then(setHelperInstalled)
       .catch(() => setHelperInstalled(false));
-    isStealthSupported()
-      .then(setStealthSupported)
-      .catch(() => setStealthSupported(false));
+    isShieldSupported()
+      .then(setShieldSupported)
+      .catch(() => setShieldSupported(false));
   }, []);
 
   const handleInstall = async () => {
@@ -77,14 +63,12 @@ export function ShieldSelect({ onSelect }: Props) {
     }
   };
 
-  const selectedChoice = choices.find((c) => c.id === selected)!;
-  const needsHelper = selectedChoice.needsStealth && helperInstalled === false;
-  const stealthDisabled = stealthSupported === false;
+  const needsHelper = selected === "shield" && helperInstalled === false;
+  const shieldDisabled = shieldSupported === false;
 
   const canContinue =
     selected === "standard" ||
-    selected === "proxy" ||
-    (selectedChoice.needsStealth && !stealthDisabled && helperInstalled === true);
+    (selected === "shield" && !shieldDisabled && helperInstalled === true);
 
   return (
     <div className="flex min-h-[90vh] items-center justify-center px-6">
@@ -96,11 +80,11 @@ export function ShieldSelect({ onSelect }: Props) {
           </p>
         </div>
 
-        {/* Compact mode cards */}
+        {/* Mode cards */}
         <div className="space-y-1.5">
           {choices.map((choice) => {
             const isSelected = selected === choice.id;
-            const isDisabled = choice.needsStealth && stealthDisabled;
+            const isDisabled = choice.id === "shield" && shieldDisabled;
             return (
               <button
                 key={choice.id}
@@ -142,28 +126,33 @@ export function ShieldSelect({ onSelect }: Props) {
           })}
         </div>
 
-        {/* Detail panel for selected mode */}
-        <div className="border border-zec-border/50 rounded-xl p-4 space-y-3">
-          <div className="space-y-1.5">
-            {selectedChoice.benefits.map((b, i) => (
-              <div key={i} className="flex items-start gap-2">
-                <span className="text-emerald-400 text-xs mt-px shrink-0">+</span>
-                <span className="text-xs text-emerald-400/80">{b}</span>
+        {/* Detail panel */}
+        {(() => {
+          const c = choices.find((c) => c.id === selected)!;
+          return (
+            <div className="border border-zec-border/50 rounded-xl p-4 space-y-3">
+              <div className="space-y-1.5">
+                {c.benefits.map((b, i) => (
+                  <div key={i} className="flex items-start gap-2">
+                    <span className="text-emerald-400 text-xs mt-px shrink-0">+</span>
+                    <span className="text-xs text-emerald-400/80">{b}</span>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
-          <div className="space-y-1.5">
-            {selectedChoice.tradeoffs.map((t, i) => (
-              <div key={i} className="flex items-start gap-2">
-                <span className="text-zec-muted text-xs mt-px shrink-0">-</span>
-                <span className="text-xs text-zec-muted">{t}</span>
+              <div className="space-y-1.5">
+                {c.tradeoffs.map((t, i) => (
+                  <div key={i} className="flex items-start gap-2">
+                    <span className="text-zec-muted text-xs mt-px shrink-0">-</span>
+                    <span className="text-xs text-zec-muted">{t}</span>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
-        </div>
+            </div>
+          );
+        })()}
 
         {/* Helper install prompt */}
-        {needsHelper && !stealthDisabled && (
+        {needsHelper && !shieldDisabled && (
           <div className="border border-zec-yellow/20 rounded-xl p-4 space-y-3">
             <p className="text-xs text-zec-muted">
               Requires a one-time system helper install for Tor firewall rules.
@@ -179,15 +168,8 @@ export function ShieldSelect({ onSelect }: Props) {
           </div>
         )}
 
-        {/* Proxy note */}
-        {(selected === "proxy" || selected === "shield") && (
-          <p className="text-xs text-zec-muted/50 text-center">
-            Proxy setup continues after onboarding.
-          </p>
-        )}
-
         <button
-          onClick={() => onSelect(selected)}
+          onClick={() => onSelect(selected === "shield")}
           disabled={!canContinue}
           className={`w-full py-3.5 rounded-xl font-semibold transition-all ${
             canContinue

@@ -1,7 +1,6 @@
 //! Sidecar process management: spawn, monitor, restart, PID tracking.
 
 pub mod platform;
-pub mod wireguard;
 pub mod zaino;
 pub mod zebrad;
 

@@ -1,11 +1,21 @@
-import { useStealthMode } from "../../hooks/useStealthMode";
+import { useState } from "react";
+import { useShieldMode } from "../../hooks/useShieldMode";
 
 export default function ShieldMode() {
   const {
     status, toggling, error, toggle, clearError,
     helperInstalled, installing, installHelper,
     platformSupported,
-  } = useStealthMode();
+  } = useShieldMode();
+  const [copied, setCopied] = useState(false);
+
+  const handleCopyOnion = async () => {
+    if (status.onionAddress) {
+      await navigator.clipboard.writeText(status.onionAddress);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
 
   if (platformSupported === false) {
     return (
@@ -14,7 +24,7 @@ export default function ShieldMode() {
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-base font-semibold text-zec-text">Shield Mode</h2>
-              <p className="text-xs text-zec-muted mt-0.5">Route node traffic through Tor</p>
+              <p className="text-xs text-zec-muted mt-0.5">Full privacy via Tor hidden service</p>
             </div>
             <span className="text-xs text-zec-muted bg-zec-border/30 px-2.5 py-1 rounded-full">Coming Soon</span>
           </div>
@@ -22,16 +32,7 @@ export default function ShieldMode() {
             Shield Mode is not yet available on Windows. It requires system-level firewall integration that is currently supported on macOS and Linux.
           </p>
         </div>
-
-        <div className="space-y-4">
-          <h3 className="text-xs font-medium text-zec-muted">How it works</h3>
-          <div className="space-y-3">
-            <Info title="Network privacy" text="Your ISP cannot see you are running a Zcash node. Peers cannot see your real IP." />
-            <Info title="Firewall enforcement" text="System firewall rules redirect all P2P traffic through Tor. No traffic can bypass." />
-            <Info title="Kill switch" text="If Tor or firewall rules drop, the node stops immediately to prevent clearnet exposure." />
-            <Info title="Performance" text="Tor adds latency. Best used after initial sync is complete." />
-          </div>
-        </div>
+        <HowItWorks />
       </div>
     );
   }
@@ -63,7 +64,7 @@ export default function ShieldMode() {
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-base font-semibold text-zec-text">Shield Mode</h2>
-            <p className="text-xs text-zec-muted mt-0.5">Route node traffic through Tor</p>
+            <p className="text-xs text-zec-muted mt-0.5">Full privacy via Tor hidden service</p>
           </div>
           <button
             onClick={toggle}
@@ -115,6 +116,27 @@ export default function ShieldMode() {
             />
           </div>
         )}
+
+        {/* .onion address display */}
+        {status.enabled && status.onionAddress && (
+          <div className="border-t border-zec-border/50 pt-4 space-y-2">
+            <span className="text-xs text-zec-muted">Your node's .onion address</span>
+            <div className="flex items-center gap-2">
+              <code className="flex-1 text-xs text-zec-text font-mono bg-zec-surface px-3 py-2 rounded-lg break-all">
+                {status.onionAddress}
+              </code>
+              <button
+                onClick={handleCopyOnion}
+                className="px-3 py-2 bg-zec-border/50 rounded-lg text-xs text-zec-muted hover:text-zec-text transition-colors shrink-0"
+              >
+                {copied ? "Copied!" : "Copy"}
+              </button>
+            </div>
+            <p className="text-[10px] text-zec-muted/50">
+              Other Zcash nodes can connect to you at this address. Your home IP is never exposed.
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Error */}
@@ -127,17 +149,22 @@ export default function ShieldMode() {
         </div>
       )}
 
-      {/* How it works */}
-      <div className="space-y-4">
-        <h3 className="text-xs font-medium text-zec-muted">How it works</h3>
-        <div className="space-y-3">
-          <Info title="Network privacy" text="Your ISP cannot see you are running a Zcash node. Peers cannot see your real IP." />
-          <Info title="Firewall enforcement" text="System firewall rules redirect all P2P traffic through Tor. No traffic can bypass." />
-          <Info title="Kill switch" text="If Tor or firewall rules drop, the node stops immediately to prevent clearnet exposure." />
-          <Info title="Performance" text="Tor adds latency. Best used after initial sync is complete." />
-        </div>
-      </div>
+      <HowItWorks />
+    </div>
+  );
+}
 
+function HowItWorks() {
+  return (
+    <div className="space-y-4">
+      <h3 className="text-xs font-medium text-zec-muted">How it works</h3>
+      <div className="space-y-3">
+        <Info title="Complete IP privacy" text="All traffic routed through Tor. Your ISP and peers cannot see your real IP address." />
+        <Info title="Full network participation" text="Your node accepts incoming connections via a .onion hidden service. You serve the Zcash network while staying private." />
+        <Info title="Firewall enforcement" text="System firewall rules ensure all traffic goes through Tor. No traffic can bypass." />
+        <Info title="Kill switch" text="If Tor or firewall rules drop, the node stops immediately to prevent clearnet exposure." />
+        <Info title="No extra cost" text="Unlike VPS-based solutions, Shield Mode uses the Tor network directly. No server to rent." />
+      </div>
     </div>
   );
 }

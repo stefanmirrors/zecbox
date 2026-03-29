@@ -33,38 +33,21 @@ pub async fn start_zebrad(
 
     let data_dir = node.data_dir.lock().await.clone();
 
-    // Check if stealth mode (Tor) is active to generate appropriate config
-    let stealth_active = {
+    // Check if shield mode (Tor) is active to generate appropriate config
+    let shield_active = {
         let state = app_handle.state::<AppState>();
-        state.stealth.is_active().await
+        state.shield.is_active().await
     };
 
-    // Check if proxy mode is active to get VPS IP for external_addr
-    let proxy_vps_ip = {
+    // Get .onion address if shield mode has one (for external_addr)
+    let onion_address = {
         let state = app_handle.state::<AppState>();
-        let proxy_status = state.proxy.status.lock().await;
-        match &*proxy_status {
-            crate::state::ProxyStatus::Active { vps_ip, .. } => Some(vps_ip.clone()),
-            _ => {
-                // Also check persisted config
-                let config = crate::config::app_config::AppConfig::load(&state.default_data_dir).ok();
-                if let Some(cfg) = config {
-                    if cfg.is_proxy_active() {
-                        crate::config::proxy_config::ProxyConfig::load(&state.default_data_dir)
-                            .ok()
-                            .map(|pc| pc.vps_ip)
-                    } else {
-                        None
-                    }
-                } else {
-                    None
-                }
-            }
-        }
+        let addr = state.shield.onion_address.lock().await.clone();
+        addr
     };
 
     // Generate config
-    let config_path = zebrad_config::write_zebrad_config(&data_dir, stealth_active, proxy_vps_ip.as_deref())
+    let config_path = zebrad_config::write_zebrad_config(&data_dir, shield_active, onion_address.as_deref())
         .map_err(|e| format!("Failed to write zebrad config: {}", e))?;
 
     // Resolve binary path
@@ -99,11 +82,11 @@ pub async fn start_zebrad(
     #[cfg(windows)]
     cmd.creation_flags(0x08000000); // CREATE_NO_WINDOW
 
-    if stealth_active {
-        log::info!("Starting zebrad with Stealth Mode active (PF firewall enforces Tor routing)");
+    if shield_active {
+        log::info!("Starting zebrad with Shield Mode active (PF firewall enforces Tor routing)");
     }
-    if proxy_vps_ip.is_some() {
-        log::info!("Starting zebrad with Proxy Mode active (external_addr set to VPS)");
+    if onion_address.is_some() {
+        log::info!("Starting zebrad with .onion hidden service (external_addr set)");
     }
 
     let mut child = cmd.spawn().map_err(|e| {

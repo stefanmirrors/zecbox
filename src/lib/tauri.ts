@@ -1,9 +1,8 @@
 import { invoke } from "@tauri-apps/api/core";
 import type {
   AppConfig, BinaryUpdateInfo, NetworkServeStatusInfo, NodeStats,
-  NodeStatusInfo, PrivacyMode, ProxySetupConfig, ProxyStatusInfo,
-  StealthStatusInfo, StorageInfo, UpdateStatusInfo, VersionInfo,
-  Volume, VpsProvider, WalletStatusInfo,
+  NodeStatusInfo, ShieldStatusInfo, StorageInfo, UpdateStatusInfo,
+  VersionInfo, Volume, WalletStatusInfo,
 } from "./types";
 
 export async function getNodeStatus(): Promise<NodeStatusInfo> {
@@ -35,8 +34,8 @@ export async function getAppConfig(): Promise<AppConfig> {
   return invoke<AppConfig>("get_app_config");
 }
 
-export async function completeOnboarding(path: string, privacyMode: PrivacyMode): Promise<void> {
-  return invoke("complete_onboarding", { path, privacyMode });
+export async function completeOnboarding(path: string, shieldMode: boolean): Promise<void> {
+  return invoke("complete_onboarding", { path, shieldMode });
 }
 
 export async function resetOnboarding(): Promise<void> {
@@ -47,18 +46,20 @@ export async function getLogs(): Promise<string[]> {
   return invoke<string[]>("get_logs");
 }
 
-// --- Stealth Mode (Tor) ---
-
-export async function getStealthStatus(): Promise<StealthStatusInfo> {
-  return invoke<StealthStatusInfo>("get_stealth_status");
+export async function getShieldStatus(): Promise<ShieldStatusInfo> {
+  return invoke<ShieldStatusInfo>("get_shield_status");
 }
 
-export async function enableStealthMode(): Promise<void> {
-  return invoke("enable_stealth_mode");
+export async function enableShieldMode(): Promise<void> {
+  return invoke("enable_shield_mode");
 }
 
-export async function disableStealthMode(): Promise<void> {
-  return invoke("disable_stealth_mode");
+export async function disableShieldMode(): Promise<void> {
+  return invoke("disable_shield_mode");
+}
+
+export async function getOnionAddress(): Promise<string | null> {
+  return invoke<string | null>("get_onion_address");
 }
 
 export async function isFirewallHelperInstalled(): Promise<boolean> {
@@ -69,55 +70,9 @@ export async function installFirewallHelper(): Promise<void> {
   return invoke("install_firewall_helper");
 }
 
-export async function isStealthSupported(): Promise<boolean> {
-  return invoke<boolean>("is_stealth_supported");
+export async function isShieldSupported(): Promise<boolean> {
+  return invoke<boolean>("is_shield_supported");
 }
-
-// --- Proxy Mode (VPS relay) ---
-
-export async function getProxyStatus(): Promise<ProxyStatusInfo> {
-  return invoke<ProxyStatusInfo>("get_proxy_status");
-}
-
-export async function startProxySetup(vpsIp: string, vpsWgPort?: number): Promise<void> {
-  return invoke("start_proxy_setup", { vpsIp, vpsWgPort });
-}
-
-export async function getProxySetupConfig(): Promise<ProxySetupConfig> {
-  return invoke<ProxySetupConfig>("get_proxy_setup_config");
-}
-
-export async function enableProxyMode(): Promise<void> {
-  return invoke("enable_proxy_mode");
-}
-
-export async function disableProxyMode(): Promise<void> {
-  return invoke("disable_proxy_mode");
-}
-
-export async function verifyProxyConnection(): Promise<boolean> {
-  return invoke<boolean>("verify_proxy_connection");
-}
-
-export async function resetProxyConfig(): Promise<void> {
-  return invoke("reset_proxy_config");
-}
-
-export async function getVpsProviders(tier: string): Promise<VpsProvider[]> {
-  return invoke<VpsProvider[]>("get_vps_providers", { tier });
-}
-
-// --- Privacy Mode ---
-
-export async function getPrivacyMode(): Promise<PrivacyMode> {
-  return invoke<PrivacyMode>("get_privacy_mode");
-}
-
-export async function setPrivacyMode(mode: PrivacyMode): Promise<void> {
-  return invoke("set_privacy_mode", { mode });
-}
-
-// --- Wallet Server ---
 
 export async function getWalletStatus(): Promise<WalletStatusInfo> {
   return invoke<WalletStatusInfo>("get_wallet_status");
@@ -134,8 +89,6 @@ export async function disableWalletServer(): Promise<void> {
 export async function getWalletQr(): Promise<string> {
   return invoke<string>("get_wallet_qr");
 }
-
-// --- Updates ---
 
 export async function getVersions(): Promise<VersionInfo> {
   return invoke<VersionInfo>("get_versions");
@@ -165,8 +118,6 @@ export async function checkAppUpdate(): Promise<boolean> {
   return invoke<boolean>("check_app_update");
 }
 
-// --- Settings ---
-
 export async function getAutoStartEnabled(): Promise<boolean> {
   return invoke<boolean>("get_auto_start_enabled");
 }
@@ -178,8 +129,6 @@ export async function setAutoStart(enabled: boolean): Promise<void> {
 export async function rebuildDatabase(): Promise<void> {
   return invoke("rebuild_database");
 }
-
-// --- Network Serve ---
 
 export async function getNetworkServeStatus(): Promise<NetworkServeStatusInfo> {
   return invoke<NetworkServeStatusInfo>("get_network_serve_status");
@@ -196,8 +145,6 @@ export async function disableNetworkServe(): Promise<void> {
 export async function recheckReachability(): Promise<void> {
   return invoke("recheck_reachability");
 }
-
-// --- Node Stats ---
 
 export async function getNodeStats(): Promise<NodeStats> {
   return invoke<NodeStats>("get_node_stats");

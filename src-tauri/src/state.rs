@@ -13,8 +13,7 @@ pub const LOG_BUFFER_CAPACITY: usize = 5000;
 pub struct AppState {
     pub node: Arc<NodeState>,
     pub storage: Arc<StorageState>,
-    pub stealth: Arc<StealthState>,
-    pub proxy: Arc<ProxyState>,
+    pub shield: Arc<ShieldState>,
     pub wallet: Arc<WalletState>,
     pub update: Arc<UpdateState>,
     pub network: Arc<NetworkServeState>,
@@ -29,8 +28,7 @@ impl AppState {
         Self {
             node: Arc::new(NodeState::new(data_dir)),
             storage: Arc::new(StorageState::new()),
-            stealth: Arc::new(StealthState::new()),
-            proxy: Arc::new(ProxyState::new()),
+            shield: Arc::new(ShieldState::new()),
             wallet: Arc::new(WalletState::new()),
             update: Arc::new(UpdateState::new()),
             network: Arc::new(NetworkServeState::new()),
@@ -208,11 +206,9 @@ impl BackoffState {
     }
 }
 
-// --- Stealth Mode (Tor) state (formerly "Shield Mode" internally) ---
-
 #[derive(Debug, Clone, Serialize)]
 #[serde(tag = "status", rename_all = "camelCase")]
-pub enum StealthStatus {
+pub enum ShieldStatus {
     Disabled,
     #[serde(rename_all = "camelCase")]
     Bootstrapping {
@@ -225,83 +221,27 @@ pub enum StealthStatus {
     Interrupted,
 }
 
-pub struct StealthState {
-    pub status: Mutex<StealthStatus>,
+pub struct ShieldState {
+    pub status: Mutex<ShieldStatus>,
     pub process: Mutex<Option<tokio::process::Child>>,
     pub bootstrap_task: Mutex<Option<JoinHandle<()>>>,
     pub kill_switch_task: Mutex<Option<JoinHandle<()>>>,
+    pub onion_address: Mutex<Option<String>>,
 }
 
-impl StealthState {
+impl ShieldState {
     pub fn new() -> Self {
         Self {
-            status: Mutex::new(StealthStatus::Disabled),
+            status: Mutex::new(ShieldStatus::Disabled),
             process: Mutex::new(None),
             bootstrap_task: Mutex::new(None),
             kill_switch_task: Mutex::new(None),
+            onion_address: Mutex::new(None),
         }
     }
 
     pub async fn is_active(&self) -> bool {
-        matches!(*self.status.lock().await, StealthStatus::Active)
-    }
-}
-
-// --- Proxy Mode state (WireGuard VPS relay) ---
-
-#[derive(Debug, Clone, Serialize)]
-#[serde(tag = "status", rename_all = "camelCase")]
-pub enum ProxyStatus {
-    Disabled,
-    #[serde(rename_all = "camelCase")]
-    Setup {
-        step: String,
-    },
-    Connecting,
-    #[serde(rename_all = "camelCase")]
-    Active {
-        vps_ip: String,
-        last_handshake_secs: Option<u64>,
-        relay_reachable: Option<bool>,
-    },
-    Error {
-        message: String,
-    },
-    Interrupted,
-}
-
-pub struct ProxyState {
-    pub status: Mutex<ProxyStatus>,
-    pub process: Mutex<Option<tokio::process::Child>>,
-    pub kill_switch_task: Mutex<Option<JoinHandle<()>>>,
-    pub monitor_task: Mutex<Option<JoinHandle<()>>>,
-}
-
-impl ProxyState {
-    pub fn new() -> Self {
-        Self {
-            status: Mutex::new(ProxyStatus::Disabled),
-            process: Mutex::new(None),
-            kill_switch_task: Mutex::new(None),
-            monitor_task: Mutex::new(None),
-        }
-    }
-}
-
-// --- Privacy Mode (unified enum for AppConfig) ---
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub enum PrivacyMode {
-    Standard,
-    Stealth,
-    Proxy,
-    Shield,
-}
-
-impl Default for PrivacyMode {
-    fn default() -> Self {
-        PrivacyMode::Standard
+        matches!(*self.status.lock().await, ShieldStatus::Active)
     }
 }
 

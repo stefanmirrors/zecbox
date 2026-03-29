@@ -1,4 +1,4 @@
-//! Arti SOCKS5 proxy lifecycle for Stealth Mode.
+//! Arti SOCKS5 proxy lifecycle for Shield Mode.
 //! Manages Arti as a sidecar process, monitors bootstrap and health,
 //! implements kill switch logic (Arti crash while Shield ON → stop zebrad).
 
@@ -16,7 +16,7 @@ use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::task::JoinHandle;
 
 use crate::process::zebrad;
-use crate::state::{AppState, StealthState, StealthStatus};
+use crate::state::{AppState, ShieldState, ShieldStatus};
 
 const ARTI_SOCKS_PORT: u16 = 9150;
 const HEALTH_CHECK_INTERVAL_SECS: u64 = 3;
@@ -24,45 +24,45 @@ const HEALTH_CHECK_INTERVAL_SECS: u64 = 3;
 /// Start the Arti SOCKS5 proxy sidecar.
 pub async fn start_arti(
     app_handle: AppHandle,
-    shield: &StealthState,
+    shield: &ShieldState,
 ) -> Result<(), String> {
     {
         let status = shield.status.lock().await;
-        if !matches!(*status, StealthStatus::Disabled) {
+        if !matches!(*status, ShieldStatus::Disabled) {
             let desc = match &*status {
-                StealthStatus::Bootstrapping { .. } => "currently connecting",
-                StealthStatus::Active => "already active",
-                StealthStatus::Error { .. } => "in an error state",
-                StealthStatus::Interrupted => "interrupted",
+                ShieldStatus::Bootstrapping { .. } => "currently connecting",
+                ShieldStatus::Active => "already active",
+                ShieldStatus::Error { .. } => "in an error state",
+                ShieldStatus::Interrupted => "interrupted",
                 _ => "busy",
             };
-            return Err(format!("Cannot enable Stealth Mode: {}", desc));
+            return Err(format!("Cannot enable Shield Mode: {}", desc));
         }
     }
 
     {
         let mut status = shield.status.lock().await;
-        *status = StealthStatus::Bootstrapping { progress: 0 };
+        *status = ShieldStatus::Bootstrapping { progress: 0 };
     }
-    emit_stealth_status(&app_handle, &shield).await;
+    emit_shield_status(&app_handle, &shield).await;
 
     let binary_path = resolve_arti_binary_path(&app_handle);
     if !binary_path.exists() {
         let mut status = shield.status.lock().await;
-        *status = StealthStatus::Error {
+        *status = ShieldStatus::Error {
             message: "Tor proxy binary not found. Try reinstalling zecbox.".into(),
         };
-        emit_stealth_status(&app_handle, &shield).await;
+        emit_shield_status(&app_handle, &shield).await;
         return Err(format!("Arti binary not found at {:?}", binary_path));
     }
 
     // Check for port conflict before spawning
     if let Err(_) = tokio::net::TcpListener::bind(format!("127.0.0.1:{}", ARTI_SOCKS_PORT)).await {
         let mut status = shield.status.lock().await;
-        *status = StealthStatus::Error {
+        *status = ShieldStatus::Error {
             message: format!("Port {} is already in use. Another Tor instance may be running.", ARTI_SOCKS_PORT),
         };
-        emit_stealth_status(&app_handle, shield).await;
+        emit_shield_status(&app_handle, shield).await;
         return Err(format!("Port {} is already in use", ARTI_SOCKS_PORT));
     }
 
@@ -95,22 +95,22 @@ pub async fn start_arti(
     if let Some(stderr) = child.stderr.take() {
         let app = app_handle.clone();
         let state = app_handle.state::<AppState>();
-        let shield_arc = state.stealth.clone();
+        let shield_arc = state.shield.clone();
         let bootstrap_task = tokio::spawn(async move {
             let mut lines = BufReader::new(stderr).lines();
             while let Ok(Some(line)) = lines.next_line().await {
                 log::debug!("arti: {}", line);
                 if let Some(pct) = parse_bootstrap_progress(&line) {
                     let mut status = shield_arc.status.lock().await;
-                    if matches!(*status, StealthStatus::Bootstrapping { .. }) {
-                        *status = StealthStatus::Bootstrapping { progress: pct };
+                    if matches!(*status, ShieldStatus::Bootstrapping { .. }) {
+                        *status = ShieldStatus::Bootstrapping { progress: pct };
                         drop(status);
-                        let _ = app.emit("stealth_status_changed", get_status_payload(&shield_arc).await);
+                        let _ = app.emit("shield_status_changed", get_status_payload(&shield_arc).await);
                         if pct >= 100 {
                             let mut status = shield_arc.status.lock().await;
-                            *status = StealthStatus::Active;
+                            *status = ShieldStatus::Active;
                             drop(status);
-                            let _ = app.emit("stealth_status_changed", get_status_payload(&shield_arc).await);
+                            let _ = app.emit("shield_status_changed", get_status_payload(&shield_arc).await);
                         }
                     }
                 }
@@ -137,7 +137,7 @@ pub async fn start_arti(
 
     // Wait for bootstrap completion (up to 60s)
     let state = app_handle.state::<AppState>();
-    let shield_arc = state.stealth.clone();
+    let shield_arc = state.shield.clone();
     let bootstrapped = wait_for_bootstrap(&shield_arc, 60).await;
     if !bootstrapped {
         // If bootstrap didn't complete, check if process is still alive
@@ -152,22 +152,22 @@ pub async fn start_arti(
         if alive {
             // Process is running but bootstrap didn't complete — report error, don't assume Active
             let mut status = shield.status.lock().await;
-            *status = StealthStatus::Error {
+            *status = ShieldStatus::Error {
                 message: "Tor bootstrap timed out. Check your network connection.".into(),
             };
-            emit_stealth_status(&app_handle, shield).await;
+            emit_shield_status(&app_handle, shield).await;
             return Err("Arti bootstrap timed out after 60s".into());
         } else {
             let mut status = shield.status.lock().await;
-            *status = StealthStatus::Error {
+            *status = ShieldStatus::Error {
                 message: "Arti failed to bootstrap".into(),
             };
-            emit_stealth_status(&app_handle, &shield).await;
+            emit_shield_status(&app_handle, &shield).await;
             return Err("Arti failed to bootstrap within timeout".into());
         }
     }
 
-    emit_stealth_status(&app_handle, &shield).await;
+    emit_shield_status(&app_handle, &shield).await;
 
     // Spawn kill switch monitor
     let kill_switch_handle = spawn_kill_switch(app_handle.clone(), shield_arc);
@@ -182,7 +182,7 @@ pub async fn start_arti(
 /// Stop the Arti SOCKS5 proxy.
 pub async fn stop_arti(
     app_handle: &AppHandle,
-    shield: &StealthState,
+    shield: &ShieldState,
 ) -> Result<(), String> {
     // Abort kill switch
     {
@@ -217,10 +217,10 @@ pub async fn stop_arti(
 
     {
         let mut status = shield.status.lock().await;
-        *status = StealthStatus::Disabled;
+        *status = ShieldStatus::Disabled;
     }
 
-    emit_stealth_status(app_handle, shield).await;
+    emit_shield_status(app_handle, shield).await;
     log::info!("Arti stopped");
     Ok(())
 }
@@ -230,7 +230,7 @@ pub async fn stop_arti(
 /// immediately stop zebrad to prevent clearnet fallback.
 fn spawn_kill_switch(
     app_handle: AppHandle,
-    shield: Arc<StealthState>,
+    shield: Arc<ShieldState>,
 ) -> JoinHandle<()> {
     tokio::spawn(async move {
         let mut interval =
@@ -241,7 +241,7 @@ fn spawn_kill_switch(
 
             let status = shield.status.lock().await.clone();
             match status {
-                StealthStatus::Active | StealthStatus::Bootstrapping { .. } => {}
+                ShieldStatus::Active | ShieldStatus::Bootstrapping { .. } => {}
                 _ => break,
             }
 
@@ -282,17 +282,17 @@ fn spawn_kill_switch(
                 }
                 {
                     let mut status = shield.status.lock().await;
-                    *status = StealthStatus::Interrupted;
+                    *status = ShieldStatus::Interrupted;
                 }
 
-                let _ = app_handle.emit("stealth_interrupted", msg);
+                let _ = app_handle.emit("shield_interrupted", msg);
 
                 // Stop zebrad immediately
                 let state = app_handle.state::<AppState>();
                 let _ = zebrad::stop_zebrad(&app_handle, &state.node).await;
 
                 let _ = app_handle.emit(
-                    "stealth_status_changed",
+                    "shield_status_changed",
                     get_status_payload(&shield).await,
                 );
 
@@ -302,18 +302,18 @@ fn spawn_kill_switch(
     })
 }
 
-async fn wait_for_bootstrap(shield: &StealthState, timeout_secs: u64) -> bool {
+async fn wait_for_bootstrap(shield: &ShieldState, timeout_secs: u64) -> bool {
     let deadline = tokio::time::Instant::now()
         + std::time::Duration::from_secs(timeout_secs);
 
     loop {
         let status = shield.status.lock().await.clone();
         match status {
-            StealthStatus::Active => return true,
-            StealthStatus::Error { .. } | StealthStatus::Disabled | StealthStatus::Interrupted => {
+            ShieldStatus::Active => return true,
+            ShieldStatus::Error { .. } | ShieldStatus::Disabled | ShieldStatus::Interrupted => {
                 return false;
             }
-            StealthStatus::Bootstrapping { .. } => {}
+            ShieldStatus::Bootstrapping { .. } => {}
         }
 
         if tokio::time::Instant::now() >= deadline {
@@ -339,33 +339,33 @@ fn resolve_arti_binary_path(app_handle: &AppHandle) -> PathBuf {
     crate::platform::resolve_sidecar_path(app_handle, "arti")
 }
 
-async fn emit_stealth_status(app_handle: &AppHandle, shield: &StealthState) {
+async fn emit_shield_status(app_handle: &AppHandle, shield: &ShieldState) {
     let payload = get_status_payload(shield).await;
-    let _ = app_handle.emit("stealth_status_changed", payload);
+    let _ = app_handle.emit("shield_status_changed", payload);
 }
 
-async fn get_status_payload(shield: &StealthState) -> serde_json::Value {
+async fn get_status_payload(shield: &ShieldState) -> serde_json::Value {
     let status = shield.status.lock().await;
     match &*status {
-        StealthStatus::Disabled => serde_json::json!({
+        ShieldStatus::Disabled => serde_json::json!({
             "status": "disabled",
             "enabled": false,
         }),
-        StealthStatus::Bootstrapping { progress } => serde_json::json!({
+        ShieldStatus::Bootstrapping { progress } => serde_json::json!({
             "status": "bootstrapping",
             "enabled": false,
             "bootstrapProgress": progress,
         }),
-        StealthStatus::Active => serde_json::json!({
+        ShieldStatus::Active => serde_json::json!({
             "status": "active",
             "enabled": true,
         }),
-        StealthStatus::Error { message } => serde_json::json!({
+        ShieldStatus::Error { message } => serde_json::json!({
             "status": "error",
             "enabled": false,
             "message": message,
         }),
-        StealthStatus::Interrupted => serde_json::json!({
+        ShieldStatus::Interrupted => serde_json::json!({
             "status": "interrupted",
             "enabled": false,
             "message": "Tor proxy stopped unexpectedly. Node stopped to prevent clearnet exposure.",

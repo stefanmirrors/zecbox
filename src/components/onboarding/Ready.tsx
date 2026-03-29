@@ -1,5 +1,4 @@
 import { useState } from "react";
-import type { PrivacyMode } from "../../lib/types";
 import { completeOnboarding } from "../../lib/tauri";
 
 interface ModeSummary {
@@ -8,7 +7,7 @@ interface ModeSummary {
   details: string[];
 }
 
-const modeSummaries: Record<PrivacyMode, ModeSummary> = {
+const modeSummaries: Record<string, ModeSummary> = {
   standard: {
     title: "Standard Node",
     description: "Your node connects directly to the Zcash network with no privacy features enabled.",
@@ -18,47 +17,26 @@ const modeSummaries: Record<PrivacyMode, ModeSummary> = {
       "No extra infrastructure or cost required",
     ],
   },
-  stealth: {
-    title: "Stealth Node",
-    description: "All your node's traffic will be routed through the Tor network. Your IP address is hidden from every peer.",
-    details: [
-      "Outbound traffic routed through Tor — your IP is invisible",
-      "Your ISP cannot see you are running a Zcash node",
-      "Cannot accept incoming connections from other nodes",
-      "Initial sync will be slower due to Tor overhead",
-    ],
-  },
-  proxy: {
-    title: "Proxy Node",
-    description: "A lightweight relay on your VPS will accept connections on behalf of your node. The network sees your VPS IP, never your home IP.",
-    details: [
-      "Full network participation — accept incoming peer connections",
-      "Other nodes see your VPS IP, not your home IP",
-      "You help decentralize the Zcash network while staying private",
-      "Outbound connections still use your home IP",
-      "Proxy setup continues after onboarding — you'll need your VPS IP",
-    ],
-  },
   shield: {
     title: "Shielded Node",
-    description: "Maximum protection. Outbound traffic goes through Tor, inbound connections arrive through your VPS relay. Your home IP is never visible to any peer in either direction.",
+    description: "All traffic routed through Tor. Your node accepts incoming connections via a .onion hidden service — full network participation with complete IP privacy.",
     details: [
-      "Complete IP privacy — hidden in both directions",
-      "Full network participation through your VPS relay",
-      "Outbound through Tor, inbound through WireGuard tunnel",
+      "Your IP is hidden from all peers and your ISP",
+      "Accept incoming connections via .onion address",
+      "Full network participation while staying private",
+      "No VPS or extra cost — uses the Tor network directly",
       "Initial sync will be slower due to Tor overhead",
-      "Proxy setup continues after onboarding — you'll need your VPS IP",
     ],
   },
 };
 
 interface Props {
   selectedPath: string;
-  privacyMode: PrivacyMode;
+  shieldMode: boolean;
   onComplete: () => void;
 }
 
-export function Ready({ selectedPath, privacyMode, onComplete }: Props) {
+export function Ready({ selectedPath, shieldMode, onComplete }: Props) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -66,7 +44,7 @@ export function Ready({ selectedPath, privacyMode, onComplete }: Props) {
     setLoading(true);
     setError(null);
     try {
-      await completeOnboarding(selectedPath, privacyMode);
+      await completeOnboarding(selectedPath, shieldMode);
       onComplete();
     } catch (e) {
       setError(typeof e === "string" ? e : "Failed to start node. Please try again.");
@@ -74,8 +52,7 @@ export function Ready({ selectedPath, privacyMode, onComplete }: Props) {
     }
   };
 
-  const summary = modeSummaries[privacyMode];
-  const isPrivate = privacyMode !== "standard";
+  const summary = modeSummaries[shieldMode ? "shield" : "standard"];
 
   return (
     <div className="flex min-h-[90vh] items-center justify-center px-6">
@@ -123,8 +100,8 @@ export function Ready({ selectedPath, privacyMode, onComplete }: Props) {
           }`}
         >
           {loading
-            ? isPrivate ? "Starting private node..." : "Starting..."
-            : isPrivate ? "Start Private Node" : "Start Node"}
+            ? shieldMode ? "Starting shielded node..." : "Starting..."
+            : shieldMode ? "Start Shielded Node" : "Start Node"}
         </button>
       </div>
     </div>

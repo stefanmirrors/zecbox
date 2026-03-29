@@ -1,17 +1,17 @@
 import { useCallback, useEffect, useState } from "react";
 import { listen } from "@tauri-apps/api/event";
-import type { StealthStatusInfo } from "../lib/types";
+import type { ShieldStatusInfo } from "../lib/types";
 import {
-  getStealthStatus,
-  enableStealthMode,
-  disableStealthMode,
+  getShieldStatus,
+  enableShieldMode,
+  disableShieldMode,
   isFirewallHelperInstalled,
   installFirewallHelper,
-  isStealthSupported,
+  isShieldSupported,
 } from "../lib/tauri";
 
-export function useStealthMode() {
-  const [status, setStatus] = useState<StealthStatusInfo>({
+export function useShieldMode() {
+  const [status, setStatus] = useState<ShieldStatusInfo>({
     enabled: false,
     status: "disabled",
   });
@@ -22,11 +22,11 @@ export function useStealthMode() {
   const [platformSupported, setPlatformSupported] = useState<boolean | null>(null);
 
   useEffect(() => {
-    isStealthSupported()
+    isShieldSupported()
       .then(setPlatformSupported)
       .catch(() => setPlatformSupported(false));
 
-    getStealthStatus()
+    getShieldStatus()
       .then(setStatus)
       .catch((e) => setError(String(e)));
 
@@ -34,7 +34,7 @@ export function useStealthMode() {
       .then(setHelperInstalled)
       .catch(() => setHelperInstalled(false));
 
-    const unlisten = listen<StealthStatusInfo>("stealth_status_changed", (event) => {
+    const unlisten = listen<ShieldStatusInfo>("shield_status_changed", (event) => {
       setStatus(event.payload);
       if (
         event.payload.status === "active" ||
@@ -44,11 +44,11 @@ export function useStealthMode() {
       }
       if (event.payload.status === "error" || event.payload.status === "interrupted") {
         setToggling(false);
-        setError(event.payload.message ?? "Stealth Mode error");
+        setError(event.payload.message ?? "Shield Mode error");
       }
     });
 
-    const unlistenInterrupt = listen<string>("stealth_interrupted", (event) => {
+    const unlistenInterrupt = listen<string>("shield_interrupted", (event) => {
       setError(event.payload);
       setToggling(false);
     });
@@ -77,9 +77,9 @@ export function useStealthMode() {
     setError(null);
     try {
       if (status.enabled) {
-        await disableStealthMode();
+        await disableShieldMode();
       } else {
-        await enableStealthMode();
+        await enableShieldMode();
       }
     } catch (e) {
       const errMsg = String(e);
@@ -88,7 +88,7 @@ export function useStealthMode() {
       }
       setError(errMsg);
       setToggling(false);
-      getStealthStatus().then(setStatus).catch(() => {});
+      getShieldStatus().then(setStatus).catch(() => {});
     }
   }, [status.enabled]);
 

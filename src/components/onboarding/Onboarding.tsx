@@ -1,13 +1,12 @@
 import { useState } from "react";
-import type { PrivacyMode } from "../../lib/types";
 import { Welcome } from "./Welcome";
 import { StorageSelect } from "./StorageSelect";
 import { ShieldSelect } from "./ShieldSelect";
 import { Ready } from "./Ready";
 
-type Step = "welcome" | "storage" | "privacy" | "ready";
+type Step = "welcome" | "storage" | "shield" | "ready";
 
-const steps: Step[] = ["welcome", "storage", "privacy", "ready"];
+const steps: Step[] = ["welcome", "storage", "shield", "ready"];
 
 interface Props {
   onComplete: () => void;
@@ -16,15 +15,15 @@ interface Props {
 export function Onboarding({ onComplete }: Props) {
   const [step, setStep] = useState<Step>("welcome");
   const [selectedPath, setSelectedPath] = useState<string>("");
-  const [privacyMode, setPrivacyMode] = useState<PrivacyMode>("standard");
+  const [shieldMode, setShieldMode] = useState(false);
 
   const handleStorageSelect = (path: string) => {
     setSelectedPath(path);
-    setStep("privacy");
+    setStep("shield");
   };
 
-  const handlePrivacySelect = (mode: PrivacyMode) => {
-    setPrivacyMode(mode);
+  const handleShieldSelect = (shield: boolean) => {
+    setShieldMode(shield);
     setStep("ready");
   };
 
@@ -60,11 +59,11 @@ export function Onboarding({ onComplete }: Props) {
         {step === "storage" && (
           <StorageSelect onSelect={handleStorageSelect} />
         )}
-        {step === "privacy" && (
-          <ShieldSelect onSelect={handlePrivacySelect} />
+        {step === "shield" && (
+          <ShieldSelect onSelect={handleShieldSelect} />
         )}
         {step === "ready" && (
-          <Ready selectedPath={selectedPath} privacyMode={privacyMode} onComplete={onComplete} />
+          <Ready selectedPath={selectedPath} shieldMode={shieldMode} onComplete={onComplete} />
         )}
       </div>
 

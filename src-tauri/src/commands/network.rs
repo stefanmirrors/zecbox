@@ -2,7 +2,7 @@ use tauri::{AppHandle, Emitter, State};
 
 use crate::config::app_config::AppConfig;
 use crate::network;
-use crate::state::{AppState, NetworkServeStatus, NodeStatus, ProxyStatus, StealthStatus};
+use crate::state::{AppState, NetworkServeStatus, NodeStatus, ShieldStatus};
 
 #[derive(Clone, serde::Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -95,19 +95,11 @@ pub async fn enable_network_serve(
     app_handle: AppHandle,
     state: State<'_, AppState>,
 ) -> Result<(), String> {
-    // Check Stealth Mode not active
+    // Check Shield Mode not active
     {
-        let stealth = state.stealth.status.lock().await;
-        if matches!(*stealth, StealthStatus::Active | StealthStatus::Bootstrapping { .. }) {
-            return Err("Disable Stealth Mode first. Accepting inbound connections is not possible while routing through Tor.".into());
-        }
-    }
-
-    // Check Proxy Mode not active (mutually exclusive)
-    {
-        let proxy = state.proxy.status.lock().await;
-        if matches!(*proxy, ProxyStatus::Active { .. } | ProxyStatus::Connecting) {
-            return Err("Disable Proxy Mode first. Network Serve and Proxy Mode are mutually exclusive — both accept inbound connections through different mechanisms.".into());
+        let shield = state.shield.status.lock().await;
+        if matches!(*shield, ShieldStatus::Active | ShieldStatus::Bootstrapping { .. }) {
+            return Err("Disable Shield Mode first. Accepting inbound connections is not possible while routing through Tor.".into());
         }
     }
 

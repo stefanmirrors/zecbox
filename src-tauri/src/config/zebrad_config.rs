@@ -2,13 +2,13 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 /// Generate the contents of zebrad.toml for the given data directory.
-/// When `stealth_mode` is true, restricts listen to localhost.
-/// When `proxy_vps_ip` is set, adds external_addr so peers see the VPS IP.
-pub fn generate_zebrad_toml(data_dir: &Path, stealth_mode: bool, proxy_vps_ip: Option<&str>) -> String {
+/// When `shield_mode` is true, restricts listen to localhost.
+/// When `onion_address` is set, adds external_addr so peers see the .onion address.
+pub fn generate_zebrad_toml(data_dir: &Path, shield_mode: bool, onion_address: Option<&str>) -> String {
     let cache_dir = data_dir.join("zebra");
 
     // DNS seeders for peer discovery — zebrad needs these to find the network.
-    // In Stealth Mode, PF firewall transparently routes connections through Tor,
+    // In Shield Mode, PF firewall transparently routes connections through Tor,
     // so zebrad uses the same seeders but traffic goes through the SOCKS proxy.
     let dns_seeders = r#"initial_mainnet_peers = [
     "dnsseed.z.cash:8233",
@@ -17,14 +17,21 @@ pub fn generate_zebrad_toml(data_dir: &Path, stealth_mode: bool, proxy_vps_ip: O
     "mainnet.is.yolo.money:8233",
 ]"#;
 
-    let listen_addr = if stealth_mode {
+    let listen_addr = if shield_mode {
         "127.0.0.1:8233"
     } else {
         "0.0.0.0:8233"
     };
 
-    let external_addr_line = match proxy_vps_ip {
-        Some(ip) => format!("\nexternal_addr = \"{}:8233\"", ip),
+    let external_addr_line = match onion_address {
+        Some(addr) => {
+            // .onion addresses already include the port context; add :8233 if not present
+            if addr.contains(':') {
+                format!("\nexternal_addr = \"{}\"", addr)
+            } else {
+                format!("\nexternal_addr = \"{}:8233\"", addr)
+            }
+        }
         None => String::new(),
     };
 
@@ -58,8 +65,8 @@ cache_dir = "{cache_dir}"
 /// Returns the path to the written config file.
 pub fn write_zebrad_config(
     data_dir: &Path,
-    stealth_mode: bool,
-    proxy_vps_ip: Option<&str>,
+    shield_mode: bool,
+    onion_address: Option<&str>,
 ) -> Result<PathBuf, std::io::Error> {
     let config_dir = data_dir.join("config");
     fs::create_dir_all(&config_dir)?;
@@ -68,7 +75,7 @@ pub fn write_zebrad_config(
     fs::create_dir_all(data_dir.join("zaino"))?;
 
     let config_path = config_dir.join("zebrad.toml");
-    let contents = generate_zebrad_toml(data_dir, stealth_mode, proxy_vps_ip);
+    let contents = generate_zebrad_toml(data_dir, shield_mode, onion_address);
     fs::write(&config_path, contents)?;
 
     Ok(config_path)
