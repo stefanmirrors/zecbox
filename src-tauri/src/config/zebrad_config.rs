@@ -21,6 +21,7 @@ initial_mainnet_peers = []
 
 [rpc]
 listen_addr = "127.0.0.1:8232"
+enable_cookie_auth = false
 
 [state]
 cache_dir = "{cache_dir}"
@@ -41,6 +42,7 @@ listen_addr = "0.0.0.0:8233"
 
 [rpc]
 listen_addr = "127.0.0.1:8232"
+enable_cookie_auth = false
 
 [state]
 cache_dir = "{cache_dir}"
