@@ -118,7 +118,7 @@ export function NodeStatus() {
           isStarting={isStarting}
           isSyncing={isSyncing}
           message={ns.message}
-
+          progress={ns.progress}
           syncPercentage={ns.syncPercentage}
           blockHeight={ns.blockHeight}
           estimatedHeight={ns.estimatedHeight}
@@ -248,6 +248,7 @@ function UnifiedProgress({
   isStarting,
   isSyncing,
   message,
+  progress,
   syncPercentage,
   blockHeight,
   estimatedHeight,
@@ -255,6 +256,7 @@ function UnifiedProgress({
   isStarting: boolean;
   isSyncing: boolean;
   message?: string;
+  progress?: number;
   syncPercentage?: number;
   blockHeight?: number;
   estimatedHeight?: number;
@@ -264,20 +266,43 @@ function UnifiedProgress({
   if (rawStep > highestStep) setHighestStep(rawStep);
   const currentStep = highestStep;
 
-  // Unified 0-100%: startup = 0-5%, sync = 5-100%
+  // Monotonic guard — progress bar never goes backwards
+  const highestProgress = useRef(0);
+
+  // Has verification started? (checkpoint progress available)
+  const verifying = isStarting && progress != null && progress > 0;
+
+  // Unified 0-100%: quick startup steps = 0-5%, blockchain work = 5-100%
   let totalProgress: number;
   let statusText: string;
 
-  if (isStarting) {
+  if (isStarting && !verifying) {
+    // Quick startup steps: 0-5%
     totalProgress = (currentStep / STARTUP_STEPS.length) * 5;
     statusText = message || "Initializing node...";
+  } else if (verifying && progress != null) {
+    // Verification phase (before RPC): 5-100% from checkpoint progress
+    totalProgress = 5 + (progress * 0.95);
+    statusText = progress >= 99
+      ? "Almost ready..."
+      : message || "Verifying blockchain history";
   } else if (isSyncing && syncPercentage != null) {
+    // Syncing phase (RPC live): 5-100% from RPC sync percentage
     totalProgress = 5 + (syncPercentage * 0.95);
-    statusText = `Downloading and verifying every Zcash transaction since 2016`;
+    statusText = "Downloading and verifying every Zcash transaction since 2016";
   } else {
     totalProgress = 5;
     statusText = "Starting sync...";
   }
+
+  // Apply monotonic guard
+  if (totalProgress > highestProgress.current) {
+    highestProgress.current = totalProgress;
+  }
+  const displayProgress = highestProgress.current;
+
+  // When verification is active, mark first 4 steps done, keep "Verifying blockchain" as active spinner
+  const checklistStep = verifying ? STARTUP_STEPS.length - 1 : currentStep;
 
   return (
     <div className="space-y-4">
@@ -285,7 +310,7 @@ function UnifiedProgress({
       <div className="space-y-2">
         <div className="flex items-baseline justify-between">
           <span className="text-3xl font-bold text-zec-text tabular-nums">
-            {totalProgress < 5 ? `${totalProgress.toFixed(0)}%` : `${totalProgress.toFixed(1)}%`}
+            {displayProgress < 5 ? `${displayProgress.toFixed(0)}%` : `${displayProgress.toFixed(1)}%`}
           </span>
           {isSyncing && blockHeight != null && estimatedHeight != null && (
             <span className="text-xs text-zec-muted tabular-nums">
@@ -296,18 +321,18 @@ function UnifiedProgress({
         <div className="h-1.5 rounded-full bg-zec-border overflow-hidden">
           <div
             className="h-full rounded-full bg-zec-yellow transition-all duration-700"
-            style={{ width: `${Math.max(totalProgress, 0.5)}%` }}
+            style={{ width: `${Math.max(displayProgress, 0.5)}%` }}
           />
         </div>
         <p className="text-xs text-zec-muted">{statusText}</p>
       </div>
 
-      {/* Step checklist — only during startup */}
+      {/* Step checklist — during startup */}
       {isStarting && (
         <div className="space-y-1.5">
           {STARTUP_STEPS.map((step, i) => {
-            const isDone = i < currentStep;
-            const isActive = i === currentStep;
+            const isDone = i < checklistStep;
+            const isActive = i === checklistStep;
             return (
               <div key={step.key} className="flex items-center gap-2.5">
                 {isDone ? (
