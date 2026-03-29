@@ -25,7 +25,7 @@ listen_addr = "127.0.0.1:8232"
 [state]
 cache_dir = "{cache_dir}"
 "#,
-            cache_dir = cache_dir.display()
+            cache_dir = super::toml_path(&cache_dir)
         )
     } else {
         format!(
@@ -45,7 +45,7 @@ listen_addr = "127.0.0.1:8232"
 [state]
 cache_dir = "{cache_dir}"
 "#,
-            cache_dir = cache_dir.display()
+            cache_dir = super::toml_path(&cache_dir)
         )
     }
 }
