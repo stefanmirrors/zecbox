@@ -8,6 +8,19 @@ try {
   }
 } catch {}
 
+const downloads = {
+  macos: {
+    arm: { url: "https://github.com/stefanmirrors/zecbox/releases/latest/download/zecbox-macos-aarch64.dmg", label: "Download for macOS", arch: "Apple Silicon (M1–M4)" },
+    intel: { url: "https://github.com/stefanmirrors/zecbox/releases/latest/download/zecbox-macos-x86_64.dmg", label: "Download for macOS", arch: "Intel" },
+  },
+  linux: {
+    x86_64: { url: "https://github.com/stefanmirrors/zecbox/releases/latest/download/zecbox-linux-x86_64.AppImage", label: "Download for Linux", arch: "Intel/AMD (x86_64)" },
+    arm64: { url: "https://github.com/stefanmirrors/zecbox/releases/latest/download/zecbox-linux-aarch64.AppImage", label: "Download for Linux", arch: "ARM (aarch64)" },
+  },
+  windows: {
+    x86_64: { url: "https://github.com/stefanmirrors/zecbox/releases/latest/download/zecbox-windows-x86_64.exe", label: "Download for Windows", arch: "Intel/AMD (x86_64)" },
+  },
+};
 ---
 
 <section class="px-4 sm:px-6 pt-6 sm:pt-10 pb-8 sm:pb-12">
@@ -15,6 +28,26 @@ try {
     <div class="text-center mb-8">
       <h2 class="text-3xl sm:text-4xl font-black text-zec-text mb-2" style="font-family: 'Montserrat', sans-serif;">Downloads</h2>
       <p class="text-zec-muted">v{version} · ~300 GB disk space required for the full blockchain</p>
+    </div>
+
+    <!-- Download data for client-side detection -->
+    <script id="download-data" type="application/json" set:html={JSON.stringify(downloads)} />
+
+    <!-- Auto-detected primary download (hidden until JS detects platform) -->
+    <div id="detected-download" class="hidden max-w-sm mx-auto text-center mb-8">
+      <p class="text-[11px] font-semibold uppercase tracking-wider text-zec-yellow mb-3">Auto-detected</p>
+
+      <a id="detected-download-btn"
+        href="#"
+        target="_blank"
+        rel="noopener noreferrer"
+        class="inline-flex items-center justify-center gap-2.5 px-8 py-3.5 rounded-lg bg-zec-yellow text-zec-dark font-bold text-base hover:brightness-110 transition-all no-underline"
+      >
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+        <span id="detected-btn-text"></span>
+      </a>
+
+      <p id="detected-arch-label" class="text-xs text-zec-muted mt-2"></p>
     </div>
 
     <!-- All downloads grid (always visible) -->
@@ -267,34 +300,99 @@ try {
         </ol>
         <p class="mt-4 text-xs text-zec-muted">Windows may show a SmartScreen warning for unsigned apps. Code signing is coming soon.</p>
       </div>
+
+      <div id="show-all-instructions" class="hidden mt-5">
+        <button type="button" class="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border border-zec-border hover:border-zec-muted text-xs text-zec-muted hover:text-zec-text transition-all cursor-pointer bg-transparent">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+          <span>Show instructions for all platforms</span>
+        </button>
+      </div>
     </div>
 
     <script>
-      // Platform detection — highlight the detected platform card with a badge
+      // Platform detection — show primary download button + highlight detected card
       (function () {
+        const data = JSON.parse(document.getElementById('download-data')?.textContent || '{}');
         const ua = navigator.userAgent;
         const platform = (navigator.platform || '').trim();
+        const uaData = (navigator as any).userAgentData;
 
         if (/Android|iPhone|iPad|iPod|Mobile/i.test(ua)) return;
 
         let os = 'unknown';
+        let arch = 'unknown';
+
         if (ua.includes('Mac OS X') || platform.startsWith('Mac')) {
           os = 'macos';
+          arch = uaData?.architecture === 'x86' ? 'intel' : 'arm';
         } else if (ua.includes('CrOS') || (ua.includes('Linux') && !ua.includes('Android'))) {
           os = 'linux';
+          const isArm = uaData?.architecture === 'arm' || /aarch64|armv[78]l/i.test(platform) || /aarch64|armv[78]l/i.test(ua);
+          arch = isArm ? 'arm64' : 'x86_64';
         } else if (ua.includes('Windows')) {
           os = 'windows';
+          arch = 'x86_64';
         }
 
         if (os === 'unknown') return;
 
-        // Show "Detected" badge on the matching platform card and highlight its border
+        // Resolve download info
+        let dl: { url: string; label: string; arch: string } | undefined;
+        if (os === 'macos') dl = arch === 'intel' ? data.macos?.intel : data.macos?.arm;
+        else if (os === 'linux') dl = arch === 'arm64' ? data.linux?.arm64 : data.linux?.x86_64;
+        else if (os === 'windows') dl = data.windows?.x86_64;
+
+        if (!dl) return;
+
+        // Show auto-detected download button
+        const primary = document.getElementById('detected-download');
+        const btn = document.getElementById('detected-download-btn') as HTMLAnchorElement;
+        const btnText = document.getElementById('detected-btn-text');
+        const archLabel = document.getElementById('detected-arch-label');
+        if (primary && btn && btnText) {
+          btn.href = dl.url;
+          btnText.textContent = dl.label;
+          if (archLabel) archLabel.textContent = dl.arch;
+          primary.classList.remove('hidden');
+        }
+
+        // Highlight detected platform card with badge + border
         const card = document.querySelector(`[data-platform-card="${os}"]`) as HTMLElement;
         if (card) {
           const badge = card.querySelector('[data-detected-badge]') as HTMLElement;
           if (badge) badge.classList.remove('hidden');
           card.classList.remove('border-zec-border');
           card.classList.add('border-zec-yellow/40');
+        }
+
+        // Show only the detected platform's post-install instructions
+        const showPlatforms = os === 'macos' ? ['macos'] : os === 'linux' ? ['linux-appimage'] : ['windows'];
+        document.querySelectorAll<HTMLElement>('[data-platform]').forEach(el => {
+          if (!showPlatforms.includes(el.dataset.platform!)) el.classList.add('hidden');
+        });
+        document.querySelectorAll<HTMLElement>('[data-platform-divider]').forEach(el => el.classList.add('hidden'));
+
+        // Show the "all platforms" toggle and wire it up
+        const toggleWrap = document.getElementById('show-all-instructions');
+        if (toggleWrap) {
+          toggleWrap.classList.remove('hidden');
+          let expanded = false;
+          const toggleBtn = toggleWrap.querySelector('button')!;
+          const btnLabel = toggleBtn.querySelector('span')!;
+          toggleBtn.addEventListener('click', () => {
+            expanded = !expanded;
+            if (expanded) {
+              document.querySelectorAll<HTMLElement>('[data-platform]').forEach(el => el.classList.remove('hidden'));
+              document.querySelectorAll<HTMLElement>('[data-platform-divider]').forEach(el => el.classList.remove('hidden'));
+              btnLabel.textContent = 'Show only my platform';
+            } else {
+              document.querySelectorAll<HTMLElement>('[data-platform]').forEach(el => {
+                if (!showPlatforms.includes(el.dataset.platform!)) el.classList.add('hidden');
+              });
+              document.querySelectorAll<HTMLElement>('[data-platform-divider]').forEach(el => el.classList.add('hidden'));
+              btnLabel.textContent = 'Show instructions for all platforms';
+            }
+          });
         }
       })();
 
