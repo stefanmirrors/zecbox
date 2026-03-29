@@ -137,12 +137,7 @@ async fn main() {
         eprintln!("INFO init: zebra_consensus::router: starting state checkpoint validation");
         sleep(Duration::from_secs(3)).await;
 
-        // Stage 6: RPC ready
-        eprintln!("INFO zebra_rpc::server: Opened RPC endpoint at 127.0.0.1:8232");
-        RPC_READY.store(true, Ordering::Relaxed);
-        sleep(Duration::from_secs(1)).await;
-
-        // Stage 7: Checkpoints (simulate with rising block heights)
+        // Stage 6: Checkpoint verification (happens BEFORE RPC is available)
         let checkpoints = [1200, 12000, 96000, 384000, 900000, 1600000, 2400000, 3000000, 3200000];
         for &height in &checkpoints {
             BLOCK_HEIGHT.store(height, Ordering::Relaxed);
@@ -158,9 +153,11 @@ async fn main() {
             sleep(Duration::from_secs(3)).await;
         }
 
-        // Stage 8: Fully synced
+        // Stage 7: Fully synced + RPC ready
         BLOCK_HEIGHT.store(3_300_000, Ordering::Relaxed);
         eprintln!("INFO zebrad::components::sync::progress: estimated progress to chain tip sync_percent=100.000% current_height=Height(3300000) remaining_sync_blocks=0");
+        eprintln!("INFO zebra_rpc::server: Opened RPC endpoint at 127.0.0.1:8232");
+        RPC_READY.store(true, Ordering::Relaxed);
 
         // Keep incrementing slowly like a synced node
         loop {

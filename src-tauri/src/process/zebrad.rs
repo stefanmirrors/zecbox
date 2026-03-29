@@ -362,29 +362,27 @@ async fn read_log_stream<R: tokio::io::AsyncRead + Unpin>(
         // Emit to frontend
         let _ = app_handle.emit("log_line", &formatted);
 
-        // Parse real status from zebrad output and update Starting message
+        // Parse real status from zebrad output and update Starting message.
+        // Only update if status is still Starting (health monitor may have set Running).
         {
-            let status = node.status.lock().await;
-            if matches!(*status, NodeStatus::Starting { .. }) {
-                drop(status);
+            let is_starting = matches!(*node.status.lock().await, NodeStatus::Starting { .. });
+            if is_starting {
                 if let Some(info) = parse_startup_message(&line) {
-                    // If message is empty (progress-only update), keep the previous message
-                    let message = if info.message.is_empty() {
-                        let status = node.status.lock().await;
-                        if let NodeStatus::Starting { ref message, .. } = *status {
+                    // Re-acquire lock and re-check before writing (avoids TOCTOU race
+                    // where health monitor sets Running between our check and write).
+                    let mut status = node.status.lock().await;
+                    if let NodeStatus::Starting { ref message, .. } = *status {
+                        // If message is empty (progress-only update), keep previous message
+                        let new_message = if info.message.is_empty() {
                             message.clone()
                         } else {
                             Some(info.message)
-                        }
-                    } else {
-                        Some(info.message)
-                    };
-                    let new_status = NodeStatus::Starting { message, progress: info.progress };
-                    {
-                        let mut status = node.status.lock().await;
+                        };
+                        let new_status = NodeStatus::Starting { message: new_message, progress: info.progress };
                         *status = new_status.clone();
+                        drop(status);
+                        let _ = app_handle.emit("node_status_changed", &new_status);
                     }
-                    let _ = app_handle.emit("node_status_changed", &new_status);
                 }
             }
         }
