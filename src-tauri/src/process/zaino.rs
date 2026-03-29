@@ -4,6 +4,8 @@ use std::process::Stdio;
 use std::sync::Arc;
 use std::time::Duration;
 
+#[cfg(windows)]
+use std::os::windows::process::CommandExt;
 use tauri::{AppHandle, Emitter, Manager};
 use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::task::JoinHandle;
@@ -60,15 +62,19 @@ pub async fn start_zaino(
         return Err(msg);
     }
 
-    let mut child = tokio::process::Command::new(&binary_path)
-        .arg("--config")
+    let mut cmd = tokio::process::Command::new(&binary_path);
+    cmd.arg("--config")
         .arg(&config_path)
         .arg("--grpc-port")
         .arg(GRPC_PORT.to_string())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
-        .kill_on_drop(false)
-        .spawn()
+        .kill_on_drop(false);
+
+    #[cfg(windows)]
+    cmd.creation_flags(0x08000000); // CREATE_NO_WINDOW
+
+    let mut child = cmd.spawn()
         .map_err(|e| format!("Failed to spawn Zaino: {}", e))?;
 
     // Write PID file
