@@ -80,7 +80,7 @@ if [ ! -f "$ARTI_PATH" ]; then
         if [ ! -d "$ARTI_REPO" ]; then
             git clone --depth 1 https://gitlab.torproject.org/tpo/core/arti.git "$ARTI_REPO"
         fi
-        cargo build --release --manifest-path "$ARTI_REPO/Cargo.toml" -p arti $CROSS_ARGS
+        cargo build --release --manifest-path "$ARTI_REPO/Cargo.toml" -p arti --features onion-service-service $CROSS_ARGS
         cp "$ARTI_REPO/target/$CROSS_DIR/arti${EXE_SUFFIX}" "$ARTI_PATH"
         echo "Real arti installed at $ARTI_PATH"
     else

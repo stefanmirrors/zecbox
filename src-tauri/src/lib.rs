@@ -109,7 +109,7 @@ pub fn run() {
                 let managed_state = app.state::<AppState>();
                 let shield_arc = managed_state.shield.clone();
                 let restore_handle = app.handle().clone();
-                tokio::spawn(async move {
+                tauri::async_runtime::spawn(async move {
                     log::info!("Restoring Shield Mode from saved config");
                     if let Err(e) = tor::start_arti(restore_handle.clone(), &shield_arc).await {
                         log::error!("Failed to restore Shield Mode Arti: {}", e);

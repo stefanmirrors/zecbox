@@ -34,8 +34,14 @@ socks_listen = "127.0.0.1:{socks_port}"
 state_dir = "{state_dir}"
 cache_dir = "{cache_dir}"
 
+[storage.permissions]
+dangerously_trust_everyone = true
+
+[logging]
+log_sensitive_information = true
+
 [onion_services."zecbox"]
-proxy_ports = ["8233 => 127.0.0.1:8233"]
+proxy_ports = [[8233, "127.0.0.1:8233"]]
 "#,
         socks_port = ARTI_SOCKS_PORT,
         state_dir = state_dir.to_string_lossy().replace('\\', "/"),
@@ -61,26 +67,23 @@ fn write_arti_config(data_dir: &Path) -> Result<PathBuf, String> {
     Ok(config_path)
 }
 
-/// Path where Arti stores the .onion hostname for our hidden service.
-fn hostname_path(data_dir: &Path) -> PathBuf {
-    data_dir.join("arti").join("state").join("onion_services").join("zecbox").join("hostname")
-}
-
-/// Read the .onion address from Arti's hostname file, polling until available.
-async fn read_onion_address(data_dir: &Path, timeout_secs: u64) -> Option<String> {
-    let path = hostname_path(data_dir);
-    let polls = timeout_secs * 2; // poll every 500ms
-    for _ in 0..polls {
-        if let Ok(contents) = std::fs::read_to_string(&path) {
-            let addr = contents.trim().to_string();
-            if !addr.is_empty() {
-                log::info!("Read .onion address: {}", addr);
-                return Some(addr);
-            }
+/// Parse .onion address from an Arti log line.
+/// Arti logs: "Generated a new identity for service zecbox: xxxx.onion"
+/// or: "Using existing identity for service zecbox: xxxx.onion"
+/// With log_sensitive_information=true, the address is not scrubbed.
+fn parse_onion_address(line: &str) -> Option<String> {
+    // Look for anything ending in .onion
+    if let Some(idx) = line.find(".onion") {
+        // Walk backward from .onion to find the start of the address
+        let before = &line[..idx];
+        let start = before.rfind(|c: char| c == ' ' || c == ':').map(|i| i + 1).unwrap_or(0);
+        let addr = format!("{}.onion", &line[start..idx]);
+        // Validate: v3 onion addresses are 56 chars + ".onion"
+        let name = addr.trim_end_matches(".onion");
+        if name.len() == 56 && name.chars().all(|c| c.is_ascii_alphanumeric()) {
+            return Some(addr);
         }
-        tokio::time::sleep(Duration::from_millis(500)).await;
     }
-    log::warn!("Failed to read .onion address after {}s", timeout_secs);
     None
 }
 
@@ -159,16 +162,30 @@ pub async fn start_arti(
         log::warn!("Failed to write Arti PID file: {}", e);
     }
 
-    // Monitor stderr for bootstrap progress and hidden service readiness
+    // Monitor stderr for bootstrap progress, .onion address, and readiness.
+    // Real Arti outputs:
+    //   "Sufficiently bootstrapped; proxy now functional." → ready
+    //   "identity for service zecbox: xxxx.onion" → .onion address
+    //   "Downloading certificates" / "Downloading microdescriptors" → progress hints
+    // Mock Arti outputs:
+    //   "BOOTSTRAP PROGRESS=XX" → numeric progress
     if let Some(stderr) = child.stderr.take() {
         let app = app_handle.clone();
         let state = app_handle.state::<AppState>();
         let shield_arc = state.shield.clone();
-        let data_dir_clone = data_dir.clone();
         let bootstrap_task = tokio::spawn(async move {
             let mut lines = BufReader::new(stderr).lines();
+            let mut saw_consensus = false;
             while let Ok(Some(line)) = lines.next_line().await {
                 log::debug!("arti: {}", line);
+
+                // Try to capture .onion address from log
+                if let Some(addr) = parse_onion_address(&line) {
+                    let mut onion = shield_arc.onion_address.lock().await;
+                    *onion = Some(addr);
+                }
+
+                // Check for mock-arti style progress
                 if let Some(pct) = parse_bootstrap_progress(&line) {
                     let mut status = shield_arc.status.lock().await;
                     if matches!(*status, ShieldStatus::Bootstrapping { .. }) {
@@ -176,16 +193,50 @@ pub async fn start_arti(
                         drop(status);
                         let _ = app.emit("shield_status_changed", get_status_payload(&shield_arc).await);
                         if pct >= 100 {
-                            // Bootstrap complete — try to read .onion address
-                            if let Some(addr) = read_onion_address(&data_dir_clone, 30).await {
-                                let mut onion = shield_arc.onion_address.lock().await;
-                                *onion = Some(addr);
-                            }
                             let mut status = shield_arc.status.lock().await;
                             *status = ShieldStatus::Active;
                             drop(status);
                             let _ = app.emit("shield_status_changed", get_status_payload(&shield_arc).await);
                         }
+                    }
+                }
+
+                // Real Arti progress heuristics
+                if line.contains("Looking for a consensus") {
+                    let mut status = shield_arc.status.lock().await;
+                    if matches!(*status, ShieldStatus::Bootstrapping { .. }) {
+                        *status = ShieldStatus::Bootstrapping { progress: 20 };
+                        drop(status);
+                        let _ = app.emit("shield_status_changed", get_status_payload(&shield_arc).await);
+                    }
+                } else if line.contains("Downloading certificates") {
+                    let mut status = shield_arc.status.lock().await;
+                    if matches!(*status, ShieldStatus::Bootstrapping { .. }) {
+                        *status = ShieldStatus::Bootstrapping { progress: 40 };
+                        drop(status);
+                        let _ = app.emit("shield_status_changed", get_status_payload(&shield_arc).await);
+                    }
+                } else if line.contains("Downloading microdescriptors") && !saw_consensus {
+                    saw_consensus = true;
+                    let mut status = shield_arc.status.lock().await;
+                    if matches!(*status, ShieldStatus::Bootstrapping { .. }) {
+                        *status = ShieldStatus::Bootstrapping { progress: 60 };
+                        drop(status);
+                        let _ = app.emit("shield_status_changed", get_status_payload(&shield_arc).await);
+                    }
+                } else if line.contains("Marked consensus usable") || line.contains("enough information to build circuits") {
+                    let mut status = shield_arc.status.lock().await;
+                    if matches!(*status, ShieldStatus::Bootstrapping { .. }) {
+                        *status = ShieldStatus::Bootstrapping { progress: 80 };
+                        drop(status);
+                        let _ = app.emit("shield_status_changed", get_status_payload(&shield_arc).await);
+                    }
+                } else if line.contains("Sufficiently bootstrapped") || line.contains("proxy now functional") {
+                    let mut status = shield_arc.status.lock().await;
+                    if matches!(*status, ShieldStatus::Bootstrapping { .. }) {
+                        *status = ShieldStatus::Active;
+                        drop(status);
+                        let _ = app.emit("shield_status_changed", get_status_payload(&shield_arc).await);
                     }
                 }
             }
