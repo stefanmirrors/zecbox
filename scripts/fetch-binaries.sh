@@ -70,15 +70,25 @@ else
 fi
 
 # --- arti ---
-# Arti does not provide pre-built binaries and is complex to build.
-# For v0.1.x, use the mock binary. Shield Mode UI will function but
-# will not route through real Tor until a real arti binary is provided.
+# Set REAL_ARTI=1 for production builds to compile real Arti from source.
+# Default: use mock-arti for development (simulates Tor bootstrap + hidden service).
 ARTI_PATH="$BINARIES_DIR/arti-${TARGET_TRIPLE}${EXE_SUFFIX}"
 if [ ! -f "$ARTI_PATH" ]; then
-    echo "Building mock-arti (real arti planned for future release)..."
-    cargo build -p mock-arti --release --manifest-path "$PROJECT_DIR/Cargo.toml" $CROSS_ARGS
-    cp "$PROJECT_DIR/target/$CROSS_DIR/mock-arti${EXE_SUFFIX}" "$ARTI_PATH"
-    echo "mock-arti installed at $ARTI_PATH"
+    if [ "${REAL_ARTI:-0}" = "1" ]; then
+        echo "Building real Arti from source (this may take several minutes)..."
+        ARTI_REPO="/tmp/arti-build"
+        if [ ! -d "$ARTI_REPO" ]; then
+            git clone --depth 1 https://gitlab.torproject.org/tpo/core/arti.git "$ARTI_REPO"
+        fi
+        cargo build --release --manifest-path "$ARTI_REPO/Cargo.toml" -p arti $CROSS_ARGS
+        cp "$ARTI_REPO/target/$CROSS_DIR/arti${EXE_SUFFIX}" "$ARTI_PATH"
+        echo "Real arti installed at $ARTI_PATH"
+    else
+        echo "Building mock-arti for development..."
+        cargo build -p mock-arti --release --manifest-path "$PROJECT_DIR/Cargo.toml" $CROSS_ARGS
+        cp "$PROJECT_DIR/target/$CROSS_DIR/mock-arti${EXE_SUFFIX}" "$ARTI_PATH"
+        echo "mock-arti installed at $ARTI_PATH (set REAL_ARTI=1 for production)"
+    fi
 else
     echo "Using existing arti at $ARTI_PATH"
 fi

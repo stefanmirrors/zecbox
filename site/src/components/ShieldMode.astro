@@ -1,0 +1,106 @@
+---
+const features = [
+  {
+    title: "Your IP is invisible",
+    description: "All outbound traffic routes through the Tor network. Zcash peers, network observers, and your ISP never see your real IP address.",
+    icon: `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.242 4.242L9.88 9.88" />`,
+  },
+  {
+    title: ".onion hidden service",
+    description: "Your node gets a unique .onion address. Other Zcash nodes connect to you through Tor — full network participation without revealing your location.",
+    icon: `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 21a9.004 9.004 0 008.716-6.747M12 21a9.004 9.004 0 01-8.716-6.747M12 21c2.485 0 4.5-4.03 4.5-9S14.485 3 12 3m0 18c-2.485 0-4.5-4.03-4.5-9S9.515 3 12 3m0 0a8.997 8.997 0 017.843 4.582M12 3a8.997 8.997 0 00-7.843 4.582m15.686 0A11.953 11.953 0 0112 10.5c-2.998 0-5.74-1.1-7.843-2.918m15.686 0A8.959 8.959 0 0121 12c0 .778-.099 1.533-.284 2.253m0 0A17.919 17.919 0 0112 16.5c-3.162 0-6.133-.815-8.716-2.247m0 0A9.015 9.015 0 013 12c0-1.605.42-3.113 1.157-4.418" />`,
+  },
+  {
+    title: "Kill switch",
+    description: "If Tor drops or firewall rules are removed, your node stops immediately. No silent fallback to clearnet. Your privacy is protected even during failures.",
+    icon: `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 9v3.75m0-10.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.75c0 5.592 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.57-.598-3.75h-.152c-3.196 0-6.1-1.249-8.25-3.286zm0 13.036h.008v.008H12v-.008z" />`,
+  },
+  {
+    title: "No VPS. No cost.",
+    description: "Everything runs locally using the Tor network. No server to rent, no account to create, no monthly bill. One toggle in the app — that's it.",
+    icon: `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M2.25 18.75a60.07 60.07 0 0115.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 013 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125H20.25M2.25 6v9m18-10.5v.75c0 .414.336.75.75.75h.75m-1.5-1.5h.375c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-.375m1.5-1.5H21a.75.75 0 00-.75.75v.75m0 0H3.75m0 0h-.375a1.125 1.125 0 01-1.125-1.125V15m1.5 1.5v-.75A.75.75 0 003 15h-.75M15 10.5a3 3 0 11-6 0 3 3 0 016 0zm3 0h.008v.008H18V10.5zm-12 0h.008v.008H6V10.5z" />`,
+  },
+];
+---
+
+<section id="privacy" class="px-6 py-16 sm:py-24 max-w-5xl mx-auto">
+  <!-- Header -->
+  <div class="text-center mb-16">
+    <span class="inline-block text-xs font-semibold uppercase tracking-widest text-zec-yellow mb-4">Privacy</span>
+    <h2 class="text-4xl sm:text-5xl font-black text-zec-text mb-4" style="font-family: 'Montserrat', sans-serif;">
+      Shield Mode
+    </h2>
+    <p class="text-lg text-zec-muted max-w-2xl mx-auto leading-relaxed">
+      Full network participation. Complete IP privacy. No VPS. No cost. One toggle.
+    </p>
+  </div>
+
+  <!-- Architecture diagram -->
+  <div class="mb-16 bg-zec-surface border border-zec-border rounded-2xl p-8 sm:p-10">
+    <div class="flex flex-col items-center gap-3">
+      <!-- Zcash peers -->
+      <div class="text-center">
+        <div class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-zec-border/30 border border-zec-border">
+          <span class="text-sm text-zec-muted">Zcash Network Peers</span>
+        </div>
+      </div>
+
+      <!-- Arrow down -->
+      <div class="flex flex-col items-center gap-1 text-zec-border">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+        </svg>
+        <span class="text-[10px] text-zec-muted">connect to your .onion address</span>
+      </div>
+
+      <!-- Tor network -->
+      <div class="text-center">
+        <div class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-purple-500/10 border border-purple-500/30">
+          <span class="font-semibold text-purple-400">Tor Network</span>
+        </div>
+        <p class="text-[10px] text-zec-muted mt-1.5">encrypted multi-hop relays</p>
+      </div>
+
+      <!-- Arrow down -->
+      <div class="flex flex-col items-center gap-1 text-zec-border">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+        </svg>
+        <span class="text-[10px] text-zec-muted">your IP is never exposed</span>
+      </div>
+
+      <!-- Your node -->
+      <div class="text-center">
+        <div class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-zec-yellow/10 border border-zec-yellow/30">
+          <span class="font-bold text-zec-yellow text-lg">Your Node</span>
+        </div>
+        <p class="text-xs text-zec-muted mt-2">Arti hidden service &middot; zebrad on localhost</p>
+      </div>
+    </div>
+
+    <!-- Arrows showing bidirectional -->
+    <div class="mt-6 pt-6 border-t border-zec-border flex flex-col sm:flex-row justify-center gap-6 sm:gap-12 text-xs text-zec-muted">
+      <div class="flex items-center gap-2">
+        <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+        <span>Outbound: your traffic goes through Tor</span>
+      </div>
+      <div class="flex items-center gap-2">
+        <span class="w-2 h-2 rounded-full bg-purple-400"></span>
+        <span>Inbound: peers connect via your .onion address</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Feature cards -->
+  <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+    {features.map((f) => (
+      <div class="bg-zec-surface border border-zec-border rounded-xl p-6 space-y-3 hover:border-zec-muted/60 transition-colors">
+        <div class="w-10 h-10 rounded-lg bg-zec-yellow/10 flex items-center justify-center">
+          <svg class="w-5 h-5 text-zec-yellow" fill="none" stroke="currentColor" viewBox="0 0 24 24" set:html={f.icon} />
+        </div>
+        <h3 class="text-base font-semibold text-zec-text">{f.title}</h3>
+        <p class="text-sm text-zec-muted leading-relaxed">{f.description}</p>
+      </div>
+    ))}
+  </div>
+</section>

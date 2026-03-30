@@ -11,18 +11,12 @@ interface Props {
 
 type Choice = "standard" | "shield";
 
-const choices: { id: Choice; label: string; tag?: string; oneLiner: string; benefits: string[]; tradeoffs: string[] }[] = [
-  {
-    id: "standard",
-    label: "Standard",
-    oneLiner: "Direct connection, no privacy features",
-    benefits: ["Fastest sync speed", "Simplest setup, no extra cost"],
-    tradeoffs: ["Your home IP is visible to other Zcash nodes"],
-  },
+const choices: { id: Choice; label: string; tag?: string; recommended?: boolean; oneLiner: string; benefits: string[]; tradeoffs: string[] }[] = [
   {
     id: "shield",
     label: "Shield Mode",
     tag: "Tor",
+    recommended: true,
     oneLiner: "Full privacy — hidden IP, full network participation",
     benefits: [
       "Your IP is hidden from all peers and your ISP",
@@ -32,10 +26,17 @@ const choices: { id: Choice; label: string; tag?: string; oneLiner: string; bene
     ],
     tradeoffs: ["Initial sync will be slower due to Tor overhead"],
   },
+  {
+    id: "standard",
+    label: "Standard",
+    oneLiner: "Direct connection, no privacy features",
+    benefits: ["Fastest sync speed", "Simplest setup"],
+    tradeoffs: ["Your home IP is visible to other Zcash nodes", "Cannot accept incoming connections behind NAT"],
+  },
 ];
 
 export function ShieldSelect({ onSelect }: Props) {
-  const [selected, setSelected] = useState<Choice>("standard");
+  const [selected, setSelected] = useState<Choice>("shield");
   const [helperInstalled, setHelperInstalled] = useState<boolean | null>(null);
   const [shieldSupported, setShieldSupported] = useState<boolean | null>(null);
   const [installing, setInstalling] = useState(false);
@@ -102,6 +103,11 @@ export function ShieldSelect({ onSelect }: Props) {
                     {choice.tag && (
                       <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-zec-yellow/10 text-zec-yellow">
                         {choice.tag}
+                      </span>
+                    )}
+                    {choice.recommended && (
+                      <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-400/10 text-emerald-400">
+                        Recommended
                       </span>
                     )}
                     {isDisabled && (

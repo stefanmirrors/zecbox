@@ -30,7 +30,8 @@ pub async fn complete_onboarding(
     config.save(&state.default_data_dir)?;
 
     // If shield mode chosen, start Arti + enable firewall before starting node
-    if shield_mode {
+    // Skip if already active (e.g. restored on startup)
+    if shield_mode && !state.shield.is_active().await {
         tor::start_arti(app_handle.clone(), &state.shield).await?;
 
         tor::firewall::enable_firewall()

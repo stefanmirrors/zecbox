@@ -102,6 +102,25 @@ pub fn run() {
 
             app.manage(app_state);
 
+            // Restore Shield Mode if it was enabled before shutdown/crash
+            // Only restore if onboarding is complete (not during first run)
+            // Runs async so it doesn't block the window from opening
+            if app_config.shield_mode && app_config.first_run_complete {
+                let managed_state = app.state::<AppState>();
+                let shield_arc = managed_state.shield.clone();
+                let restore_handle = app.handle().clone();
+                tokio::spawn(async move {
+                    log::info!("Restoring Shield Mode from saved config");
+                    if let Err(e) = tor::start_arti(restore_handle.clone(), &shield_arc).await {
+                        log::error!("Failed to restore Shield Mode Arti: {}", e);
+                    } else if let Err(e) = tor::firewall::enable_firewall() {
+                        log::error!("Failed to restore Shield Mode firewall: {}", e);
+                    } else {
+                        log::info!("Shield Mode restored successfully");
+                    }
+                });
+            }
+
             // Spawn power monitor (sleep/wake handling)
             {
                 let managed_state = app.state::<AppState>();

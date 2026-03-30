@@ -1,6 +1,6 @@
-//! Arti SOCKS5 proxy lifecycle for Shield Mode.
-//! Manages Arti as a sidecar process, monitors bootstrap and health,
-//! implements kill switch logic (Arti crash while Shield ON → stop zebrad).
+//! Arti Tor proxy + hidden service lifecycle for Shield Mode.
+//! Manages Arti as a sidecar process with SOCKS5 proxy (outbound) and
+//! onion service (inbound). Monitors bootstrap/health, implements kill switch.
 
 pub mod firewall;
 
@@ -21,7 +21,70 @@ use crate::state::{AppState, ShieldState, ShieldStatus};
 const ARTI_SOCKS_PORT: u16 = 9150;
 const HEALTH_CHECK_INTERVAL_SECS: u64 = 3;
 
-/// Start the Arti SOCKS5 proxy sidecar.
+/// Generate arti.toml config with SOCKS5 proxy and hidden service.
+fn generate_arti_config(data_dir: &Path) -> String {
+    let state_dir = data_dir.join("arti").join("state");
+    let cache_dir = data_dir.join("arti").join("cache");
+
+    format!(
+        r#"[proxy]
+socks_listen = "127.0.0.1:{socks_port}"
+
+[storage]
+state_dir = "{state_dir}"
+cache_dir = "{cache_dir}"
+
+[onion_services."zecbox"]
+proxy_ports = ["8233 => 127.0.0.1:8233"]
+"#,
+        socks_port = ARTI_SOCKS_PORT,
+        state_dir = state_dir.to_string_lossy().replace('\\', "/"),
+        cache_dir = cache_dir.to_string_lossy().replace('\\', "/"),
+    )
+}
+
+/// Write arti.toml config file and create necessary directories.
+fn write_arti_config(data_dir: &Path) -> Result<PathBuf, String> {
+    let config_dir = data_dir.join("config");
+    std::fs::create_dir_all(&config_dir)
+        .map_err(|e| format!("Failed to create config dir: {}", e))?;
+    std::fs::create_dir_all(data_dir.join("arti").join("state"))
+        .map_err(|e| format!("Failed to create Arti state dir: {}", e))?;
+    std::fs::create_dir_all(data_dir.join("arti").join("cache"))
+        .map_err(|e| format!("Failed to create Arti cache dir: {}", e))?;
+
+    let config_path = config_dir.join("arti.toml");
+    let contents = generate_arti_config(data_dir);
+    std::fs::write(&config_path, &contents)
+        .map_err(|e| format!("Failed to write arti.toml: {}", e))?;
+
+    Ok(config_path)
+}
+
+/// Path where Arti stores the .onion hostname for our hidden service.
+fn hostname_path(data_dir: &Path) -> PathBuf {
+    data_dir.join("arti").join("state").join("onion_services").join("zecbox").join("hostname")
+}
+
+/// Read the .onion address from Arti's hostname file, polling until available.
+async fn read_onion_address(data_dir: &Path, timeout_secs: u64) -> Option<String> {
+    let path = hostname_path(data_dir);
+    let polls = timeout_secs * 2; // poll every 500ms
+    for _ in 0..polls {
+        if let Ok(contents) = std::fs::read_to_string(&path) {
+            let addr = contents.trim().to_string();
+            if !addr.is_empty() {
+                log::info!("Read .onion address: {}", addr);
+                return Some(addr);
+            }
+        }
+        tokio::time::sleep(Duration::from_millis(500)).await;
+    }
+    log::warn!("Failed to read .onion address after {}s", timeout_secs);
+    None
+}
+
+/// Start the Arti Tor proxy with SOCKS5 + hidden service.
 pub async fn start_arti(
     app_handle: AppHandle,
     shield: &ShieldState,
@@ -44,7 +107,7 @@ pub async fn start_arti(
         let mut status = shield.status.lock().await;
         *status = ShieldStatus::Bootstrapping { progress: 0 };
     }
-    emit_shield_status(&app_handle, &shield).await;
+    emit_shield_status(&app_handle, shield).await;
 
     let binary_path = resolve_arti_binary_path(&app_handle);
     if !binary_path.exists() {
@@ -52,7 +115,7 @@ pub async fn start_arti(
         *status = ShieldStatus::Error {
             message: "Tor proxy binary not found. Try reinstalling zecbox.".into(),
         };
-        emit_shield_status(&app_handle, &shield).await;
+        emit_shield_status(&app_handle, shield).await;
         return Err(format!("Arti binary not found at {:?}", binary_path));
     }
 
@@ -66,9 +129,18 @@ pub async fn start_arti(
         return Err(format!("Port {} is already in use", ARTI_SOCKS_PORT));
     }
 
+    // Generate arti.toml with hidden service config
+    let data_dir = {
+        let state = app_handle.state::<AppState>();
+        let dir = state.node.data_dir.lock().await.clone();
+        dir
+    };
+    let config_path = write_arti_config(&data_dir)?;
+
     let mut cmd = tokio::process::Command::new(&binary_path);
-    cmd.arg("--socks-port")
-        .arg(ARTI_SOCKS_PORT.to_string())
+    cmd.arg("proxy")
+        .arg("-c")
+        .arg(&config_path)
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .kill_on_drop(false);
@@ -80,22 +152,19 @@ pub async fn start_arti(
         .map_err(|e| format!("Failed to spawn Arti: {}", e))?;
 
     let pid = child.id().unwrap_or(0);
-    log::info!("Arti started with PID {}", pid);
+    log::info!("Arti started with PID {} (config: {:?})", pid, config_path);
 
     // Write PID file
-    {
-        let state = app_handle.state::<AppState>();
-        let data_dir = state.node.data_dir.lock().await.clone();
-        if let Err(e) = write_pid_file(&data_dir, pid) {
-            log::warn!("Failed to write Arti PID file: {}", e);
-        }
+    if let Err(e) = write_pid_file(&data_dir, pid) {
+        log::warn!("Failed to write Arti PID file: {}", e);
     }
 
-    // Monitor stderr for bootstrap progress
+    // Monitor stderr for bootstrap progress and hidden service readiness
     if let Some(stderr) = child.stderr.take() {
         let app = app_handle.clone();
         let state = app_handle.state::<AppState>();
         let shield_arc = state.shield.clone();
+        let data_dir_clone = data_dir.clone();
         let bootstrap_task = tokio::spawn(async move {
             let mut lines = BufReader::new(stderr).lines();
             while let Ok(Some(line)) = lines.next_line().await {
@@ -107,6 +176,11 @@ pub async fn start_arti(
                         drop(status);
                         let _ = app.emit("shield_status_changed", get_status_payload(&shield_arc).await);
                         if pct >= 100 {
+                            // Bootstrap complete — try to read .onion address
+                            if let Some(addr) = read_onion_address(&data_dir_clone, 30).await {
+                                let mut onion = shield_arc.onion_address.lock().await;
+                                *onion = Some(addr);
+                            }
                             let mut status = shield_arc.status.lock().await;
                             *status = ShieldStatus::Active;
                             drop(status);
@@ -140,7 +214,6 @@ pub async fn start_arti(
     let shield_arc = state.shield.clone();
     let bootstrapped = wait_for_bootstrap(&shield_arc, 60).await;
     if !bootstrapped {
-        // If bootstrap didn't complete, check if process is still alive
         let alive = {
             let mut proc = shield.process.lock().await;
             if let Some(ref mut child) = *proc {
@@ -150,7 +223,6 @@ pub async fn start_arti(
             }
         };
         if alive {
-            // Process is running but bootstrap didn't complete — report error, don't assume Active
             let mut status = shield.status.lock().await;
             *status = ShieldStatus::Error {
                 message: "Tor bootstrap timed out. Check your network connection.".into(),
@@ -162,12 +234,12 @@ pub async fn start_arti(
             *status = ShieldStatus::Error {
                 message: "Arti failed to bootstrap".into(),
             };
-            emit_shield_status(&app_handle, &shield).await;
+            emit_shield_status(&app_handle, shield).await;
             return Err("Arti failed to bootstrap within timeout".into());
         }
     }
 
-    emit_shield_status(&app_handle, &shield).await;
+    emit_shield_status(&app_handle, shield).await;
 
     // Spawn kill switch monitor
     let kill_switch_handle = spawn_kill_switch(app_handle.clone(), shield_arc);
@@ -179,7 +251,7 @@ pub async fn start_arti(
     Ok(())
 }
 
-/// Stop the Arti SOCKS5 proxy.
+/// Stop the Arti Tor proxy and hidden service.
 pub async fn stop_arti(
     app_handle: &AppHandle,
     shield: &ShieldState,
@@ -207,6 +279,12 @@ pub async fn stop_arti(
             crate::process::platform::graceful_stop(child, std::time::Duration::from_secs(5)).await;
         }
         *proc = None;
+    }
+
+    // Clear onion address
+    {
+        let mut addr = shield.onion_address.lock().await;
+        *addr = None;
     }
 
     // Remove PID file
@@ -255,11 +333,11 @@ fn spawn_kill_switch(
                 }
             };
 
-            // Check if PF firewall is still active (during both Active and Bootstrapping)
+            // Check if PF firewall is still active
             let firewall_down = if !arti_dead {
                 match firewall::firewall_status() {
                     Ok((enabled, _)) => !enabled,
-                    Err(_) => false, // Don't trip kill switch on transient query failures
+                    Err(_) => false,
                 }
             } else {
                 false
@@ -325,7 +403,6 @@ async fn wait_for_bootstrap(shield: &ShieldState, timeout_secs: u64) -> bool {
 }
 
 fn parse_bootstrap_progress(line: &str) -> Option<u8> {
-    // Expected format: "BOOTSTRAP PROGRESS=XX"
     if let Some(idx) = line.find("BOOTSTRAP PROGRESS=") {
         let after = &line[idx + "BOOTSTRAP PROGRESS=".len()..];
         let num_str: String = after.chars().take_while(|c| c.is_ascii_digit()).collect();
@@ -346,6 +423,7 @@ async fn emit_shield_status(app_handle: &AppHandle, shield: &ShieldState) {
 
 async fn get_status_payload(shield: &ShieldState) -> serde_json::Value {
     let status = shield.status.lock().await;
+    let onion = shield.onion_address.lock().await.clone();
     match &*status {
         ShieldStatus::Disabled => serde_json::json!({
             "status": "disabled",
@@ -359,6 +437,7 @@ async fn get_status_payload(shield: &ShieldState) -> serde_json::Value {
         ShieldStatus::Active => serde_json::json!({
             "status": "active",
             "enabled": true,
+            "onionAddress": onion,
         }),
         ShieldStatus::Error { message } => serde_json::json!({
             "status": "error",
@@ -400,8 +479,7 @@ fn remove_pid_file(data_dir: &Path) -> Result<(), std::io::Error> {
     Ok(())
 }
 
-/// Verify the Tor routing path is functional by performing a SOCKS5 handshake
-/// through the redirector to Arti. This confirms: PF rules → redirector → Arti are all working.
+/// Verify the Tor routing path is functional by performing a SOCKS5 handshake.
 pub async fn verify_tor_path() -> Result<(), String> {
     use tokio::io::{AsyncReadExt, AsyncWriteExt};
     use tokio::net::TcpStream;
@@ -416,7 +494,6 @@ pub async fn verify_tor_path() -> Result<(), String> {
     .map_err(|_| "Tor path verification timed out connecting to Arti".to_string())?
     .map_err(|e| format!("Cannot connect to Arti SOCKS at {}: {}", arti_addr, e))?;
 
-    // SOCKS5 greeting: version 5, 1 auth method (no auth)
     stream
         .write_all(&[0x05, 0x01, 0x00])
         .await

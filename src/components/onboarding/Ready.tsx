@@ -1,4 +1,6 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { listen } from "@tauri-apps/api/event";
+import type { ShieldStatusInfo } from "../../lib/types";
 import { completeOnboarding } from "../../lib/tauri";
 
 interface ModeSummary {
@@ -30,6 +32,33 @@ const modeSummaries: Record<string, ModeSummary> = {
   },
 };
 
+const shieldFacts = [
+  {
+    title: "Hiding your IP address",
+    description: "No one on the Zcash network will ever see your real IP. Not peers, not observers, not your ISP.",
+  },
+  {
+    title: "Building encrypted circuits",
+    description: "Your traffic passes through multiple encrypted relays. Each relay only knows the previous and next hop — never the full path.",
+  },
+  {
+    title: "Creating your .onion address",
+    description: "Your node gets a unique hidden service address. Other Zcash nodes can connect to you without knowing where you are.",
+  },
+  {
+    title: "Protecting your identity",
+    description: "Running a Zcash node reveals nothing about your transactions. Shield Mode ensures it also reveals nothing about your location.",
+  },
+  {
+    title: "Enforcing firewall rules",
+    description: "System-level firewall rules guarantee all traffic goes through Tor. Even if something goes wrong, your IP can never leak.",
+  },
+  {
+    title: "Kill switch enabled",
+    description: "If Tor drops or firewall rules are removed, your node stops immediately. We never silently fall back to an unprotected connection. Your privacy is protected even during failures.",
+  },
+];
+
 interface Props {
   selectedPath: string;
   shieldMode: boolean;
@@ -39,10 +68,36 @@ interface Props {
 export function Ready({ selectedPath, shieldMode, onComplete }: Props) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [activeFact, setActiveFact] = useState(0);
+
+  // Listen for shield bootstrap progress during onboarding
+  useEffect(() => {
+    if (!loading || !shieldMode) return;
+
+    const unlisten = listen<ShieldStatusInfo>("shield_status_changed", (event) => {
+      if (event.payload.status === "active") {
+        // Tor connected — the command will complete shortly
+      }
+    });
+
+    return () => {
+      unlisten.then((fn) => fn());
+    };
+  }, [loading, shieldMode]);
+
+  // Cycle through facts while waiting
+  useEffect(() => {
+    if (!loading || !shieldMode) return;
+    const interval = setInterval(() => {
+      setActiveFact((prev) => (prev + 1) % shieldFacts.length);
+    }, 8000);
+    return () => clearInterval(interval);
+  }, [loading, shieldMode]);
 
   const handleStart = async () => {
     setLoading(true);
     setError(null);
+    setActiveFact(0);
     try {
       await completeOnboarding(selectedPath, shieldMode);
       onComplete();
@@ -53,6 +108,64 @@ export function Ready({ selectedPath, shieldMode, onComplete }: Props) {
   };
 
   const summary = modeSummaries[shieldMode ? "shield" : "standard"];
+
+  // Show shield startup screen
+  if (loading && shieldMode) {
+    const fact = shieldFacts[activeFact];
+    return (
+      <div className="flex min-h-[90vh] items-center justify-center px-6">
+        <div className="max-w-sm w-full text-center space-y-10">
+          <div className="space-y-4">
+            <div className="flex justify-center">
+              <div className="w-12 h-12 border-2 border-zec-yellow/20 border-t-zec-yellow rounded-full animate-spin" />
+            </div>
+            <h2 className="text-xl font-bold text-zec-text">Securing Your Node</h2>
+          </div>
+
+          <div className="border border-zec-border/50 rounded-xl p-6 space-y-3 min-h-[120px] flex flex-col justify-center transition-all">
+            <p className="text-sm font-medium text-zec-yellow">{fact.title}</p>
+            <p className="text-xs text-zec-muted leading-relaxed">{fact.description}</p>
+          </div>
+
+          {/* Dot indicator for facts */}
+          <div className="flex justify-center gap-1.5">
+            {shieldFacts.map((_, i) => (
+              <div
+                key={i}
+                className={`h-1 rounded-full transition-all duration-500 ${
+                  i === activeFact ? "w-4 bg-zec-yellow" : "w-1 bg-zec-border"
+                }`}
+              />
+            ))}
+          </div>
+
+          <p className="text-[11px] text-zec-muted/30">
+            This usually takes 30-60 seconds
+          </p>
+
+          {error && (
+            <p className="text-sm text-red-400/80">{error}</p>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // Standard loading
+  if (loading) {
+    return (
+      <div className="flex min-h-[90vh] items-center justify-center px-6">
+        <div className="max-w-sm w-full text-center space-y-6">
+          <div className="flex justify-center">
+            <div className="w-10 h-10 border-2 border-zec-yellow/20 border-t-zec-yellow rounded-full animate-spin" />
+          </div>
+          <h2 className="text-xl font-bold text-zec-text">Starting Node</h2>
+          <p className="text-sm text-zec-muted">Preparing your node...</p>
+          {error && <p className="text-sm text-red-400/80">{error}</p>}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-[90vh] items-center justify-center px-6">
@@ -93,15 +206,9 @@ export function Ready({ selectedPath, shieldMode, onComplete }: Props) {
         <button
           onClick={handleStart}
           disabled={loading}
-          className={`w-full py-3.5 rounded-xl font-semibold transition-all ${
-            loading
-              ? "bg-zec-border/50 text-zec-muted cursor-not-allowed"
-              : "bg-zec-yellow text-zec-dark hover:brightness-110"
-          }`}
+          className="w-full py-3.5 rounded-xl font-semibold bg-zec-yellow text-zec-dark hover:brightness-110 transition-all"
         >
-          {loading
-            ? shieldMode ? "Starting shielded node..." : "Starting..."
-            : shieldMode ? "Start Shielded Node" : "Start Node"}
+          {shieldMode ? "Start Shielded Node" : "Start Node"}
         </button>
       </div>
     </div>
