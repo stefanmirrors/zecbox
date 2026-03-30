@@ -115,27 +115,27 @@ async fn main() {
         // Stage 1: Starting
         eprintln!("Thank you for running a mainnet zebrad 4.2.0 node!");
         eprintln!("You're helping to strengthen the network and contributing to a social good :)");
-        sleep(Duration::from_secs(3)).await;
+        sleep(Duration::from_secs(1)).await;
 
         // Stage 2: Database
         eprintln!("INFO zebrad::commands::start: opening database, this may take a few minutes");
         eprintln!("INFO zebra_state: creating new database running_version=27.0.0");
-        sleep(Duration::from_secs(4)).await;
+        sleep(Duration::from_secs(1)).await;
 
         // Stage 3: Network
         eprintln!("INFO zebrad::commands::start: initializing network");
-        sleep(Duration::from_secs(3)).await;
+        sleep(Duration::from_secs(1)).await;
 
         // Stage 4: Peers
         eprintln!("INFO add_initial_peers: zebra_network::peer_set::initialize: connecting to initial peer set ipv4_peer_count=23 ipv6_peer_count=2");
-        sleep(Duration::from_secs(4)).await;
+        sleep(Duration::from_secs(1)).await;
         eprintln!("INFO add_initial_peers: zebra_network::peer_set::initialize: finished connecting to initial seed and disk cache peers handshake_success_total=15 active_initial_peer_count=15");
-        sleep(Duration::from_secs(2)).await;
+        sleep(Duration::from_secs(1)).await;
 
         // Stage 5: Verifiers
         eprintln!("INFO zebrad::commands::start: initializing verifiers");
         eprintln!("INFO init: zebra_consensus::router: starting state checkpoint validation");
-        sleep(Duration::from_secs(3)).await;
+        sleep(Duration::from_secs(1)).await;
 
         // Stage 6: Checkpoint verification (happens BEFORE RPC is available)
         let checkpoints = [1200, 12000, 96000, 384000, 900000, 1600000, 2400000, 3000000, 3200000];
@@ -150,7 +150,7 @@ async fn main() {
                 "INFO zebrad::components::sync::progress: estimated progress to chain tip sync_percent={:.3}% current_height=Height({}) remaining_sync_blocks={}",
                 pct, height, 3_300_000u64.saturating_sub(height)
             );
-            sleep(Duration::from_secs(3)).await;
+            sleep(Duration::from_secs(1)).await;
         }
 
         // Stage 7: Fully synced + RPC ready
