@@ -1,7 +1,6 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import { useNodeStatus } from "../../hooks/useNodeStatus";
 import { useShieldMode } from "../../hooks/useShieldMode";
-import { useNetworkServe } from "../../hooks/useNetworkServe";
 import { startNode, stopNode } from "../../lib/tauri";
 import { InfoTip } from "../shared/InfoTip";
 
@@ -13,7 +12,6 @@ export function NodeStatus() {
   const isStarting = ns.status === "starting";
   const isBusy = isStarting || ns.status === "stopping";
   const shield = useShieldMode();
-  const network = useNetworkServe();
   const [toggling, setToggling] = useState(false);
   const [toggleError, setToggleError] = useState<string | null>(null);
   const [showCongrats, setShowCongrats] = useState(false);
@@ -70,26 +68,14 @@ export function NodeStatus() {
         </div>
         <div className="flex items-center gap-4">
           {/* Feature toggles */}
-          {isRunning && (
-            <>
-              <MiniToggle
-                label="Shield"
-                tip="Route all node traffic through Tor for maximum privacy."
-                enabled={shield.status.enabled}
-                loading={shield.toggling || shield.status.status === "bootstrapping"}
-                onToggle={shield.toggle}
-              />
-              <MiniToggle
-                label="Inbound"
-                tip="Allow inbound connections from other nodes to strengthen the Zcash network. Attempts automatic port forwarding via UPnP."
-                enabled={network.status.enabled}
-                loading={network.toggling || network.status.status === "enabling"}
-                disabled={shield.status.enabled}
-                onToggle={network.toggle}
-              />
-              <div className="w-px h-5 bg-zec-border" />
-            </>
-          )}
+          <MiniToggle
+            label="Shield"
+            tip="Route all node traffic through Tor and accept connections via .onion hidden service."
+            enabled={shield.status.enabled}
+            loading={shield.toggling || shield.status.status === "bootstrapping"}
+            onToggle={shield.toggle}
+          />
+          <div className="w-px h-5 bg-zec-border" />
           <button
             onClick={handleToggle}
             disabled={isBusy || toggling}
@@ -107,7 +93,7 @@ export function NodeStatus() {
                 : "Stopping..."
               : isRunning
                 ? "Stop"
-                : "Start Node"}
+                : shield.status.enabled ? "Start Shielded Node" : "Start Node"}
           </button>
         </div>
       </div>

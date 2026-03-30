@@ -142,13 +142,12 @@ pub fn run() {
                 });
             }
 
-            // Restore network serve if previously enabled
-            if app_config.serve_network && !app_config.shield_mode {
+            // In Standard mode, silently try UPnP to accept inbound connections
+            // (Shield Mode handles inbound via .onion, so UPnP is not needed)
+            if !app_config.shield_mode && app_config.first_run_complete {
                 let app_handle = app.handle().clone();
-                let net_arc = app.state::<AppState>().network.clone();
-                let ddd = app.state::<AppState>().default_data_dir.clone();
-                tokio::spawn(async move {
-                    // Wait for node to come up before enabling network serve
+                tauri::async_runtime::spawn(async move {
+                    // Wait for node to come up
                     let client = reqwest::Client::builder()
                         .timeout(std::time::Duration::from_secs(5))
                         .build()
@@ -161,42 +160,16 @@ pub fn run() {
                                 .send().await
                             {
                                 if resp.status().is_success() {
-                                    log::info!("Node is up, restoring network serve");
-                                    let (public_ip, upnp_active, cgnat) = network::enable_upnp(8233).await.unwrap_or_default();
-                                    let public_ip_opt = if public_ip.is_empty() { None } else { Some(public_ip.clone()) };
-                                    let reachable = if !public_ip.is_empty() {
-                                        network::check_reachability(&public_ip, 8233).await
-                                    } else { None };
-                                    let local_ip = network::get_local_ip();
-                                    let active = state::NetworkServeStatus::Active {
-                                        public_ip: public_ip_opt,
-                                        reachable,
-                                        inbound_peers: None,
-                                        outbound_peers: None,
-                                        upnp_active,
-                                        local_ip,
-                                        cgnat_detected: cgnat,
-                                    };
-                                    {
-                                        let mut status = net_arc.status.lock().await;
-                                        *status = active.clone();
+                                    log::info!("Node is up, attempting UPnP for inbound connections");
+                                    match network::enable_upnp(8233).await {
+                                        Ok((_, true, _)) => log::info!("UPnP port forwarding active"),
+                                        Ok((_, false, _)) => log::info!("UPnP not available, inbound connections may be limited"),
+                                        Err(e) => log::debug!("UPnP failed (not critical): {}", e),
                                     }
-                                    let info = crate::commands::network::NetworkServeStatusInfo::from(&active);
-                                    let _ = app_handle.emit("network_serve_status_changed", &info);
-                                    let monitor = network::spawn_network_monitor(
-                                        app_handle, net_arc.clone(), upnp_active, ddd,
-                                    );
-                                    *net_arc.monitor_task.lock().await = Some(monitor);
                                     return;
                                 }
                             }
                         }
-                    }
-                    log::warn!("Node never came up, not restoring network serve");
-                    // Clear the config since we couldn't restore
-                    if let Ok(mut config) = AppConfig::load(&ddd) {
-                        config.serve_network = false;
-                        let _ = config.save(&ddd);
                     }
                 });
             }

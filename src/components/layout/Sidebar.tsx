@@ -1,4 +1,4 @@
-export type View = "dashboard" | "shield" | "wallet" | "network" | "logs" | "settings";
+export type View = "dashboard" | "shield" | "wallet" | "logs" | "settings";
 
 interface NavItem {
   id: View | string;
@@ -41,17 +41,6 @@ const navItems: NavItem[] = [
         <rect x="2" y="5" width="20" height="15" rx="2" />
         <path d="M2 10h20" />
         <circle cx="17" cy="15" r="1.5" />
-      </svg>
-    ),
-  },
-  {
-    id: "network",
-    label: "Network",
-    icon: (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-        <circle cx="12" cy="12" r="10" />
-        <path d="M2 12h20" />
-        <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
       </svg>
     ),
   },
