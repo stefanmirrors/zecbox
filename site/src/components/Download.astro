@@ -49,8 +49,7 @@ const downloads = {
           <div class="space-y-1.5">
             <a
               href="https://github.com/stefanmirrors/zecbox/releases/latest/download/zecbox-macos-aarch64.dmg"
-              target="_blank"
-              rel="noopener noreferrer"
+              data-dl-platform="macos"
               class="flex items-center justify-between px-3 py-2 rounded-md bg-zec-yellow text-zec-dark font-semibold text-xs hover:brightness-110 transition-all no-underline"
             >
               Mac (M1, M2, M3, M4)
@@ -58,8 +57,7 @@ const downloads = {
             </a>
             <a
               href="https://github.com/stefanmirrors/zecbox/releases/latest/download/zecbox-macos-x86_64.dmg"
-              target="_blank"
-              rel="noopener noreferrer"
+              data-dl-platform="macos"
               class="flex items-center justify-between px-3 py-2 rounded-md border border-zec-border text-zec-text font-medium text-xs hover:border-zec-muted transition-all no-underline"
             >
               Mac (Intel)
@@ -81,8 +79,7 @@ const downloads = {
           <div class="space-y-1.5">
             <a
               href="https://github.com/stefanmirrors/zecbox/releases/latest/download/zecbox-linux-x86_64.deb"
-              target="_blank"
-              rel="noopener noreferrer"
+              data-dl-platform="linux-deb"
               class="flex items-center justify-between px-3 py-2 rounded-md bg-zec-yellow text-zec-dark font-semibold text-xs hover:brightness-110 transition-all no-underline"
             >
               PC/Laptop (Intel/AMD)
@@ -90,8 +87,7 @@ const downloads = {
             </a>
             <a
               href="https://github.com/stefanmirrors/zecbox/releases/latest/download/zecbox-linux-aarch64.deb"
-              target="_blank"
-              rel="noopener noreferrer"
+              data-dl-platform="linux-deb"
               class="flex items-center justify-between px-3 py-2 rounded-md border border-zec-border text-zec-text font-medium text-xs hover:border-zec-muted transition-all no-underline"
             >
               ARM / Pi / VM on Mac Silicon
@@ -103,8 +99,7 @@ const downloads = {
             <div class="space-y-1.5 mt-2">
               <a
                 href="https://github.com/stefanmirrors/zecbox/releases/latest/download/zecbox-linux-x86_64.AppImage"
-                target="_blank"
-                rel="noopener noreferrer"
+                data-dl-platform="linux-appimage"
                 class="flex items-center justify-between px-3 py-2 rounded-md border border-zec-border text-zec-text font-medium text-xs hover:border-zec-muted transition-all no-underline"
               >
                 AppImage (Intel/AMD)
@@ -112,8 +107,7 @@ const downloads = {
               </a>
               <a
                 href="https://github.com/stefanmirrors/zecbox/releases/latest/download/zecbox-linux-aarch64.AppImage"
-                target="_blank"
-                rel="noopener noreferrer"
+                data-dl-platform="linux-appimage"
                 class="flex items-center justify-between px-3 py-2 rounded-md border border-zec-border text-zec-text font-medium text-xs hover:border-zec-muted transition-all no-underline"
               >
                 AppImage (ARM / Pi / VM on Mac Silicon)
@@ -136,8 +130,7 @@ const downloads = {
           <div class="space-y-1.5">
             <a
               href="https://github.com/stefanmirrors/zecbox/releases/latest/download/zecbox-windows-x86_64.exe"
-              target="_blank"
-              rel="noopener noreferrer"
+              data-dl-platform="windows"
               class="flex items-center justify-between px-3 py-2 rounded-md bg-zec-yellow text-zec-dark font-semibold text-xs hover:brightness-110 transition-all no-underline"
             >
               PC/Laptop (Intel/AMD)
@@ -168,19 +161,19 @@ const downloads = {
         <ol class="space-y-3 text-sm text-zec-muted list-none m-0 p-0">
           <li class="flex gap-3">
             <span class="text-zec-yellow font-bold text-xs mt-0.5 shrink-0">1</span>
-            <span>Open the <strong class="text-zec-text">.dmg</strong> and drag ZecBox into Applications</span>
+            <span>Open the downloaded <strong class="text-zec-text">.dmg</strong> file and drag ZecBox into your Applications folder</span>
           </li>
           <li class="flex gap-3">
             <span class="text-zec-yellow font-bold text-xs mt-0.5 shrink-0">2</span>
-            <span>Open <strong class="text-zec-text">Terminal</strong> — press <kbd class="text-[11px] bg-zec-dark border border-zec-border rounded px-1.5 py-0.5 text-zec-text font-sans">&#8984; Space</kbd> and type "Terminal"</span>
+            <span>Open <strong class="text-zec-text">Terminal</strong> — press <kbd class="text-[11px] bg-zec-dark border border-zec-border rounded px-1.5 py-0.5 text-zec-text font-sans">&#8984; Space</kbd>, type "Terminal", and hit Enter</span>
           </li>
           <li class="flex gap-3">
             <span class="text-zec-yellow font-bold text-xs mt-0.5 shrink-0">3</span>
             <div class="flex-1 min-w-0">
-              <span>Paste this command and press Enter:</span>
+              <span>Copy and paste this into Terminal, then press Enter:</span>
               <div class="mt-1.5 flex items-center gap-2 bg-zec-dark border border-zec-border rounded-lg px-3 py-2">
                 <code class="text-xs font-mono text-zec-text select-all flex-1 min-w-0" id="xattr-cmd">xattr -cr /Applications/zecbox.app</code>
-                <button type="button" class="shrink-0 p-1 rounded hover:bg-zec-border transition-colors text-zec-muted hover:text-zec-text copy-btn" data-target="xattr-cmd" title="Copy to clipboard">
+                <button type="button" class="shrink-0 w-8 h-8 flex items-center justify-center rounded-lg border border-zec-border hover:border-zec-muted hover:bg-zec-border/50 transition-all text-zec-muted hover:text-zec-text bg-transparent copy-btn" data-target="xattr-cmd" title="Copy to clipboard">
                   <svg class="w-4 h-4 copy-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" stroke-width="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" stroke-width="2"/></svg>
                   <svg class="w-4 h-4 check-icon hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
                 </button>
@@ -189,7 +182,7 @@ const downloads = {
           </li>
           <li class="flex gap-3">
             <span class="text-zec-yellow font-bold text-xs mt-0.5 shrink-0">4</span>
-            <span>Open <strong class="text-zec-text">ZecBox</strong> from Applications</span>
+            <span>Open <strong class="text-zec-text">ZecBox</strong> from your Applications folder</span>
           </li>
         </ol>
       </div>
@@ -205,19 +198,15 @@ const downloads = {
         <ol class="space-y-3 text-sm text-zec-muted list-none m-0 p-0">
           <li class="flex gap-3">
             <span class="text-zec-yellow font-bold text-xs mt-0.5 shrink-0">1</span>
-            <span>Open your <strong class="text-zec-text">file manager</strong> and find the downloaded <strong class="text-zec-text">.AppImage</strong> file</span>
+            <span>Open a <strong class="text-zec-text">terminal</strong> — press <kbd class="text-[11px] bg-zec-dark border border-zec-border rounded px-1.5 py-0.5 text-zec-text font-sans">Ctrl+Alt+T</kbd> on most distros</span>
           </li>
           <li class="flex gap-3">
             <span class="text-zec-yellow font-bold text-xs mt-0.5 shrink-0">2</span>
-            <span>Open a <strong class="text-zec-text">terminal</strong> — on most distros press <kbd class="text-[11px] bg-zec-dark border border-zec-border rounded px-1.5 py-0.5 text-zec-text font-sans">Ctrl+Alt+T</kbd></span>
-          </li>
-          <li class="flex gap-3">
-            <span class="text-zec-yellow font-bold text-xs mt-0.5 shrink-0">3</span>
             <div class="flex-1 min-w-0">
-              <span>Make it executable and run it:</span>
+              <span>Copy and paste this into the terminal, then press Enter — ZecBox will open automatically:</span>
               <div class="mt-1.5 flex items-center gap-2 bg-zec-dark border border-zec-border rounded-lg px-3 py-2">
                 <code class="text-xs font-mono text-zec-text select-all flex-1 min-w-0" id="linux-appimage-cmd">chmod +x ~/Downloads/zecbox*.AppImage && ~/Downloads/zecbox*.AppImage</code>
-                <button type="button" class="shrink-0 p-1 rounded hover:bg-zec-border transition-colors text-zec-muted hover:text-zec-text copy-btn" data-target="linux-appimage-cmd" title="Copy to clipboard">
+                <button type="button" class="shrink-0 w-8 h-8 flex items-center justify-center rounded-lg border border-zec-border hover:border-zec-muted hover:bg-zec-border/50 transition-all text-zec-muted hover:text-zec-text bg-transparent copy-btn" data-target="linux-appimage-cmd" title="Copy to clipboard">
                   <svg class="w-4 h-4 copy-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" stroke-width="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" stroke-width="2"/></svg>
                   <svg class="w-4 h-4 check-icon hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
                 </button>
@@ -238,15 +227,15 @@ const downloads = {
         <ol class="space-y-3 text-sm text-zec-muted list-none m-0 p-0">
           <li class="flex gap-3">
             <span class="text-zec-yellow font-bold text-xs mt-0.5 shrink-0">1</span>
-            <span>Open a <strong class="text-zec-text">terminal</strong> — press <kbd class="text-[11px] bg-zec-dark border border-zec-border rounded px-1.5 py-0.5 text-zec-text font-sans">Ctrl+Alt+T</kbd></span>
+            <span>Open a <strong class="text-zec-text">terminal</strong> — press <kbd class="text-[11px] bg-zec-dark border border-zec-border rounded px-1.5 py-0.5 text-zec-text font-sans">Ctrl+Alt+T</kbd> on most distros</span>
           </li>
           <li class="flex gap-3">
             <span class="text-zec-yellow font-bold text-xs mt-0.5 shrink-0">2</span>
             <div class="flex-1 min-w-0">
-              <span>Install the package:</span>
+              <span>Copy and paste this into the terminal, then press Enter (it will ask for your password):</span>
               <div class="mt-1.5 flex items-center gap-2 bg-zec-dark border border-zec-border rounded-lg px-3 py-2">
                 <code class="text-xs font-mono text-zec-text select-all flex-1 min-w-0" id="linux-deb-cmd">sudo dpkg -i ~/Downloads/zecbox*.deb</code>
-                <button type="button" class="shrink-0 p-1 rounded hover:bg-zec-border transition-colors text-zec-muted hover:text-zec-text copy-btn" data-target="linux-deb-cmd" title="Copy to clipboard">
+                <button type="button" class="shrink-0 w-8 h-8 flex items-center justify-center rounded-lg border border-zec-border hover:border-zec-muted hover:bg-zec-border/50 transition-all text-zec-muted hover:text-zec-text bg-transparent copy-btn" data-target="linux-deb-cmd" title="Copy to clipboard">
                   <svg class="w-4 h-4 copy-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" stroke-width="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" stroke-width="2"/></svg>
                   <svg class="w-4 h-4 check-icon hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
                 </button>
@@ -271,15 +260,15 @@ const downloads = {
         <ol class="space-y-3 text-sm text-zec-muted list-none m-0 p-0">
           <li class="flex gap-3">
             <span class="text-zec-yellow font-bold text-xs mt-0.5 shrink-0">1</span>
-            <span>Run the downloaded <strong class="text-zec-text">.exe</strong> installer</span>
+            <span>Open the downloaded <strong class="text-zec-text">.exe</strong> file to start the installer</span>
           </li>
           <li class="flex gap-3">
             <span class="text-zec-yellow font-bold text-xs mt-0.5 shrink-0">2</span>
-            <span>If Windows SmartScreen appears, click <strong class="text-zec-text">More info</strong> then <strong class="text-zec-text">Run anyway</strong></span>
+            <span>If a blue <strong class="text-zec-text">Windows SmartScreen</strong> popup appears, click <strong class="text-zec-text">More info</strong>, then click <strong class="text-zec-text">Run anyway</strong></span>
           </li>
           <li class="flex gap-3">
             <span class="text-zec-yellow font-bold text-xs mt-0.5 shrink-0">3</span>
-            <span>Open <strong class="text-zec-text">ZecBox</strong> from the Start menu or desktop shortcut</span>
+            <span>Once installed, open <strong class="text-zec-text">ZecBox</strong> from the Start menu or desktop shortcut</span>
           </li>
         </ol>
       </div>
@@ -292,6 +281,21 @@ const downloads = {
       </div>
       </div>
       </details>
+    </div>
+
+    <!-- Download overlay -->
+    <div id="dl-overlay" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div id="dl-overlay-backdrop" class="absolute inset-0 bg-black/70"></div>
+      <div class="relative bg-zec-surface border border-zec-border rounded-xl p-6 max-w-md w-full max-h-[80vh] overflow-y-auto">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="text-sm font-semibold text-zec-text">Your download has started</h3>
+          <button id="dl-overlay-close" type="button" class="w-8 h-8 flex items-center justify-center rounded-lg border border-zec-border hover:border-zec-muted hover:bg-zec-border/50 transition-all text-zec-muted hover:text-zec-text cursor-pointer bg-transparent">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
+          </button>
+        </div>
+        <p class="text-xs text-zec-yellow mb-4">Your system may warn you during installation — this is normal for new software that isn't code-signed yet and doesn't mean ZecBox is unsafe. Follow these steps to bypass the warning.</p>
+        <div id="dl-overlay-content"></div>
+      </div>
     </div>
 
     <script>
@@ -345,6 +349,16 @@ const downloads = {
         });
         document.querySelectorAll<HTMLElement>('[data-platform-divider]').forEach(el => el.classList.add('hidden'));
 
+        // Move detected platform's instruction card to top of the list
+        const detectedPlatformEl = document.querySelector<HTMLElement>(`[data-platform="${showPlatforms[0]}"]`);
+        if (detectedPlatformEl && detectedPlatformEl.parentElement) {
+          const container = detectedPlatformEl.parentElement;
+          const firstPlatform = container.querySelector('[data-platform]');
+          if (firstPlatform && firstPlatform !== detectedPlatformEl) {
+            container.insertBefore(detectedPlatformEl, firstPlatform);
+          }
+        }
+
         // Show the "all platforms" toggle and wire it up
         const toggleWrap = document.getElementById('show-all-instructions');
         if (toggleWrap) {
@@ -367,6 +381,44 @@ const downloads = {
             }
           });
         }
+      })();
+
+      // Download overlay — show install instructions after clicking a download link
+      (function () {
+        const overlay = document.getElementById('dl-overlay');
+        const content = document.getElementById('dl-overlay-content');
+        const closeBtn = document.getElementById('dl-overlay-close');
+        const backdrop = document.getElementById('dl-overlay-backdrop');
+        if (!overlay || !content) return;
+
+        function close() { overlay!.classList.add('hidden'); }
+        closeBtn?.addEventListener('click', close);
+        backdrop?.addEventListener('click', close);
+
+        document.querySelectorAll<HTMLAnchorElement>('[data-dl-platform]').forEach(link => {
+          link.addEventListener('click', () => {
+            const platform = link.dataset.dlPlatform!;
+            const source = document.querySelector<HTMLElement>(`[data-platform="${platform}"]`);
+            if (!source) return;
+            content!.innerHTML = source.innerHTML;
+            // Re-wire copy buttons inside the overlay
+            content!.querySelectorAll('.copy-btn').forEach(btn => {
+              btn.addEventListener('click', async () => {
+                const targetId = btn.getAttribute('data-target');
+                const cmd = document.getElementById(targetId ?? '')?.textContent ?? '';
+                await navigator.clipboard.writeText(cmd);
+                const copyIcon = btn.querySelector('.copy-icon');
+                const checkIcon = btn.querySelector('.check-icon');
+                if (copyIcon && checkIcon) {
+                  copyIcon.classList.add('hidden');
+                  checkIcon.classList.remove('hidden');
+                  setTimeout(() => { copyIcon.classList.remove('hidden'); checkIcon.classList.add('hidden'); }, 2000);
+                }
+              });
+            });
+            overlay!.classList.remove('hidden');
+          });
+        });
       })();
 
       // Copy-to-clipboard handler
