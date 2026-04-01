@@ -245,12 +245,22 @@ pub async fn start_arti(
         *task = Some(bootstrap_task);
     }
 
-    // Drain stdout
+    // Parse stdout for .onion address (Arti logs identity here)
     if let Some(stdout) = child.stdout.take() {
+        let state = app_handle.state::<AppState>();
+        let shield_stdout = state.shield.clone();
+        let app_stdout = app_handle.clone();
         tokio::spawn(async move {
             let mut lines = BufReader::new(stdout).lines();
             while let Ok(Some(line)) = lines.next_line().await {
                 log::debug!("arti stdout: {}", line);
+                if let Some(addr) = parse_onion_address(&line) {
+                    log::info!("Captured .onion address from stdout: {}", addr);
+                    let mut onion = shield_stdout.onion_address.lock().await;
+                    *onion = Some(addr);
+                    drop(onion);
+                    let _ = app_stdout.emit("shield_status_changed", get_status_payload(&shield_stdout).await);
+                }
             }
         });
     }
