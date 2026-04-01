@@ -33,24 +33,7 @@ const downloads = {
     <!-- Download data for client-side detection -->
     <script id="download-data" type="application/json" set:html={JSON.stringify(downloads)} />
 
-    <!-- Auto-detected primary download (hidden until JS detects platform) -->
-    <div id="detected-download" class="hidden max-w-sm mx-auto text-center mb-8">
-      <p class="text-[11px] font-semibold uppercase tracking-wider text-zec-yellow mb-3">Auto-detected</p>
-
-      <a id="detected-download-btn"
-        href="#"
-        target="_blank"
-        rel="noopener noreferrer"
-        class="inline-flex items-center justify-center gap-2.5 px-8 py-3.5 rounded-lg bg-zec-yellow text-zec-dark font-bold text-base hover:brightness-110 transition-all no-underline"
-      >
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
-        <span id="detected-btn-text"></span>
-      </a>
-
-      <p id="detected-arch-label" class="text-xs text-zec-muted mt-2"></p>
-    </div>
-
-    <!-- All downloads grid (always visible) -->
+    <!-- All downloads grid -->
     <div id="all-downloads">
       <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <!-- macOS -->
@@ -111,7 +94,7 @@ const downloads = {
               rel="noopener noreferrer"
               class="flex items-center justify-between px-3 py-2 rounded-md border border-zec-border text-zec-text font-medium text-xs hover:border-zec-muted transition-all no-underline"
             >
-              Raspberry Pi / ARM
+              Raspberry Pi / ARM / VM on Apple Silicon
               <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
             </a>
           </div>
@@ -167,10 +150,10 @@ const downloads = {
 
     <!-- Layer C: Post-install instructions (collapsed by default) -->
     <div class="mt-6 bg-zec-surface border border-zec-border rounded-xl p-5">
-      <details id="install-instructions">
+      <details id="install-instructions" open>
         <summary class="flex items-center gap-2 cursor-pointer list-none [&::-webkit-details-marker]:hidden">
           <svg class="w-5 h-5 text-zec-yellow shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-          <span class="text-sm font-semibold text-zec-text">Need help installing?</span>
+          <span class="text-sm font-semibold text-zec-text">After Download Guide</span>
           <svg class="w-4 h-4 text-zec-muted ml-auto transition-transform details-chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
         </summary>
         <div class="mt-5">
@@ -348,18 +331,6 @@ const downloads = {
         else if (os === 'windows') dl = data.windows?.x86_64;
 
         if (!dl) return;
-
-        // Show auto-detected download button
-        const primary = document.getElementById('detected-download');
-        const btn = document.getElementById('detected-download-btn') as HTMLAnchorElement;
-        const btnText = document.getElementById('detected-btn-text');
-        const archLabel = document.getElementById('detected-arch-label');
-        if (primary && btn && btnText) {
-          btn.href = dl.url;
-          btnText.textContent = dl.label;
-          if (archLabel) archLabel.textContent = dl.arch;
-          primary.classList.remove('hidden');
-        }
 
         // Highlight detected platform card with badge + border
         const card = document.querySelector(`[data-platform-card="${os}"]`) as HTMLElement;
