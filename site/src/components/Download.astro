@@ -94,7 +94,7 @@ const downloads = {
               rel="noopener noreferrer"
               class="flex items-center justify-between px-3 py-2 rounded-md border border-zec-border text-zec-text font-medium text-xs hover:border-zec-muted transition-all no-underline"
             >
-              Raspberry Pi / ARM / VM on Apple Silicon
+              ARM / Pi / VM on Mac Silicon
               <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
             </a>
           </div>
@@ -116,7 +116,7 @@ const downloads = {
                 rel="noopener noreferrer"
                 class="flex items-center justify-between px-3 py-2 rounded-md border border-zec-border text-zec-text font-medium text-xs hover:border-zec-muted transition-all no-underline"
               >
-                AppImage (Raspberry Pi / ARM)
+                AppImage (ARM / Pi / VM on Mac Silicon)
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
               </a>
             </div>
@@ -148,7 +148,7 @@ const downloads = {
       </div>
     </div>
 
-    <!-- Layer C: Post-install instructions (collapsed by default) -->
+    <!-- Layer C: Post-install instructions -->
     <div class="mt-6 bg-zec-surface border border-zec-border rounded-xl p-5">
       <details id="install-instructions" open>
         <summary class="flex items-center gap-2 cursor-pointer list-none [&::-webkit-details-marker]:hidden">
@@ -156,7 +156,8 @@ const downloads = {
           <span class="text-sm font-semibold text-zec-text">After Download Guide</span>
           <svg class="w-4 h-4 text-zec-muted ml-auto transition-transform details-chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
         </summary>
-        <div class="mt-5">
+        <p class="text-xs text-zec-yellow mt-4 mb-5">Your system may warn you during installation — this is normal for new software that isn't code-signed yet and doesn't mean ZecBox is unsafe. The steps below will help you bypass these warnings. Code signing is coming soon.</p>
+        <div>
 
       <!-- macOS -->
       <div data-platform="macos" class="mb-5">
@@ -191,7 +192,6 @@ const downloads = {
             <span>Open <strong class="text-zec-text">ZecBox</strong> from Applications</span>
           </li>
         </ol>
-        <p class="mt-4 text-xs text-zec-muted">macOS blocks apps from unidentified developers. This command removes that restriction. Code signing is coming soon.</p>
       </div>
 
       <div data-platform-divider class="border-t border-zec-border my-5"></div>
@@ -225,7 +225,6 @@ const downloads = {
             </div>
           </li>
         </ol>
-        <p class="mt-4 text-xs text-zec-muted">AppImages are portable — no installation needed. Just make it executable and run. Works on any distro.</p>
       </div>
 
       <div data-platform-divider class="border-t border-zec-border my-5"></div>
@@ -259,7 +258,6 @@ const downloads = {
             <span>Open <strong class="text-zec-text">ZecBox</strong> from your application menu</span>
           </li>
         </ol>
-        <p class="mt-4 text-xs text-zec-muted">The .deb package integrates with your system — adds a desktop entry so you can launch from your app menu or dock. Debian, Ubuntu, Pop!_OS, Linux Mint, and similar.</p>
       </div>
 
       <div data-platform-divider class="border-t border-zec-border my-5"></div>
@@ -284,7 +282,6 @@ const downloads = {
             <span>Open <strong class="text-zec-text">ZecBox</strong> from the Start menu or desktop shortcut</span>
           </li>
         </ol>
-        <p class="mt-4 text-xs text-zec-muted">Windows may show a SmartScreen warning for unsigned apps. Code signing is coming soon.</p>
       </div>
 
       <div id="show-all-instructions" class="hidden mt-5">
