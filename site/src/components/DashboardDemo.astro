@@ -78,7 +78,7 @@
                   <div id="demo-toggles" class="flex items-center gap-2 sm:gap-4">
                     <!-- MiniToggle Shield: copied from MiniToggle -->
                     <div class="hidden sm:flex items-center gap-2">
-                      <span class="text-xs text-zec-muted flex items-center gap-1">Shield <span class="inline-flex"><span class="itip">?</span></span></span>
+                      <span class="text-xs text-zec-muted flex items-center gap-1">Shield <span class="inline-flex"><span class="itip" data-tip="Route all node traffic through Tor and accept connections via .onion hidden service.">?</span></span></span>
                       <button id="demo-shield-toggle" role="switch" aria-label="Toggle Shield" class="relative w-7 h-4 rounded-full transition-colors shrink-0 bg-zec-border hover:bg-zec-muted/20">
                         <span id="demo-shield-knob" class="absolute top-0.5 left-0.5 w-3 h-3 rounded-full bg-white transition-transform duration-200"></span>
                       </button>
@@ -129,17 +129,17 @@
               <div id="demo-synced" class="hidden mt-4 space-y-3">
                 <div class="flex items-center gap-8">
                   <div>
-                    <p class="text-xs text-zec-muted mb-0 flex items-center gap-1.5">Block Height <span class="inline-flex"><span class="itip">?</span></span></p>
+                    <p class="text-xs text-zec-muted mb-0 flex items-center gap-1.5">Block Height <span class="inline-flex"><span class="itip" data-tip="The number of blocks your node has verified. Each block contains Zcash transactions. A new block is added roughly every 75 seconds.">?</span></span></p>
                     <p class="text-2xl font-bold text-zec-text tabular-nums">3,304,456</p>
                   </div>
                   <div>
-                    <p class="text-xs text-zec-muted mb-0 flex items-center gap-1.5">Peers <span class="inline-flex"><span class="itip">?</span></span></p>
+                    <p class="text-xs text-zec-muted mb-0 flex items-center gap-1.5">Peers <span class="inline-flex"><span class="itip" data-tip="Other Zcash nodes your node is connected to. More peers means a healthier connection to the network.">?</span></span></p>
                     <p class="text-2xl font-bold text-zec-text tabular-nums">8</p>
                   </div>
                 </div>
                 <p class="text-xs text-zec-muted">Your node is fully synced — verifying new blocks as they arrive</p>
                 <div>
-                  <p class="text-xs text-zec-muted mb-1 flex items-center gap-1.5">Latest Block <span class="inline-flex"><span class="itip">?</span></span></p>
+                  <p class="text-xs text-zec-muted mb-1 flex items-center gap-1.5">Latest Block <span class="inline-flex"><span class="itip" data-tip="The unique identifier (hash) of the most recent block your node has verified. This changes every time a new block arrives.">?</span></span></p>
                   <p class="text-xs font-mono text-zec-muted/60 truncate">0000000000b84f2c7d35de0e5fb2c0a7d9e06fb81bc2e5a8c3d7b4f1a2e6c9d3</p>
                 </div>
               </div>
@@ -171,19 +171,19 @@
             <!-- NodeStatsPanel: copied from NodeStatsPanel.tsx -->
             <div id="demo-stats" class="grid grid-cols-2 sm:grid-cols-4 gap-3">
               <div class="border border-zec-border rounded-xl p-4">
-                <p class="text-xs text-zec-muted flex items-center gap-1.5 mb-2">Uptime <span class="inline-flex"><span class="itip">?</span></span></p>
+                <p class="text-xs text-zec-muted flex items-center gap-1.5 mb-2">Uptime <span class="inline-flex"><span class="itip" data-tip="Total time your node has been running across all sessions.">?</span></span></p>
                 <p class="text-xl font-bold text-zec-text tabular-nums">2h 6m</p>
               </div>
               <div class="border border-zec-border rounded-xl p-4">
-                <p class="text-xs text-zec-muted flex items-center gap-1.5 mb-2">Blocks Verified <span class="inline-flex"><span class="itip">?</span></span></p>
+                <p class="text-xs text-zec-muted flex items-center gap-1.5 mb-2">Blocks Verified <span class="inline-flex"><span class="itip" data-tip="Total blocks your node has independently verified. Every block proves the integrity of the Zcash blockchain.">?</span></span></p>
                 <p class="text-xl font-bold text-zec-text tabular-nums">215.6M</p>
               </div>
               <div class="border border-zec-border rounded-xl p-4">
-                <p class="text-xs text-zec-muted flex items-center gap-1.5 mb-2">Streak <span class="inline-flex"><span class="itip">?</span></span></p>
+                <p class="text-xs text-zec-muted flex items-center gap-1.5 mb-2">Streak <span class="inline-flex"><span class="itip" data-tip="Consecutive days your node has been online. Keep it running to grow your streak!">?</span></span></p>
                 <p class="text-xl font-bold text-zec-text tabular-nums">1d</p>
               </div>
               <div class="border border-zec-border rounded-xl p-4">
-                <p class="text-xs text-zec-muted flex items-center gap-1.5 mb-2">Wallets Served <span class="inline-flex"><span class="itip">?</span></span></p>
+                <p class="text-xs text-zec-muted flex items-center gap-1.5 mb-2">Wallets Served <span class="inline-flex"><span class="itip" data-tip="Number of light wallet connections served by your Zaino wallet server.">?</span></span></p>
                 <p class="text-xl font-bold text-zec-text tabular-nums">0</p>
               </div>
             </div>
@@ -264,8 +264,42 @@
     font-size: 9px;
     font-weight: 500;
     line-height: 1;
-    cursor: default;
+    cursor: pointer;
     flex-shrink: 0;
+    position: relative;
+    transition: color 0.15s, border-color 0.15s;
+  }
+  .itip:hover {
+    color: rgba(122, 130, 138, 0.8);
+    border-color: rgba(122, 130, 138, 0.5);
+  }
+  .itip-tooltip {
+    position: fixed;
+    width: 14rem;
+    padding: 8px 12px;
+    border-radius: 8px;
+    border: 1px solid #1c2128;
+    background: #0a0c10;
+    color: #7a828a;
+    font-size: 11px;
+    line-height: 1.5;
+    font-weight: 400;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+    z-index: 9999;
+    pointer-events: none;
+  }
+  .itip-tooltip::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%) rotate(45deg);
+    margin-top: -4px;
+    width: 8px;
+    height: 8px;
+    border-right: 1px solid #1c2128;
+    border-bottom: 1px solid #1c2128;
+    background: #0a0c10;
   }
 </style>
 
@@ -364,5 +398,23 @@
     else{dv.classList.add('hidden');pv.classList.remove('hidden');const info=PH[v];if(info){$('#demo-placeholder-title').textContent=info.t;$('#demo-placeholder-desc').textContent=info.d;$('#demo-placeholder-icon').textContent=info.i;title.textContent=info.t;}}
   });});
   go('stopped');
+
+  // InfoTip click-to-show tooltips (fixed position, appended to body to avoid clipping)
+  let activeTip: HTMLElement|null = null;
+  let activeTipEl: HTMLElement|null = null;
+  function closeTip(){if(activeTipEl){activeTipEl.remove();activeTipEl=null;}activeTip=null;}
+  document.addEventListener('click',(e)=>{
+    const t=(e.target as HTMLElement).closest('.itip') as HTMLElement;
+    if(t && t.dataset.tip){
+      e.stopPropagation();
+      if(activeTip===t){closeTip();return;}
+      closeTip();
+      const rect=t.getBoundingClientRect();
+      const tip=document.createElement('div');tip.className='itip-tooltip';tip.textContent=t.dataset.tip;
+      tip.style.top=(rect.top-8)+'px';tip.style.left=(rect.left+rect.width/2)+'px';tip.style.transform='translate(-50%,-100%)';
+      document.body.appendChild(tip);activeTip=t;activeTipEl=tip;
+    } else {closeTip();}
+  },true);
+  window.addEventListener('scroll',closeTip,true);
 })();
 </script>
