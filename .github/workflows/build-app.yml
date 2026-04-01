@@ -400,8 +400,8 @@ jobs:
 
       - name: Commit and push app update JSONs
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "stefanmirrors"
+          git config user.email "stefanmirrors@users.noreply.github.com"
           git add site/public/updates/app-darwin-*.json
           git diff --cached --quiet || git commit -m "Update app update manifests for ${GITHUB_REF#refs/tags/}"
           git push

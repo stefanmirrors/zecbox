@@ -161,8 +161,8 @@ jobs:
 
       - name: Commit and push manifest
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "stefanmirrors"
+          git config user.email "stefanmirrors@users.noreply.github.com"
           git add site/public/updates/manifest.json
           git diff --cached --quiet || git commit -m "Update binary manifest: ${{ inputs.binary }} ${{ inputs.version }}"
           git push
