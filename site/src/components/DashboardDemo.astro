@@ -53,7 +53,7 @@
           </button>
         </nav>
         <div class="px-5 py-4">
-          <p class="text-[11px] text-zec-muted/40">v0.1.0</p>
+          <p class="text-[11px] text-zec-muted/40">v0.2.1</p>
         </div>
       </aside>
 
@@ -65,29 +65,22 @@
         </div>
         <main class="flex-1 overflow-hidden px-3 py-3 sm:px-6 sm:py-4">
           <!-- Dashboard view: copied from Dashboard.tsx layout -->
-          <div id="demo-dashboard" class="space-y-3">
+          <div id="demo-dashboard" class="space-y-6">
 
             <!-- NodeStatus: copied from NodeStatus.tsx -->
-            <div class="border border-zec-border rounded-xl p-3 sm:p-5">
+            <div class="border border-zec-border rounded-xl p-4 sm:p-6">
               <div class="flex items-center justify-between gap-2">
                 <div class="flex items-center gap-2 sm:gap-2.5 shrink-0">
                   <span id="demo-dot" class="w-2 h-2 rounded-full bg-zec-muted/50"></span>
                   <span id="demo-status-label" class="text-xs sm:text-sm font-medium text-zec-text capitalize">Stopped</span>
                 </div>
                 <div class="flex items-center gap-2 sm:gap-4">
-                  <div id="demo-toggles" class="hidden items-center gap-2 sm:gap-4">
+                  <div id="demo-toggles" class="flex items-center gap-2 sm:gap-4">
                     <!-- MiniToggle Shield: copied from MiniToggle -->
                     <div class="hidden sm:flex items-center gap-2">
                       <span class="text-xs text-zec-muted flex items-center gap-1">Shield <span class="inline-flex"><span class="itip">?</span></span></span>
                       <button id="demo-shield-toggle" role="switch" aria-label="Toggle Shield" class="relative w-7 h-4 rounded-full transition-colors shrink-0 bg-zec-border hover:bg-zec-muted/20">
                         <span id="demo-shield-knob" class="absolute top-0.5 left-0.5 w-3 h-3 rounded-full bg-white transition-transform duration-200"></span>
-                      </button>
-                    </div>
-                    <!-- MiniToggle Wallet: copied from MiniToggle (disabled) -->
-                    <div class="hidden sm:flex items-center gap-2 opacity-40">
-                      <span class="text-xs text-zec-muted flex items-center gap-1">Wallet <span class="inline-flex"><span class="itip">?</span></span></span>
-                      <button disabled class="relative w-7 h-4 rounded-full transition-colors shrink-0 bg-zec-border/50 cursor-not-allowed">
-                        <span class="absolute top-0.5 left-0.5 w-3 h-3 rounded-full bg-white transition-transform duration-200"></span>
                       </button>
                     </div>
                     <div class="hidden sm:block w-px h-5 bg-zec-border"></div>
@@ -152,39 +145,51 @@
               </div>
             </div>
 
-            <!-- NodeStatsPanel: copied from NodeStatsPanel.tsx -->
-            <div id="demo-stats" class="grid grid-cols-2 sm:grid-cols-4 gap-2">
-              <div class="border border-zec-border rounded-lg px-3 py-1.5">
-                <p class="text-[10px] text-zec-muted flex items-center gap-1 mb-0.5">Uptime <span class="inline-flex"><span class="itip">?</span></span></p>
-                <p class="text-sm font-bold text-zec-text tabular-nums">2h 6m</p>
+            <!-- StatusIndicators: copied from StatusIndicators.tsx -->
+            <div id="demo-indicators" class="grid grid-cols-3 gap-2">
+              <div id="demo-ind-sync" class="rounded-xl px-3 py-2 border bg-zec-surface border-zec-border">
+                <span class="text-[10px] text-zec-muted uppercase tracking-wider block">Sync</span>
+                <div class="flex items-baseline gap-1">
+                  <span id="demo-ind-sync-val" class="text-sm font-bold tabular-nums truncate text-zec-muted">Offline</span>
+                </div>
               </div>
-              <div class="border border-zec-border rounded-lg px-3 py-1.5">
-                <p class="text-[10px] text-zec-muted flex items-center gap-1 mb-0.5">Blocks Verified <span class="inline-flex"><span class="itip">?</span></span></p>
-                <p class="text-sm font-bold text-zec-text tabular-nums">215.6M</p>
+              <div id="demo-ind-shield" class="rounded-xl px-3 py-2 border bg-zec-surface border-zec-border">
+                <span class="text-[10px] text-zec-muted uppercase tracking-wider block">Shield</span>
+                <div class="flex items-baseline gap-1">
+                  <span id="demo-ind-shield-val" class="text-sm font-bold tabular-nums truncate text-zec-muted">Off</span>
+                </div>
               </div>
-              <div class="border border-zec-border rounded-lg px-3 py-1.5">
-                <p class="text-[10px] text-zec-muted flex items-center gap-1 mb-0.5">Streak <span class="inline-flex"><span class="itip">?</span></span></p>
-                <p class="text-sm font-bold text-zec-text tabular-nums">1d</p>
-              </div>
-              <div class="border border-zec-border rounded-lg px-3 py-1.5">
-                <p class="text-[10px] text-zec-muted flex items-center gap-1 mb-0.5">Wallets Served <span class="inline-flex"><span class="itip">?</span></span></p>
-                <p class="text-sm font-bold text-zec-text tabular-nums">0</p>
+              <div id="demo-ind-storage" class="rounded-xl px-3 py-2 border bg-zec-surface border-zec-border">
+                <span class="text-[10px] text-zec-muted uppercase tracking-wider block">Storage</span>
+                <div class="flex items-baseline gap-1">
+                  <span class="text-sm font-bold tabular-nums truncate text-emerald-400">772 GB</span>
+                  <span class="text-[10px] text-zec-muted">free</span>
+                </div>
               </div>
             </div>
 
-            <!-- StorageBar: copied from StorageBar.tsx -->
-            <div class="border border-zec-border rounded-lg px-4 py-2 space-y-1.5">
-              <div class="flex items-center justify-between">
-                <span class="text-xs text-zec-muted flex items-center gap-1.5">Storage <span class="inline-flex"><span class="itip">?</span></span></span>
-                <span class="text-xs text-zec-muted tabular-nums">772.5 GB free of 994.7 GB</span>
+            <!-- NodeStatsPanel: copied from NodeStatsPanel.tsx -->
+            <div id="demo-stats" class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div class="border border-zec-border rounded-xl p-4">
+                <p class="text-xs text-zec-muted flex items-center gap-1.5 mb-2">Uptime <span class="inline-flex"><span class="itip">?</span></span></p>
+                <p class="text-xl font-bold text-zec-text tabular-nums">2h 6m</p>
               </div>
-              <div class="h-1 rounded-full bg-zec-border overflow-hidden">
-                <div class="h-full rounded-full transition-all bg-zec-muted/30" style="width:22%"></div>
+              <div class="border border-zec-border rounded-xl p-4">
+                <p class="text-xs text-zec-muted flex items-center gap-1.5 mb-2">Blocks Verified <span class="inline-flex"><span class="itip">?</span></span></p>
+                <p class="text-xl font-bold text-zec-text tabular-nums">215.6M</p>
+              </div>
+              <div class="border border-zec-border rounded-xl p-4">
+                <p class="text-xs text-zec-muted flex items-center gap-1.5 mb-2">Streak <span class="inline-flex"><span class="itip">?</span></span></p>
+                <p class="text-xl font-bold text-zec-text tabular-nums">1d</p>
+              </div>
+              <div class="border border-zec-border rounded-xl p-4">
+                <p class="text-xs text-zec-muted flex items-center gap-1.5 mb-2">Wallets Served <span class="inline-flex"><span class="itip">?</span></span></p>
+                <p class="text-xl font-bold text-zec-text tabular-nums">0</p>
               </div>
             </div>
 
             <!-- LiveLogPreview: copied from LiveLogPreview.tsx -->
-            <div id="demo-logs-panel" class="border border-zec-border rounded-lg px-4 py-2.5 space-y-2">
+            <div id="demo-logs-panel" class="border border-zec-border rounded-xl p-4 space-y-3">
               <div class="flex items-center justify-between">
                 <h3 class="text-xs font-medium text-zec-muted">Live Activity</h3>
                 <button class="text-[11px] text-zec-muted/50 hover:text-zec-yellow transition-colors">View all logs →</button>
@@ -274,15 +279,35 @@
     logs:{t:'Log Viewer',d:'Real-time log stream from zebrad with search, filtering, and auto-scroll.',i:'📋'},
     settings:{t:'Settings',d:'Auto-start, data directory, auto-updates, database management, and more.',i:'⚙️'},
   };
-  let state='stopped', stepIdx=0, syncPct=0, shieldOn=false, walletOn=false;
+  let state='stopped', stepIdx=0, syncPct=0, shieldOn=false;
   let timers: number[] = [];
   const $=(s:string)=>document.querySelector(s) as HTMLElement;
   const $$=(s:string)=>document.querySelectorAll(s);
   const dot=$('#demo-dot'), lbl=$('#demo-status-label'), btn=$('#demo-btn');
   const prog=$('#demo-progress'), steps=$('#demo-steps'), pct=$('#demo-pct');
   const bar=$('#demo-bar'), msg=$('#demo-msg'), bc=$('#demo-blocks-counter');
-  const synced=$('#demo-synced'), stats=$('#demo-stats'), tgl=$('#demo-toggles');
+  const synced=$('#demo-synced'), stats=$('#demo-stats');
   const logs=$$('.demo-log-line'), dv=$('#demo-dashboard'), pv=$('#demo-placeholder');
+  const indSync=$('#demo-ind-sync'), indShield=$('#demo-ind-shield'), indSyncVal=$('#demo-ind-sync-val'), indShieldVal=$('#demo-ind-shield-val');
+  function setIndicator(el:HTMLElement, valEl:HTMLElement, health:string, value:string){
+    const colors:{[k:string]:{bg:string;border:string;text:string}}={
+      green:{bg:'bg-emerald-400/10',border:'border-emerald-400/20',text:'text-emerald-400'},
+      yellow:{bg:'bg-yellow-400/10',border:'border-yellow-400/20',text:'text-yellow-400'},
+      red:{bg:'bg-red-400/10',border:'border-red-400/20',text:'text-red-400'},
+      gray:{bg:'bg-zec-surface',border:'border-zec-border',text:'text-zec-muted'},
+    };
+    const c=colors[health]||colors.gray;
+    el.className=`rounded-xl px-3 py-2 border ${c.bg} ${c.border}`;
+    valEl.className=`text-sm font-bold tabular-nums truncate ${c.text}`;
+    valEl.textContent=value;
+  }
+  function updateIndicators(){
+    if(state==='stopped'){setIndicator(indSync,indSyncVal,'red','Offline');setIndicator(indShield,indShieldVal,shieldOn?'green':'gray',shieldOn?'Active':'Off');}
+    else if(state==='starting'){setIndicator(indSync,indSyncVal,'yellow','Starting');setIndicator(indShield,indShieldVal,shieldOn?'yellow':'gray',shieldOn?'Connecting':'Off');}
+    else if(state==='syncing'){setIndicator(indSync,indSyncVal,'yellow',syncPct.toFixed(1)+'%');setIndicator(indShield,indShieldVal,shieldOn?'green':'gray',shieldOn?'Active':'Off');}
+    else if(state==='synced'){setIndicator(indSync,indSyncVal,'green','Synced');setIndicator(indShield,indShieldVal,shieldOn?'green':'gray',shieldOn?'Active':'Off');}
+    else if(state==='stopping'){setIndicator(indSync,indSyncVal,'yellow','Stopping');setIndicator(indShield,indShieldVal,shieldOn?'green':'gray',shieldOn?'Active':'Off');}
+  }
   function clear(){timers.forEach(clearTimeout);timers=[];}
   function showLogs(n:number){logs.forEach((e,i)=>{const el=e as HTMLElement;el.classList.toggle('hidden',i>=n);el.classList.toggle('flex',i<n);});}
   function setStep(idx:number){
@@ -297,41 +322,40 @@
   function go(s:string){
     clear(); state=s;
     prog.classList.add('hidden'); synced.classList.add('hidden');
-    tgl.classList.remove('flex'); tgl.classList.add('hidden');
     steps.classList.remove('hidden'); bc.classList.add('hidden');
     if(s==='stopped'){
       dot.className='w-2 h-2 rounded-full bg-zec-muted/50'; lbl.textContent='Stopped';
-      btn.textContent='Start Node'; btn.className='px-4 py-1.5 rounded-lg text-sm font-medium transition-colors bg-zec-yellow text-zec-dark hover:brightness-110'; btn.removeAttribute('disabled');
-      showLogs(0);
+      btn.textContent=shieldOn?'Start Shielded Node':'Start Node'; btn.className='px-4 py-1.5 rounded-lg text-sm font-medium transition-colors bg-zec-yellow text-zec-dark hover:brightness-110'; btn.removeAttribute('disabled');
+      showLogs(0); updateIndicators();
     } else if(s==='starting'){
       dot.className='w-2 h-2 rounded-full bg-zec-yellow animate-pulse'; lbl.textContent='Starting';
       btn.textContent='Starting...'; btn.className='px-4 py-1.5 rounded-lg text-sm font-medium transition-colors bg-zec-border/50 text-zec-muted cursor-not-allowed'; btn.setAttribute('disabled','');
       prog.classList.remove('hidden'); stepIdx=0; syncPct=0;
-      pct.textContent='0%'; bar.style.width='0.5%'; msg.textContent='Preparing node...'; setStep(0); showLogs(1);
+      pct.textContent='0%'; bar.style.width='0.5%'; msg.textContent='Preparing node...'; setStep(0); showLogs(1); updateIndicators();
       for(let i=1;i<=5;i++){timers.push(window.setTimeout(()=>{if(state!=='starting')return;stepIdx=i;if(i<5){setStep(i);msg.textContent=STEPS[i]+'...';pct.textContent=Math.round((i/5)*5)+'%';bar.style.width=((i/5)*5)+'%';showLogs(Math.min(i+1,3));}else{go('syncing');}},i*800));}
     } else if(s==='syncing'){
       dot.className='w-2 h-2 rounded-full bg-zec-yellow animate-pulse'; lbl.textContent='Running';
       btn.textContent='Stop'; btn.className='px-4 py-1.5 rounded-lg text-sm font-medium transition-colors border border-zec-border text-zec-muted hover:text-zec-text hover:border-red-400/50'; btn.removeAttribute('disabled');
       prog.classList.remove('hidden'); steps.classList.add('hidden'); bc.classList.remove('hidden');
-      msg.textContent='Downloading and verifying every Zcash transaction since 2016'; showLogs(3); syncPct=5;
+      msg.textContent='Downloading and verifying every Zcash transaction since 2016'; showLogs(3); syncPct=5; updateIndicators();
       let t=0; const tot=40;
       const iv=window.setInterval(()=>{if(state!=='syncing'){clearInterval(iv);return;}t++;syncPct=5+(t/tot)*95;if(syncPct>100)syncPct=100;
         const cb=Math.round((syncPct/100)*TARGET);pct.textContent=syncPct.toFixed(1)+'%';bar.style.width=syncPct+'%';
-        bc.textContent=cb.toLocaleString()+' / '+TARGET.toLocaleString();showLogs(Math.min(3+Math.floor(t/10),5));
+        bc.textContent=cb.toLocaleString()+' / '+TARGET.toLocaleString();showLogs(Math.min(3+Math.floor(t/10),5));updateIndicators();
         if(t>=tot){clearInterval(iv);go('synced');}},200);
       timers.push(iv as unknown as number);
     } else if(s==='synced'){
       dot.className='w-2 h-2 rounded-full bg-emerald-400'; lbl.textContent='Running';
       btn.textContent='Stop'; btn.className='px-4 py-1.5 rounded-lg text-sm font-medium transition-colors border border-zec-border text-zec-muted hover:text-zec-text hover:border-red-400/50'; btn.removeAttribute('disabled');
-      synced.classList.remove('hidden'); tgl.classList.remove('hidden'); tgl.classList.add('flex'); showLogs(5);
+      synced.classList.remove('hidden'); showLogs(5); updateIndicators();
     } else if(s==='stopping'){
       dot.className='w-2 h-2 rounded-full bg-zec-yellow animate-pulse'; lbl.textContent='Stopping';
       btn.textContent='Stopping...'; btn.className='px-4 py-1.5 rounded-lg text-sm font-medium transition-colors bg-zec-border/50 text-zec-muted cursor-not-allowed'; btn.setAttribute('disabled','');
-      timers.push(window.setTimeout(()=>go('stopped'),500));
+      updateIndicators(); timers.push(window.setTimeout(()=>go('stopped'),500));
     }
   }
   btn.addEventListener('click',()=>{if(state==='stopped')go('starting');else if(state==='synced'||state==='syncing')go('stopping');});
-  $('#demo-shield-toggle').addEventListener('click',()=>{shieldOn=!shieldOn;const k=$('#demo-shield-knob'),t=$('#demo-shield-toggle');if(shieldOn){k.classList.add('translate-x-3');t.className='relative w-7 h-4 rounded-full transition-colors shrink-0 bg-emerald-400';}else{k.classList.remove('translate-x-3');t.className='relative w-7 h-4 rounded-full transition-colors shrink-0 bg-zec-border hover:bg-zec-muted/20';}});
+  $('#demo-shield-toggle').addEventListener('click',()=>{shieldOn=!shieldOn;const k=$('#demo-shield-knob'),t=$('#demo-shield-toggle');if(shieldOn){k.classList.add('translate-x-3');t.className='relative w-7 h-4 rounded-full transition-colors shrink-0 bg-emerald-400';}else{k.classList.remove('translate-x-3');t.className='relative w-7 h-4 rounded-full transition-colors shrink-0 bg-zec-border hover:bg-zec-muted/20';}updateIndicators();if(state==='stopped'){btn.textContent=shieldOn?'Start Shielded Node':'Start Node';}});
   $$('.demo-nav').forEach(b=>{b.addEventListener('click',()=>{
     const v=(b as HTMLElement).dataset.nav!;
     $$('.demo-nav').forEach(x=>{const a=(x as HTMLElement).dataset.nav===v;(x as HTMLElement).className=`demo-nav relative w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13px] font-medium transition-colors ${a?'text-zec-yellow':'text-zec-muted hover:text-zec-text'}`;const ind=(x as HTMLElement).querySelector('.demo-indicator') as HTMLElement;if(ind)ind.classList.toggle('hidden',!a);});
