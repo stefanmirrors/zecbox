@@ -42,34 +42,38 @@ Download the app for your platform from [zecbox.io](https://zecbox.io/#downloads
 
 ### macOS
 
-1. Open the downloaded `.dmg` and drag zecbox into your Applications folder.
-2. Open Terminal and run:
+1. Open the downloaded `.dmg` file and drag zecbox into your Applications folder.
+2. Open **Terminal** (press Cmd+Space, type "Terminal", hit Enter).
+3. Copy and paste this into Terminal, then press Enter:
    ```
    xattr -cr /Applications/zecbox.app
    ```
-   This is needed because the app is not yet code-signed. It clears the quarantine flag so macOS will let you open it.
-3. Open zecbox from Applications.
+4. Open **zecbox** from your Applications folder.
+
+> The `xattr` step is needed because the app is not yet code-signed. It clears the quarantine flag so macOS will let you open it. Code signing is coming soon.
 
 ### Linux (.deb)
 
-```
-sudo dpkg -i ~/Downloads/zecbox*.deb
-```
-
-Then open zecbox from your application menu.
+1. Open a terminal (Ctrl+Alt+T on most distros).
+2. Copy and paste this into the terminal, then press Enter (it will ask for your password):
+   ```
+   sudo dpkg -i ~/Downloads/zecbox*.deb
+   ```
+3. Open **zecbox** from your application menu.
 
 ### Linux (AppImage)
 
-```
-chmod +x ~/Downloads/zecbox*.AppImage
-~/Downloads/zecbox*.AppImage
-```
+1. Open a terminal (Ctrl+Alt+T on most distros).
+2. Copy and paste this into the terminal, then press Enter:
+   ```
+   chmod +x ~/Downloads/zecbox*.AppImage && ~/Downloads/zecbox*.AppImage
+   ```
 
 ### Windows
 
-1. Run the downloaded `.exe` installer.
-2. If Windows SmartScreen appears, click **More info**, then **Run anyway**.
-3. Open zecbox from the Start menu.
+1. Open the downloaded `.exe` file to start the installer.
+2. If a blue **Windows SmartScreen** popup appears, click **More info**, then click **Run anyway**.
+3. Once installed, open **zecbox** from the Start menu or desktop shortcut.
 
 ## How It Works
 
