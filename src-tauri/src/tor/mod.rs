@@ -2,6 +2,7 @@
 //! Manages Arti as a sidecar process with SOCKS5 proxy (outbound) and
 //! onion service (inbound). Monitors bootstrap/health, implements kill switch.
 
+pub mod dns;
 pub mod firewall;
 
 use std::path::{Path, PathBuf};

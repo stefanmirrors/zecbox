@@ -46,9 +46,21 @@ pub async fn start_zebrad(
         addr
     };
 
+    // Get resolved peers if shield mode resolved them through Tor (prevents DNS leaks)
+    let resolved_peers = {
+        let state = app_handle.state::<AppState>();
+        let peers = state.shield.resolved_peers.lock().await.clone();
+        peers
+    };
+
     // Generate config
-    let config_path = zebrad_config::write_zebrad_config(&data_dir, shield_active, onion_address.as_deref())
-        .map_err(|e| format!("Failed to write zebrad config: {}", e))?;
+    let config_path = zebrad_config::write_zebrad_config(
+        &data_dir,
+        shield_active,
+        onion_address.as_deref(),
+        resolved_peers.as_deref(),
+    )
+    .map_err(|e| format!("Failed to write zebrad config: {}", e))?;
 
     // Resolve binary path
     let binary_path = resolve_binary_path(&app_handle);

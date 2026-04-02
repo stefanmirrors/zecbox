@@ -121,7 +121,27 @@ pub async fn enable_shield_mode(
         return Err(format!("Shield Mode failed traffic verification: {}. Disabled for safety.", e));
     }
 
-    // If node was running, restart it with shield config (includes onion external_addr)
+    // Resolve Zcash DNS seeders through Tor to prevent DNS leaks.
+    // zebrad.toml will contain IPs only — no DNS hostnames that could leak to ISP.
+    let resolved_peers = tor::dns::resolve_seeders_via_tor().await.map_err(|e| {
+        log::error!("DNS resolution through Tor failed: {}", e);
+        // Clean up — Shield Mode cannot proceed without resolved peers
+        let app = app_handle.clone();
+        let shield = state.shield.clone();
+        tokio::spawn(async move {
+            let _ = firewall::disable_firewall();
+            let _ = tor::stop_arti(&app, &shield).await;
+        });
+        format!("Shield Mode failed: {}. Disabled for safety.", e)
+    })?;
+
+    // Store resolved peers for zebrad config generation
+    {
+        let mut peers = state.shield.resolved_peers.lock().await;
+        *peers = Some(resolved_peers);
+    }
+
+    // If node was running, restart it with shield config (resolved IPs + onion external_addr)
     if node_was_running {
         zebrad::stop_zebrad(&app_handle, &state.node).await?;
         zebrad::start_zebrad(app_handle.clone(), &state.node).await?;
@@ -163,10 +183,14 @@ pub async fn disable_shield_mode(
     // Stop Arti
     tor::stop_arti(&app_handle, &state.shield).await?;
 
-    // Clear onion address
+    // Clear onion address and resolved peers
     {
         let mut addr = state.shield.onion_address.lock().await;
         *addr = None;
+    }
+    {
+        let mut peers = state.shield.resolved_peers.lock().await;
+        *peers = None;
     }
 
     // Restart node with clearnet config if it was running

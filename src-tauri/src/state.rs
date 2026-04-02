@@ -227,6 +227,8 @@ pub struct ShieldState {
     pub bootstrap_task: Mutex<Option<JoinHandle<()>>>,
     pub kill_switch_task: Mutex<Option<JoinHandle<()>>>,
     pub onion_address: Mutex<Option<String>>,
+    /// Zcash peer IPs resolved through Tor for DNS leak prevention.
+    pub resolved_peers: Mutex<Option<Vec<String>>>,
 }
 
 impl ShieldState {
@@ -237,6 +239,7 @@ impl ShieldState {
             bootstrap_task: Mutex::new(None),
             kill_switch_task: Mutex::new(None),
             onion_address: Mutex::new(None),
+            resolved_peers: Mutex::new(None),
         }
     }
 

@@ -4,18 +4,33 @@ use std::path::{Path, PathBuf};
 /// Generate the contents of zebrad.toml for the given data directory.
 /// When `shield_mode` is true, restricts listen to localhost.
 /// When `onion_address` is set, adds external_addr so peers see the .onion address.
-pub fn generate_zebrad_toml(data_dir: &Path, shield_mode: bool, onion_address: Option<&str>) -> String {
+/// When `resolved_peers` is provided (Shield Mode), uses pre-resolved IPs instead of
+/// DNS hostnames to prevent DNS leaks to the ISP.
+pub fn generate_zebrad_toml(
+    data_dir: &Path,
+    shield_mode: bool,
+    onion_address: Option<&str>,
+    resolved_peers: Option<&[String]>,
+) -> String {
     let cache_dir = data_dir.join("zebra");
 
-    // DNS seeders for peer discovery — zebrad needs these to find the network.
-    // In Shield Mode, PF firewall transparently routes connections through Tor,
-    // so zebrad uses the same seeders but traffic goes through the SOCKS proxy.
-    let dns_seeders = r#"initial_mainnet_peers = [
+    // In Shield Mode, use IPs resolved through Tor to prevent DNS leaks.
+    // In clearnet mode, use DNS seeders for peer discovery.
+    let peer_config = match resolved_peers {
+        Some(peers) if !peers.is_empty() => {
+            let entries: Vec<String> = peers.iter().map(|p| format!("    \"{}\"", p)).collect();
+            format!("initial_mainnet_peers = [\n{}\n]", entries.join(",\n"))
+        }
+        _ => {
+            r#"initial_mainnet_peers = [
     "dnsseed.z.cash:8233",
     "dnsseed.str4d.xyz:8233",
     "mainnet.seeder.zfnd.org:8233",
     "mainnet.is.yolo.money:8233",
-]"#;
+]"#
+            .to_string()
+        }
+    };
 
     let listen_addr = if shield_mode {
         "127.0.0.1:8233"
@@ -56,7 +71,7 @@ cache_dir = "{cache_dir}"
 "#,
         listen_addr = listen_addr,
         external_addr = external_addr_line,
-        dns_seeders = dns_seeders,
+        dns_seeders = peer_config,
         cache_dir = super::toml_path(&cache_dir)
     )
 }
@@ -67,6 +82,7 @@ pub fn write_zebrad_config(
     data_dir: &Path,
     shield_mode: bool,
     onion_address: Option<&str>,
+    resolved_peers: Option<&[String]>,
 ) -> Result<PathBuf, std::io::Error> {
     let config_dir = data_dir.join("config");
     fs::create_dir_all(&config_dir)?;
@@ -75,7 +91,7 @@ pub fn write_zebrad_config(
     fs::create_dir_all(data_dir.join("zaino"))?;
 
     let config_path = config_dir.join("zebrad.toml");
-    let contents = generate_zebrad_toml(data_dir, shield_mode, onion_address);
+    let contents = generate_zebrad_toml(data_dir, shield_mode, onion_address, resolved_peers);
     fs::write(&config_path, contents)?;
 
     Ok(config_path)
