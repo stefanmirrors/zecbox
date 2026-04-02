@@ -101,7 +101,7 @@ export function Sidebar({ activeView, onNavigate }: Props) {
       </nav>
 
       <div className="px-5 py-4">
-        <p className="text-[11px] text-zec-muted/40">v0.1.0</p>
+        <p className="text-[11px] text-zec-muted/40">v{__APP_VERSION__}</p>
       </div>
     </aside>
   );
