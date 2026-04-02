@@ -118,23 +118,32 @@ export default function ShieldMode() {
         )}
 
         {/* .onion address display */}
-        {status.enabled && status.onionAddress && (
+        {status.enabled && (
           <div className="border-t border-zec-border/50 pt-4 space-y-2">
             <span className="text-xs text-zec-muted">Your node's .onion address</span>
-            <div className="flex items-center gap-2">
-              <code className="flex-1 text-xs text-zec-text font-mono bg-zec-surface px-3 py-2 rounded-lg break-all">
-                {status.onionAddress}
-              </code>
-              <button
-                onClick={handleCopyOnion}
-                className="px-3 py-2 bg-zec-border/50 rounded-lg text-xs text-zec-muted hover:text-zec-text transition-colors shrink-0"
-              >
-                {copied ? "Copied!" : "Copy"}
-              </button>
-            </div>
-            <p className="text-[10px] text-zec-muted/50">
-              Other Zcash nodes can connect to you at this address. Your home IP is never exposed.
-            </p>
+            {status.onionAddress ? (
+              <>
+                <div className="flex items-center gap-2">
+                  <code className="flex-1 text-xs text-zec-text font-mono bg-zec-surface px-3 py-2 rounded-lg break-all">
+                    {status.onionAddress}
+                  </code>
+                  <button
+                    onClick={handleCopyOnion}
+                    className="px-3 py-2 bg-zec-border/50 rounded-lg text-xs text-zec-muted hover:text-zec-text transition-colors shrink-0"
+                  >
+                    {copied ? "Copied!" : "Copy"}
+                  </button>
+                </div>
+                <p className="text-[10px] text-zec-muted/50">
+                  Other Zcash nodes can connect to you at this address. Your home IP is never exposed.
+                </p>
+              </>
+            ) : (
+              <div className="flex items-center gap-2 py-2">
+                <div className="w-3 h-3 border border-zec-muted/30 border-t-zec-muted rounded-full animate-spin" />
+                <span className="text-xs text-zec-muted">Resolving .onion address...</span>
+              </div>
+            )}
           </div>
         )}
       </div>

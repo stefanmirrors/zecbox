@@ -67,6 +67,8 @@ jobs:
           rm -f $RUNNER_TEMP/certificate.p12
 
       - name: Fetch upstream binaries
+        env:
+          REAL_ARTI: "1"
         run: |
           chmod +x scripts/fetch-binaries.sh
           TARGET_TRIPLE=${{ matrix.triple }} scripts/fetch-binaries.sh
@@ -219,6 +221,8 @@ jobs:
         run: npm ci
 
       - name: Fetch upstream binaries
+        env:
+          REAL_ARTI: "1"
         run: |
           chmod +x scripts/fetch-binaries.sh
           TARGET_TRIPLE=${{ matrix.triple }} scripts/fetch-binaries.sh

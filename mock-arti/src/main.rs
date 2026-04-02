@@ -10,7 +10,7 @@ use tokio::signal;
 /// Accepts real Arti CLI format: `arti proxy -c <config>`
 /// Also accepts legacy: `--config <path>` or `--socks-port <port>`
 
-const MOCK_ONION_ADDRESS: &str = "zecboxmock1234567890abcdefghijklmnopqrstuvwxyz234567.onion";
+const MOCK_ONION_ADDRESS: &str = "zecboxmock1234567890abcdefghijklmnopqrstuvwxyz23456abcde.onion";
 
 #[tokio::main]
 async fn main() {

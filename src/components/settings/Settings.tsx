@@ -20,6 +20,7 @@ export function Settings({ onResetToOnboarding }: SettingsProps) {
   const [rebuildConfirm, setRebuildConfirm] = useState(false);
   const [rebuilding, setRebuilding] = useState(false);
   const [resetting, setResetting] = useState(false);
+  const [resetError, setResetError] = useState<string | null>(null);
   const [recoveryNeeded, setRecoveryNeeded] = useState(false);
   const [autoStartError, setAutoStartError] = useState<string | null>(null);
   const {
@@ -168,56 +169,82 @@ export function Settings({ onResetToOnboarding }: SettingsProps) {
       )}
 
       {recoveryNeeded && (
-        <div className="border border-red-400/20 rounded-xl p-4">
-          <p className="text-sm text-red-400/80">
-            Node failed to start repeatedly. The database may need to be rebuilt.
+        <div className="border border-red-400/20 rounded-xl p-4 space-y-2">
+          <p className="text-sm font-medium text-red-400">Node failed to start repeatedly</p>
+          <p className="text-xs text-zec-muted">
+            The blockchain database may be corrupted. Use <strong className="text-zec-text">Rebuild Database</strong> below to delete the chain data and re-sync from scratch. This will fix most startup issues.
           </p>
         </div>
       )}
 
-      {/* Advanced */}
-      <Section title="Advanced">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-sm text-zec-text">Rebuild Database</p>
-            <p className="text-[11px] text-zec-muted">Deletes chain data and re-syncs from scratch.</p>
-          </div>
-          {!rebuildConfirm ? (
-            <button
-              onClick={() => setRebuildConfirm(true)}
-              disabled={rebuilding}
-              className="text-[11px] px-2.5 py-1 rounded-lg border border-red-400/20 text-red-400/80 hover:bg-red-400/5 transition-colors"
-            >
-              Rebuild
-            </button>
-          ) : (
-            <div className="flex gap-2">
-              <button onClick={() => setRebuildConfirm(false)} className="text-[11px] text-zec-muted hover:text-zec-text">Cancel</button>
+      {/* Troubleshooting */}
+      <Section title="Troubleshooting">
+        {/* Rebuild Database */}
+        <div className="border border-zec-border rounded-xl p-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <p className="text-sm font-medium text-zec-text">Rebuild Database</p>
+            {!rebuildConfirm ? (
               <button
-                onClick={handleRebuild}
+                onClick={() => setRebuildConfirm(true)}
                 disabled={rebuilding}
-                className="text-[11px] px-2.5 py-1 rounded-lg bg-red-500 text-white hover:bg-red-600 disabled:opacity-50 transition-colors"
+                className="text-[11px] px-2.5 py-1 rounded-lg border border-red-400/20 text-red-400/80 hover:bg-red-400/5 transition-colors"
               >
-                {rebuilding ? "Rebuilding..." : "Confirm"}
+                Rebuild
               </button>
+            ) : (
+              <div className="flex gap-2">
+                <button onClick={() => setRebuildConfirm(false)} className="text-[11px] text-zec-muted hover:text-zec-text">Cancel</button>
+                <button
+                  onClick={handleRebuild}
+                  disabled={rebuilding}
+                  className="text-[11px] px-2.5 py-1 rounded-lg bg-red-500 text-white hover:bg-red-600 disabled:opacity-50 transition-colors"
+                >
+                  {rebuilding ? "Rebuilding..." : "Yes, Rebuild"}
+                </button>
+              </div>
+            )}
+          </div>
+          <p className="text-[11px] text-zec-muted leading-relaxed">
+            Deletes the entire blockchain database and re-syncs from the network. Use this if your node won't start, shows database errors, or gets stuck during sync.
+          </p>
+          {rebuildConfirm && (
+            <div className="border border-red-400/10 rounded-lg p-3 bg-red-400/5">
+              <p className="text-[11px] text-red-400/80 leading-relaxed">
+                This will delete all downloaded blockchain data. Your node will need to re-download and verify the entire Zcash blockchain (~300 GB), which can take several hours to days depending on your connection. Your settings, Shield Mode config, and wallet server config are not affected.
+              </p>
             </div>
           )}
         </div>
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-sm text-zec-text">Reset to Onboarding</p>
-            <p className="text-[11px] text-zec-muted">Returns to the first-run setup screen.</p>
+
+        {/* Reset to Onboarding */}
+        <div className="border border-zec-border rounded-xl p-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <p className="text-sm font-medium text-zec-text">Reset to Onboarding</p>
+            <button
+              onClick={async () => {
+                setResetting(true);
+                setResetError(null);
+                try {
+                  await resetOnboarding();
+                  onResetToOnboarding();
+                } catch (e) {
+                  console.error("Reset failed:", e);
+                  setResetError(typeof e === "string" ? e : "Reset failed. Try restarting the app.");
+                  setResetting(false);
+                }
+              }}
+              disabled={resetting}
+              className="text-[11px] px-2.5 py-1 rounded-lg border border-zec-border text-zec-muted hover:text-zec-text disabled:opacity-40 transition-colors"
+            >
+              {resetting ? "Resetting..." : "Reset"}
+            </button>
           </div>
-          <button
-            onClick={async () => {
-              setResetting(true);
-              try { await resetOnboarding(); onResetToOnboarding(); } catch { setResetting(false); }
-            }}
-            disabled={resetting}
-            className="text-[11px] px-2.5 py-1 rounded-lg border border-zec-border text-zec-muted hover:text-zec-text disabled:opacity-40 transition-colors"
-          >
-            {resetting ? "Resetting..." : "Reset"}
-          </button>
+          <p className="text-[11px] text-zec-muted leading-relaxed">
+            Returns to the first-run setup screen where you can reconfigure storage location and privacy mode. Use this if you want to change your setup or if the app is behaving unexpectedly. Your blockchain data is kept — you won't need to re-sync.
+          </p>
+          {resetError && (
+            <p className="text-[11px] text-red-400/80 mt-2">{resetError}</p>
+          )}
         </div>
       </Section>
     </div>
