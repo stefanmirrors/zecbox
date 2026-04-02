@@ -1,6 +1,6 @@
 # zecbox
 
-Zcash full node in one click. Any device. No terminal. No config files. Fully open source.
+Zcash full node in one click. Any device, no terminal, no config files, and fully open source.
 
 **Website:** [zecbox.io](https://zecbox.io)
 
@@ -14,7 +14,7 @@ zecbox is built with [Tauri](https://tauri.app/) (Rust backend + native webview)
 
 - **One-click setup:** Guided onboarding walks you through storage selection and privacy preferences. Three decisions, then you're syncing.
 - **Real-time dashboard:** Live sync progress, peer count, block height, storage usage, and uptime stats. Updated every two seconds.
-- **Shield Mode:** Route all node traffic through Tor with a single toggle. Includes a kill switch: if the Tor connection drops, the node stops immediately rather than falling back to clearnet. Your IP is never exposed.
+- **Shield Mode:** Route all node traffic through Tor with a single toggle. Your node gets its own .onion address so it can still accept inbound peers and fully participate in the network without ever revealing your IP. Includes a kill switch: if the Tor connection drops, the node stops immediately rather than falling back to clearnet.
 - **Wallet Server:** Enable Zaino to serve light wallets over gRPC (port 9067). Shows the connection endpoint and a QR code for easy pairing.
 - **System tray:** Closing the window keeps the node running in the background. The tray icon shows current status. "Quit zecbox" stops everything.
 - **Auto-updates:** The app checks for updates to itself and to the bundled binaries (zebrad, Zaino, Arti). Binary updates are verified with SHA256 before swapping.
