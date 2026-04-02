@@ -59,17 +59,30 @@ pub async fn reset_onboarding(
     app_handle: AppHandle,
     state: State<'_, AppState>,
 ) -> Result<(), String> {
-    // Stop all running processes
+    // Try to stop all running processes with a 15s overall timeout.
+    // If stops hang (e.g. firewall helper unresponsive), we still reset the config.
     let data_dir = state.node.data_dir.lock().await.clone();
-    let _ = zaino::stop_zaino(&app_handle, &state.wallet, &data_dir).await;
-    let _ = zebrad::stop_zebrad(&app_handle, &state.node).await;
-    let _ = tor::stop_arti(&app_handle, &state.shield).await;
+    let default_data_dir = state.default_data_dir.clone();
 
-    // Reset config to first-run state
-    let mut config = AppConfig::load(&state.default_data_dir)
-        .unwrap_or_else(|_| AppConfig::default_for(&state.default_data_dir));
+    let stop_result = tokio::time::timeout(
+        std::time::Duration::from_secs(15),
+        async {
+            let _ = zaino::stop_zaino(&app_handle, &state.wallet, &data_dir).await;
+            let _ = zebrad::stop_zebrad(&app_handle, &state.node).await;
+            let _ = tor::stop_arti(&app_handle, &state.shield).await;
+        }
+    ).await;
+
+    if stop_result.is_err() {
+        log::warn!("Timed out stopping processes during reset (15s). Proceeding with config reset.");
+    }
+
+    // Always reset config, even if stops timed out
+    let mut config = AppConfig::load(&default_data_dir)
+        .unwrap_or_else(|_| AppConfig::default_for(&default_data_dir));
     config.first_run_complete = false;
-    config.save(&state.default_data_dir)?;
+    config.shield_mode = false;
+    config.save(&default_data_dir)?;
 
     Ok(())
 }

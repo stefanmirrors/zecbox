@@ -180,23 +180,35 @@ fn send_command_raw(cmd: &str) -> Result<String, String> {
     let mut stream = UnixStream::connect(SOCKET_PATH)
         .map_err(|e| format!("Cannot connect to firewall helper at {}: {}", SOCKET_PATH, e))?;
 
+    // Set timeouts on the raw stream BEFORE wrapping in BufReader
     stream
         .set_read_timeout(Some(Duration::from_secs(5)))
-        .ok();
+        .map_err(|e| format!("Failed to set read timeout: {}", e))?;
     stream
         .set_write_timeout(Some(Duration::from_secs(5)))
-        .ok();
+        .map_err(|e| format!("Failed to set write timeout: {}", e))?;
 
     let msg = format!("{{\"cmd\":\"{}\"}}\n", cmd);
     stream
         .write_all(msg.as_bytes())
-        .map_err(|e| format!("Failed to send command: {}", e))?;
+        .map_err(|e| format!("Failed to send command to firewall helper: {}", e))?;
 
+    // Read response with the timeout set on the underlying stream
     let mut reader = BufReader::new(&stream);
     let mut line = String::new();
     reader
         .read_line(&mut line)
-        .map_err(|e| format!("Failed to read response: {}", e))?;
+        .map_err(|e| {
+            if e.kind() == std::io::ErrorKind::WouldBlock || e.kind() == std::io::ErrorKind::TimedOut {
+                "Firewall helper did not respond within 5 seconds. It may need to be reinstalled.".to_string()
+            } else {
+                format!("Failed to read response from firewall helper: {}", e)
+            }
+        })?;
+
+    if line.is_empty() {
+        return Err("Firewall helper returned empty response. It may need to be reinstalled.".into());
+    }
 
     Ok(line)
 }

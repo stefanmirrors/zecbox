@@ -109,23 +109,46 @@ pub async fn enable_shield_mode(
     // Start Arti SOCKS proxy + hidden service
     tor::start_arti(app_handle.clone(), &state.shield).await?;
 
-    // Enable PF firewall rules + transparent redirector
-    firewall::enable_firewall()
-        .map_err(|e| format!("Failed to enable firewall: {}", e))?;
+    // Enable PF firewall rules + transparent redirector (10s timeout)
+    tokio::time::timeout(
+        std::time::Duration::from_secs(10),
+        tokio::task::spawn_blocking(|| firewall::enable_firewall())
+    )
+    .await
+    .map_err(|_| "Firewall helper did not respond within 10 seconds. Try reinstalling the helper.".to_string())?
+    .map_err(|e| format!("Firewall task failed: {}", e))?
+    .map_err(|e| format!("Failed to enable firewall: {}", e))?;
 
-    // Verify traffic actually routes through Tor
-    if let Err(e) = tor::verify_tor_path().await {
+    // Verify traffic actually routes through Tor (15s timeout)
+    if let Err(e) = tokio::time::timeout(
+        std::time::Duration::from_secs(15),
+        tor::verify_tor_path()
+    ).await.map_err(|_| "Tor path verification timed out".to_string())? {
         log::error!("Traffic verification failed: {}", e);
         let _ = firewall::disable_firewall();
         let _ = tor::stop_arti(&app_handle, &state.shield).await;
         return Err(format!("Shield Mode failed traffic verification: {}. Disabled for safety.", e));
     }
 
-    // Resolve Zcash DNS seeders through Tor to prevent DNS leaks.
+    // Resolve Zcash DNS seeders through Tor to prevent DNS leaks (45s timeout).
     // zebrad.toml will contain IPs only — no DNS hostnames that could leak to ISP.
-    let resolved_peers = tor::dns::resolve_seeders_via_tor().await.map_err(|e| {
+    let resolved_peers = tokio::time::timeout(
+        std::time::Duration::from_secs(45),
+        tor::dns::resolve_seeders_via_tor()
+    )
+    .await
+    .map_err(|_| {
+        log::error!("DNS resolution through Tor timed out after 45s");
+        let app = app_handle.clone();
+        let shield = state.shield.clone();
+        tokio::spawn(async move {
+            let _ = firewall::disable_firewall();
+            let _ = tor::stop_arti(&app, &shield).await;
+        });
+        "DNS resolution through Tor timed out. Check your network connection.".to_string()
+    })?
+    .map_err(|e| {
         log::error!("DNS resolution through Tor failed: {}", e);
-        // Clean up — Shield Mode cannot proceed without resolved peers
         let app = app_handle.clone();
         let shield = state.shield.clone();
         tokio::spawn(async move {
