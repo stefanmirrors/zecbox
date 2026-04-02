@@ -1,360 +1,222 @@
-# zecbox (Under Development)
+# zecbox
 
-**One click. Full node.**
+Zcash full node in one click. Any device. No terminal. No config files. Fully open source.
 
-zecbox turns your computer into a Zcash full node. Download, install, click start. No terminal. No Docker. No configuration files.
+**Website:** [zecbox.io](https://zecbox.io)
 
----
+## What is zecbox?
 
-## What It Does
+zecbox is a desktop application that lets you run a full Zcash node without touching a command line. It bundles everything you need into a single installer: [zebrad](https://github.com/ZcashFoundation/zebra) (the Zcash node), [Zaino](https://github.com/zingolabs/zaino) (a light wallet server), and [Arti](https://gitlab.torproject.org/tpo/core/arti) (a Tor client for private networking). All configuration is generated and managed by the app. You pick a storage location, click start, and the node takes care of itself.
 
-- Runs a [Zebra](https://github.com/ZcashFoundation/zebra) full node (zebrad) behind a clean dashboard
-- **Shield Mode** -- route all node traffic through Tor with one toggle. If Tor drops, the node stops. It will never silently fall back to clearnet. (macOS; Windows and Linux coming soon)
-- **Wallet Server** -- serve your own light wallet backend (Zaino) so ZODL, Ywallet, or any compatible wallet can sync from _your_ node instead of someone else's
-- **Network Serve** -- open your node to inbound connections with one toggle. Automatic UPnP port forwarding, CGNAT detection, and reachability checks
-- Monitors storage, network peers, sync progress, and node health in real time
-- Survives reboots, sleep, crashes, and power loss without losing chain data
-- Lives in your system tray -- close the window, the node keeps running
+zecbox is built with [Tauri](https://tauri.app/) (Rust backend + native webview) and React. It runs on macOS, Linux, and Windows.
 
-## What It Doesn't Do
+## Features
 
-- It doesn't hold your keys. zecbox is not a wallet.
-- It doesn't mine.
-- It doesn't require you to know what a terminal is.
+- **One-click setup:** Guided onboarding walks you through storage selection and privacy preferences. Three decisions, then you're syncing.
+- **Real-time dashboard:** Live sync progress, peer count, block height, storage usage, and uptime stats. Updated every two seconds.
+- **Shield Mode:** Route all node traffic through Tor with a single toggle. Includes a kill switch: if the Tor connection drops, the node stops immediately rather than falling back to clearnet. Your IP is never exposed.
+- **Wallet Server:** Enable Zaino to serve light wallets over gRPC (port 9067). Shows the connection endpoint and a QR code for easy pairing.
+- **System tray:** Closing the window keeps the node running in the background. The tray icon shows current status. "Quit zecbox" stops everything.
+- **Auto-updates:** The app checks for updates to itself and to the bundled binaries (zebrad, Zaino, Arti). Binary updates are verified with SHA256 before swapping.
+- **External drive support:** Store the blockchain on an external drive. If the drive disconnects, the app pauses cleanly and tells you to reconnect.
+- **Sleep/wake recovery:** On macOS, the app detects sleep/wake events and reconnects automatically. On other platforms, health checks handle it.
+- **Launch at login:** Optional setting to start zecbox when you log in.
 
----
+## Downloads
 
-## Requirements
+Download the latest release from [zecbox.io](https://zecbox.io/#downloads) or from [GitHub Releases](https://github.com/stefanmirrors/zecbox/releases/latest).
 
-- **Storage:** ~300 GB free (the Zcash blockchain). External drives supported.
-- **OS:** macOS (v1). Windows, Linux, and Android are planned.
-- **RAM:** 4 GB minimum. 8 GB recommended.
-- **Internet:** Required for syncing. Initial sync takes 1-3 days depending on connection speed.
+| Platform    | Architecture          | Format                  |
+| ----------- | --------------------- | ----------------------- |
+| macOS 12+   | Apple Silicon (M1-M4) | `.dmg`                  |
+| macOS 12+   | Intel                 | `.dmg`                  |
+| Linux       | x86_64                | `.deb`, `.AppImage`     |
+| Linux       | ARM (aarch64)         | `.deb`, `.AppImage`     |
+| Windows 10+ | x86_64                | `.exe` (NSIS installer) |
 
----
+You will need roughly **300 GB** of free disk space for the full Zcash blockchain.
 
-## Install
+## Installation
 
-1. Download the `.dmg` from [Releases](https://github.com/stefanmirrors/zecbox/releases)
-2. Open the `.dmg`, drag zecbox to Applications
-3. Launch zecbox
-4. Pick your storage location (or accept the default)
-5. Click **Start**
+### macOS
 
-Your node is running. That's it.
+1. Open the downloaded `.dmg` and drag zecbox into your Applications folder.
+2. Open Terminal and run:
+   ```
+   xattr -cr /Applications/zecbox.app
+   ```
+   This is needed because the app is not yet code-signed. It clears the quarantine flag so macOS will let you open it.
+3. Open zecbox from Applications.
 
-### First Launch (Unsigned Builds)
-
-Until official signed releases are available, macOS Gatekeeper will block the app. To open it:
-
-1. Try opening zecbox normally (it will be blocked)
-2. Open **System Settings > Privacy & Security**
-3. Scroll down -- you'll see "zecbox was blocked"
-4. Click **Open Anyway**
-
-This is only needed once. Signed releases will not require this step.
-
----
-
-## Verify Your Download
-
-Every release includes a `SHA256SUMS` file. To verify:
-
-```bash
-shasum -a 256 -c SHA256SUMS
-```
-
----
-
-## Architecture
-
-zecbox is a Tauri v2 app with a Rust backend and a React + TypeScript frontend. It bundles three sidecar binaries as child processes:
+### Linux (.deb)
 
 ```
-React UI  <-- Tauri IPC -->  Rust Backend
-                                |
-                                +---> zebrad   (Zcash full node)
-                                |       JSON-RPC  127.0.0.1:8232
-                                |       P2P       0.0.0.0:8233
-                                |
-                                +---> Zaino    (light wallet server)
-                                |       gRPC      0.0.0.0:9067
-                                |       reads from zebrad :8232
-                                |
-                                +---> Arti     (Tor SOCKS5 proxy, Shield Mode only)
-                                        SOCKS5    127.0.0.1:9150
+sudo dpkg -i ~/Downloads/zecbox*.deb
 ```
 
-**Sources:**
-- zebrad -- [ZcashFoundation/zebra](https://github.com/ZcashFoundation/zebra)
-- Zaino -- [zingolabs/zaino](https://github.com/zingolabs/zaino)
-- Arti -- [torproject/arti](https://gitlab.torproject.org/tpo/core/arti)
+Then open zecbox from your application menu.
 
-### How it works
+### Linux (AppImage)
 
-The Rust backend spawns each sidecar as a child process using `tokio::process::Command`. A health monitor polls zebrad's JSON-RPC every 2 seconds and pushes status updates to the React frontend through Tauri's event system (`emit()`). The frontend calls Rust functions through `invoke()`.
+```
+chmod +x ~/Downloads/zecbox*.AppImage
+~/Downloads/zecbox*.AppImage
+```
 
-If zebrad crashes, it restarts automatically with exponential backoff (1s, 2s, 4s, 8s, up to 60s max). A PID file at `{data_dir}/zebrad.pid` prevents duplicate instances. If zecbox itself crashes, it detects the orphaned zebrad process on relaunch and reclaims it.
+### Windows
 
-Closing the window hides zecbox to the system tray. The node keeps running. Choosing "Quit zecbox" from the tray menu shuts everything down in order: stop update checker, stop storage monitor, stop power monitor, stop Zaino, stop zebrad, stop Arti, disable firewall rules.
+1. Run the downloaded `.exe` installer.
+2. If Windows SmartScreen appears, click **More info**, then **Run anyway**.
+3. Open zecbox from the Start menu.
+
+## How It Works
+
+zecbox manages three processes behind the scenes:
+
+- **zebrad:**The Zcash node. Syncs the blockchain, validates transactions, and connects to the peer-to-peer network. Listens for JSON-RPC on `127.0.0.1:8232` and P2P connections on port `8233`.
+- **Zaino:**A light wallet indexing server. Reads from zebrad and serves light wallet clients over gRPC on port `9067`. Only runs when you enable the Wallet Server toggle.
+- **Arti:**A Tor client. Provides a SOCKS5 proxy for routing zebrad traffic through the Tor network. Only runs when Shield Mode is enabled.
+
+All three are bundled as sidecar binaries inside the app. The Rust backend spawns and monitors them, restarts them on crash (with exponential backoff), and writes their config files on the fly. The React frontend communicates with the backend over Tauri's IPC, and the backend pushes status updates to the frontend via events.
 
 ### Data directory
 
-Default location: `~/Library/Application Support/com.zecbox.app/`
+By default, zecbox stores everything under:
+
+- **macOS:** `~/Library/Application Support/com.zecbox.app/`
+- **Linux:** `~/.local/share/com.zecbox.app/`
+- **Windows:** `%APPDATA%/com.zecbox.app/`
+
+Inside that directory:
 
 ```
 com.zecbox.app/
-  zebra/       Chain data (~300 GB, RocksDB)
-  zaino/       Index data
-  config/      zebrad.toml, zaino.toml, zecbox.json (all generated, not user-facing)
-  logs/        Rotated, 7-day retention
+  zebra/          # Blockchain data (RocksDB, ~300 GB)
+  zaino/          # Wallet index data
+  config/         # zebrad.toml, zaino.toml, zecbox.json (all generated)
+  logs/           # Rotated logs, 7-day retention
 ```
 
-If you select an external drive during onboarding, a `data_location.json` pointer file stays in the default directory. On launch, zecbox checks that the drive is mounted before starting. If the drive disconnects while running, zebrad, Zaino, and Arti are stopped and you get a "reconnect drive" message.
+You can also choose an external drive during onboarding. The app stores a pointer to the chosen location and checks that the drive is mounted on every launch.
 
-All config files (zebrad.toml, zaino.toml) are generated by the Rust backend. They are never exposed to the user and are regenerated when settings change.
+## Building from Source
 
-### Shield Mode
+### Prerequisites
 
-> Currently available on macOS. Windows and Linux support is planned.
+**All platforms:**
 
-When you toggle Shield Mode on:
+- [Rust](https://rustup.rs/) 1.70 or later
+- [Node.js](https://nodejs.org/) 20 or later
 
-1. Arti (Tor) starts and bootstraps a SOCKS5 proxy on 127.0.0.1:9150
-2. A privileged firewall helper enables macOS PF (packet filter) rules that redirect all zebrad traffic through a transparent SOCKS5 redirector on port 9040
-3. zebrad.toml is regenerated to bind to localhost only
-4. zebrad restarts with the new config
+**macOS:**
 
-The firewall helper (`firewall-helper/`) is a small Rust binary installed as a LaunchDaemon at `/Library/PrivilegedHelperTools/com.zecbox.firewall-helper`. It communicates over a Unix socket and manages a PF anchor (`com.zecbox.shield`) with redirect and route-to rules. This is required because zebrad has no native SOCKS proxy support -- the enforcement happens at the OS level instead.
-
-A kill switch runs every 3 seconds. If Arti crashes or the PF firewall rules disappear while Shield Mode is active, zebrad is stopped immediately. There is no silent fallback to clearnet.
-
-Toggling Shield Mode off reverses the process: stop zebrad, disable firewall rules, stop Arti, regenerate zebrad.toml for normal operation, restart zebrad.
-
-### Wallet Server
-
-When you toggle the Wallet Server on, zecbox starts Zaino as a sidecar. Zaino reads from zebrad's JSON-RPC and serves compact blocks over gRPC on port 9067. Point any compatible wallet (ZODL, Ywallet, etc.) at `your-ip:9067` and it syncs from your node.
-
-A QR code with the connection endpoint is generated in-app for easy setup. Zaino has its own health check (TCP connect to :9067 every 2s), auto-restart with backoff, and PID file management. The toggle is disabled when zebrad isn't running.
-
-### Network Serve
-
-When you toggle Network Serve on, zecbox makes your node accept inbound peer connections to strengthen the Zcash network:
-
-1. UPnP port mapping is attempted on your router for TCP port 8233 (1-hour lease, renewed every 30 minutes)
-2. Your public IP is discovered and checked for CGNAT (carrier-grade NAT)
-3. An external reachability check confirms the port is open from the internet
-4. Peer counts (inbound/outbound) are polled every 10 seconds via zebrad's JSON-RPC
-
-If UPnP is unavailable, the UI shows manual port forwarding instructions with your local IP. If CGNAT is detected, it explains the limitation. The feature auto-disables if zebrad goes down (5 consecutive RPC failures). It cannot be used with Shield Mode since Tor prevents inbound connections.
-
----
-
-## Security and Trust
-
-### Open source
-
-Every component is in this repository. The Rust backend, React frontend, config generators, build scripts, mock sidecars, and the firewall helper are all here. The upstream binaries (zebrad, Zaino, Arti) are open source projects you can audit independently.
-
-### No telemetry
-
-zecbox collects nothing. There are no analytics, no tracking pixels, no usage reporting. Health checks are local JSON-RPC calls between processes on your machine. The only outbound connections are:
-
-- Zcash P2P peers (port 8233) -- this is the blockchain network itself
-- Update manifest fetch from zecbox.io -- periodic, fetches a small JSON file to check for new versions
-- If Network Serve is enabled: public IP lookup (api.ipify.org) and port reachability check (ifconfig.co) -- only while the feature is active
-
-That's it. Nothing else leaves your machine.
-
-### Verified updates
-
-Binary updates (zebrad, Zaino, Arti) follow this process:
-
-1. Fetch the update manifest over HTTPS (only HTTPS URLs allowed in production)
-2. Download the new binary to a temporary `.update` file
-3. Verify SHA-256 hash against the manifest (fail-fast, before stopping anything)
-4. Stop the running process
-5. Re-verify SHA-256 hash (closes the TOCTOU window between download and swap)
-6. Move current binary to `.backup`, move new binary into place
-7. Start the new binary
-8. Monitor health for 10 seconds
-9. If health checks fail, stop the new binary, restore from `.backup`, restart
-
-If the hash doesn't match at any point, the update is rejected. If the new binary crashes or fails to respond, the old one is restored automatically. Chain data is never touched during updates.
-
-### Hardened runtime
-
-macOS builds use hardened runtime entitlements for notarization. The entitlements are minimal:
-
-- `com.apple.security.network.client` -- HTTPS for update checks and downloads
-- `com.apple.security.network.server` -- gRPC listening (Zaino), JSON-RPC (zebrad)
-- `com.apple.security.cs.allow-unsigned-executable-memory` -- required for sidecar execution
-- `com.apple.security.cs.disable-library-validation` -- required for sidecar loading
-
-SHA-256 checksums are published alongside every release DMG.
-
----
-
-## Build from Source
-
-### Requirements
-
-- macOS 12+ (Monterey or later)
-- Rust toolchain ([rustup.rs](https://rustup.rs))
-- Node.js 20+
 - Xcode Command Line Tools (`xcode-select --install`)
 
-### Steps
+**Linux (Debian/Ubuntu):**
+
+```
+sudo apt install libwebkit2gtk-4.1-dev libgtk-3-dev libayatana-appindicator3-dev librsvg2-dev patchelf
+```
+
+**Windows:**
+
+- Visual Studio 2022 with C++ build tools (Community edition works fine)
+
+### Development
 
 ```bash
 git clone https://github.com/stefanmirrors/zecbox.git
 cd zecbox
+
+# Install frontend dependencies
 npm install
-./scripts/build-macos.sh
+
+# Build mock sidecar binaries (these simulate zebrad/Zaino/Arti for development)
+cargo build -p mock-zebrad --release
+cargo build -p mock-arti --release
+cargo build -p mock-zaino --release
+cargo build -p firewall-helper --release
+
+# Copy them where Tauri expects them (replace the target triple with yours)
+# macOS Apple Silicon: aarch64-apple-darwin
+# macOS Intel: x86_64-apple-darwin
+# Linux x86_64: x86_64-unknown-linux-gnu
+# Linux ARM: aarch64-unknown-linux-gnu
+# Windows: x86_64-pc-windows-msvc
+TARGET=aarch64-apple-darwin
+mkdir -p src-tauri/binaries
+cp target/release/mock-zebrad src-tauri/binaries/zebrad-$TARGET
+cp target/release/mock-arti src-tauri/binaries/arti-$TARGET
+cp target/release/mock-zaino src-tauri/binaries/zaino-$TARGET
+cp target/release/zecbox-firewall-helper src-tauri/binaries/zecbox-firewall-helper-$TARGET
+
+# Start the dev server (Vite hot-reload + Rust recompilation on changes)
+npx tauri dev
 ```
 
-The DMG will be at `target/release/bundle/dmg/zecbox_<version>_aarch64.dmg`.
+The mock binaries respond to health checks and simulate sync progress so you can develop the UI without downloading 300 GB of blockchain data.
 
-### Mock vs real binaries
+### Production builds
 
-By default, the build script compiles mock sidecar binaries for development. These simulate the behavior of the real binaries (fake JSON-RPC responses, fake sync progress, etc.) so you can work on the app without downloading 300 GB of blockchain data.
+Use the build scripts in `scripts/`:
 
-For production builds with real upstream binaries:
+```bash
+# macOS
+./scripts/build-macos.sh
+
+# Linux
+TARGET_TRIPLE=x86_64-unknown-linux-gnu ./scripts/build-linux.sh
+```
+
+To build with real upstream binaries instead of mocks, set `REAL_BINARIES=1`:
 
 ```bash
 REAL_BINARIES=1 ./scripts/build-macos.sh
 ```
 
-This runs `scripts/fetch-binaries.sh`, which installs zebrad from crates.io and builds Zaino from source. Arti currently uses a mock (real Arti integration is planned).
+The scripts handle fetching binaries, code signing (if credentials are provided via environment variables), and calling `npx tauri build`. Output goes to `target/release/bundle/`.
 
-### Code signing
+For details on code signing and notarization, see the `scripts/` directory and the CI workflows under `.github/workflows/`.
 
-To produce a signed, notarizable build:
-
-```bash
-APPLE_SIGNING_IDENTITY="Developer ID Application: ..." ./scripts/build-macos.sh
-```
-
-This codesigns all sidecar binaries with `--options runtime` before the Tauri build step.
-
----
-
-## Development
-
-### Running locally
-
-```bash
-npx tauri dev
-```
-
-This starts the Vite dev server (hot reload for frontend changes) and builds the Rust backend. The app window opens automatically. Rust changes trigger a rebuild.
-
-Before first run, build the mock sidecars and place them where Tauri expects them:
-
-```bash
-cargo build -p mock-zebrad --release
-cp target/release/mock-zebrad src-tauri/binaries/zebrad-aarch64-apple-darwin
-
-cargo build -p mock-arti --release
-cp target/release/mock-arti src-tauri/binaries/arti-aarch64-apple-darwin
-
-cargo build -p mock-zaino --release
-cp target/release/mock-zaino src-tauri/binaries/zaino-aarch64-apple-darwin
-
-cargo build -p firewall-helper --release
-cp target/release/zecbox-firewall-helper src-tauri/binaries/zecbox-firewall-helper-aarch64-apple-darwin
-```
-
-### Mock sidecars
-
-The workspace includes mock implementations of each sidecar:
-
-- **mock-zebrad** -- serves JSON-RPC on :8232 with `getinfo` and `getblockchaininfo` methods. Block height increments every 500ms to simulate sync progress. Accepts `--config` for compatibility with real zebrad.
-- **mock-arti** -- simulates a Tor SOCKS5 proxy for Shield Mode development.
-- **mock-zaino** -- simulates a gRPC wallet server for Wallet Server development.
-- **firewall-helper** -- the actual privileged helper (not a mock). Built from source as a workspace member.
-
-### Reset onboarding
-
-In the app: Settings > Advanced > Reset to Onboarding.
-
-Or manually:
-
-```bash
-rm ~/Library/Application\ Support/com.zecbox.app/config/zecbox.json
-```
-
-### Website
-
-The landing site is a separate Astro project in the `site/` directory:
-
-```bash
-cd site
-npm install
-npx astro dev --port 4321
-```
-
-### Debugging
-
-For verbose Rust logs:
-
-```bash
-RUST_LOG=debug npx tauri dev
-```
-
-Frontend devtools are available via Cmd+Shift+I in the app window.
-
-Log files are written to `~/Library/Application Support/com.zecbox.app/logs/` and are viewable in-app through the Log Viewer.
-
-### Project layout
+## Project Structure
 
 ```
 zecbox/
-  src/                     React frontend
-    App.tsx                Entry point, onboarding vs dashboard routing
-    components/
-      layout/              AppShell, Sidebar, TitleBar
-      dashboard/           NodeStatus, NetworkPanel, StoragePanel, QuickActions, LiveLogPreview, NodeStatsPanel, StorageBar
-      onboarding/          Welcome, StorageSelect, Ready
-      shield/              Shield Mode toggle and status
-      wallet/              Wallet Server toggle, endpoint display, QR code
-      network/             Network Serve toggle, UPnP status, reachability
-      logs/                Log viewer
-      settings/            Settings panels (versions, auto-start, rebuild, updates)
-      shared/              InfoTip
-    hooks/                 useNodeStatus, useStorage, useShieldMode, useLogs, useWalletServer, useUpdates, useNetworkServe
-    lib/
-      tauri.ts             Typed invoke() wrappers for Rust commands
-      types.ts             Shared TypeScript types
-      format.ts            Formatting utilities (bytes, etc.)
-      logParser.ts         Log line parsing
-  src-tauri/
+  src/                  # React frontend (components, hooks, styles)
+  src-tauri/            # Tauri Rust backend (commands, process management, config)
     src/
-      main.rs              App init, tray setup, command registration
-      lib.rs               Tauri plugin setup, shutdown handler
-      state.rs             AppState (node, storage, shield, wallet, update managers)
-      commands/            IPC command handlers (node, storage, shield, wallet, updates, network, settings, etc.)
-      process/             Sidecar lifecycle (zebrad.rs, zaino.rs -- spawn, monitor, restart, PID)
-      health/              Polling loop, JSON-RPC health checks, event emission
-      tor/                 Arti lifecycle (mod.rs), PF firewall client (firewall.rs)
-      config/              Config generation (zebrad_config.rs, zaino_config.rs, app_config.rs)
-      storage/             Volume enumeration, space monitoring, thresholds
-      updates/             Binary updater (manifest, download, verify, swap, rollback)
-      network/             UPnP port mapping, CGNAT detection, peer monitoring
-      power/               Sleep/wake handling (macOS IOKit)
-    binaries/              Sidecar binaries (gitignored, populated by build script)
-  mock-zebrad/             Mock Zcash node (workspace member)
-  mock-arti/               Mock Tor proxy (workspace member)
-  mock-zaino/              Mock wallet server (workspace member)
-  firewall-helper/         macOS PF firewall helper (workspace member)
-  site/                    Landing site (Astro)
-  scripts/
-    build-macos.sh         Production build orchestrator
-    fetch-binaries.sh      Real binary fetcher (zebrad, Zaino)
+      commands/         # IPC command handlers (node, storage, shield, wallet, etc.)
+      process/          # Sidecar process spawning and monitoring
+      config/           # Config file generation (zebrad.toml, zaino.toml)
+      tor/              # Arti lifecycle, firewall rules, DNS-over-Tor
+      health/           # Health check polling
+      storage/          # Disk space monitoring
+      updates/          # Binary update logic
+      power/            # Sleep/wake handling (IOKit on macOS)
+    binaries/           # Sidecar executables (placed here by build scripts)
+  site/                 # Project website (Astro, deployed to zecbox.io)
+  scripts/              # Build and release scripts
+  mock-zebrad/          # Mock Zcash node for development
+  mock-arti/            # Mock Tor client for development
+  mock-zaino/           # Mock wallet server for development
+  firewall-helper/      # Privileged helper for Shield Mode firewall rules
+  tools/
+    manifest-signer/    # Signing tool for binary update manifests
 ```
 
----
+## Contributing
+
+Contributions are welcome. If you want to report a bug or suggest a feature, please [open an issue](https://github.com/stefanmirrors/zecbox/issues).
+
+For code contributions:
+
+1. Fork the repository and create a branch for your work.
+2. Follow the "Building from Source" instructions above to get a dev environment running.
+3. Make your changes and test them with `npx tauri dev`.
+4. Open a pull request with a clear description of what you changed and why.
+
+The project is organized as a Cargo workspace. The main app lives in `src-tauri/`, and the mock binaries, firewall helper, and manifest signer are separate workspace members that you can build independently.
 
 ## License
 
-MIT
+MIT. See [LICENSE](LICENSE) for the full text.
