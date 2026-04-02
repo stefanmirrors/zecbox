@@ -40,6 +40,8 @@ You will need roughly **300 GB** of free disk space for the full Zcash blockchai
 
 Download the app for your platform from [zecbox.io](https://zecbox.io/#downloads) or [GitHub Releases](https://github.com/stefanmirrors/zecbox/releases/latest), then follow the steps below.
 
+Your system may warn you during installation. This is normal for new software that isn't code-signed yet and doesn't mean zecbox is unsafe. The steps below will help you bypass these warnings. Code signing is coming soon.
+
 ### macOS
 
 1. Open the downloaded `.dmg` file and drag zecbox into your Applications folder.
@@ -49,8 +51,6 @@ Download the app for your platform from [zecbox.io](https://zecbox.io/#downloads
    xattr -cr /Applications/zecbox.app
    ```
 4. Open **zecbox** from your Applications folder.
-
-> The `xattr` step is needed because the app is not yet code-signed. It clears the quarantine flag so macOS will let you open it. Code signing is coming soon.
 
 ### Linux (.deb)
 
