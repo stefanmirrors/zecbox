@@ -38,6 +38,8 @@ You will need roughly **300 GB** of free disk space for the full Zcash blockchai
 
 ## Installation
 
+Download the app for your platform from [zecbox.io](https://zecbox.io/#downloads) or [GitHub Releases](https://github.com/stefanmirrors/zecbox/releases/latest), then follow the steps below.
+
 ### macOS
 
 1. Open the downloaded `.dmg` and drag zecbox into your Applications folder.
