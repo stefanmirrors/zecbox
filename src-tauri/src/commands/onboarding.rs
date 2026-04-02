@@ -32,6 +32,12 @@ pub async fn complete_onboarding(
     // If shield mode chosen, start Arti + enable firewall before starting node
     // Skip if already active (e.g. restored on startup)
     if shield_mode && !state.shield.is_active().await {
+        // Ensure firewall helper is installed (required for Shield Mode)
+        if !tor::firewall::is_helper_installed() {
+            // Try to install it — will prompt for admin password
+            tor::firewall::install_helper(&app_handle)?;
+        }
+
         tor::start_arti(app_handle.clone(), &state.shield).await?;
 
         tor::firewall::enable_firewall()
@@ -43,6 +49,23 @@ pub async fn complete_onboarding(
             let _ = tor::firewall::disable_firewall();
             let _ = tor::stop_arti(&app_handle, &state.shield).await;
             return Err(format!("Shield Mode failed traffic verification: {}. Try again or select Standard.", e));
+        }
+
+        // Resolve DNS seeders through Tor to prevent DNS leaks
+        match tokio::time::timeout(
+            std::time::Duration::from_secs(45),
+            tor::dns::resolve_seeders_via_tor()
+        ).await {
+            Ok(Ok(peers)) => {
+                let mut resolved = state.shield.resolved_peers.lock().await;
+                *resolved = Some(peers);
+            }
+            Ok(Err(e)) => {
+                log::warn!("DNS resolution through Tor failed during onboarding: {}. Using default seeders.", e);
+            }
+            Err(_) => {
+                log::warn!("DNS resolution through Tor timed out during onboarding. Using default seeders.");
+            }
         }
 
         log::info!("Shield Mode enabled during onboarding");

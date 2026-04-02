@@ -1,6 +1,6 @@
 [package]
 name = "zecbox"
-version = "0.2.4"
+version = "0.2.5"
 description = "One-click Zcash full node"
 edition = "2021"
 

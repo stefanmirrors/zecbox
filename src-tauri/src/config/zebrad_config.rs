@@ -38,17 +38,11 @@ pub fn generate_zebrad_toml(
         "0.0.0.0:8233"
     };
 
-    let external_addr_line = match onion_address {
-        Some(addr) => {
-            // .onion addresses already include the port context; add :8233 if not present
-            if addr.contains(':') {
-                format!("\nexternal_addr = \"{}\"", addr)
-            } else {
-                format!("\nexternal_addr = \"{}:8233\"", addr)
-            }
-        }
-        None => String::new(),
-    };
+    // .onion addresses are NOT put in external_addr — zebrad only accepts IP addresses.
+    // Inbound connections via .onion are handled by Arti's hidden service, which forwards
+    // to zebrad on localhost. No zebrad config change needed for hidden service.
+    let _ = onion_address;
+    let external_addr_line = String::new();
 
     format!(
         r#"[consensus]
