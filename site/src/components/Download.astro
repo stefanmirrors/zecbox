@@ -1,5 +1,5 @@
 ---
-let version = "0.1.2";
+let version = "0.1.0";
 try {
   const res = await fetch("https://api.github.com/repos/stefanmirrors/zecbox/releases/latest");
   if (res.ok) {
@@ -39,12 +39,12 @@ const downloads = {
         <!-- macOS -->
         <div data-platform-card="macos" class="border border-zec-border rounded-xl p-4 relative">
           <span data-detected-badge class="hidden absolute top-2.5 right-2.5 text-[10px] font-semibold uppercase tracking-wider text-zec-yellow">Detected</span>
-          <div class="flex items-center gap-2.5 mb-3">
-            <svg class="w-6 h-6 text-zec-text shrink-0" viewBox="0 0 24 24" fill="currentColor"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
-            <div>
+          <div class="mb-3">
+            <div class="flex items-center gap-2.5">
+              <svg class="w-6 h-6 text-zec-text shrink-0" viewBox="0 0 24 24" fill="currentColor"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
               <p class="text-sm font-semibold text-zec-text">macOS</p>
-              <p class="text-[11px] text-zec-muted">12+ required</p>
             </div>
+            <p class="text-[11px] text-zec-muted mt-1 ml-0">12+ required</p>
           </div>
           <div class="space-y-1.5">
             <a
@@ -69,12 +69,12 @@ const downloads = {
         <!-- Linux -->
         <div data-platform-card="linux" class="border border-zec-border rounded-xl p-4 relative">
           <span data-detected-badge class="hidden absolute top-2.5 right-2.5 text-[10px] font-semibold uppercase tracking-wider text-zec-yellow">Detected</span>
-          <div class="flex items-center gap-2.5 mb-3">
-            <svg class="w-6 h-6 text-zec-text shrink-0" viewBox="0 0 24 24" fill="currentColor"><path d="M12.504 0c-.155 0-.315.008-.48.021-4.226.333-3.105 4.807-3.17 6.298-.076 1.092-.3 1.953-1.05 3.02-.885 1.051-2.127 2.75-2.716 4.521-.278.832-.41 1.684-.287 2.489a11.966 11.966 0 00-2.517 2.453c-1.455 1.774-.41 3.178 1.382 3.178h1.369c.193 0 .398-.043.608-.13.573.402 1.181.756 1.82 1.05a8.41 8.41 0 002.596.738c.344.034.682.055 1.006.055.397 0 .776-.032 1.126-.089a8.476 8.476 0 002.847-.907 9.588 9.588 0 001.654-.942c.203.074.4.11.588.11h1.369c1.792 0 2.837-1.404 1.382-3.178a11.966 11.966 0 00-2.517-2.453c.123-.805-.01-1.657-.287-2.489-.59-1.771-1.831-3.47-2.716-4.521-.75-1.067-.974-1.928-1.05-3.02-.065-1.491 1.056-5.965-3.17-6.298A5.11 5.11 0 0012.504 0zm0 1.5c.076 0 .154.003.236.012 2.33.184 2.058 3.27 2.12 4.688.066 1.325.376 2.47 1.25 3.715.818.971 1.942 2.494 2.46 4.05.208.625.322 1.26.236 1.836-.56-.326-1.155-.604-1.779-.826a6.92 6.92 0 00-.754-.227c.21-.578.105-1.238-.31-1.787-.543-.717-1.47-1.088-2.459-1.088s-1.916.371-2.459 1.088c-.415.549-.52 1.209-.31 1.787a6.92 6.92 0 00-.754.227 10.164 10.164 0 00-1.779.826c-.086-.576.028-1.211.236-1.836.518-1.556 1.642-3.079 2.46-4.05.874-1.245 1.184-2.39 1.25-3.715.062-1.418-.21-4.504 2.12-4.688.082-.009.16-.012.236-.012z"/></svg>
-            <div>
+          <div class="mb-3">
+            <div class="flex items-center gap-2.5">
+              <svg class="w-6 h-6 text-zec-text shrink-0" viewBox="0 0 24 24" fill="currentColor"><path d="M12.504 0c-.155 0-.315.008-.48.021-4.226.333-3.105 4.807-3.17 6.298-.076 1.092-.3 1.953-1.05 3.02-.885 1.051-2.127 2.75-2.716 4.521-.278.832-.41 1.684-.287 2.489a11.966 11.966 0 00-2.517 2.453c-1.455 1.774-.41 3.178 1.382 3.178h1.369c.193 0 .398-.043.608-.13.573.402 1.181.756 1.82 1.05a8.41 8.41 0 002.596.738c.344.034.682.055 1.006.055.397 0 .776-.032 1.126-.089a8.476 8.476 0 002.847-.907 9.588 9.588 0 001.654-.942c.203.074.4.11.588.11h1.369c1.792 0 2.837-1.404 1.382-3.178a11.966 11.966 0 00-2.517-2.453c.123-.805-.01-1.657-.287-2.489-.59-1.771-1.831-3.47-2.716-4.521-.75-1.067-.974-1.928-1.05-3.02-.065-1.491 1.056-5.965-3.17-6.298A5.11 5.11 0 0012.504 0zm0 1.5c.076 0 .154.003.236.012 2.33.184 2.058 3.27 2.12 4.688.066 1.325.376 2.47 1.25 3.715.818.971 1.942 2.494 2.46 4.05.208.625.322 1.26.236 1.836-.56-.326-1.155-.604-1.779-.826a6.92 6.92 0 00-.754-.227c.21-.578.105-1.238-.31-1.787-.543-.717-1.47-1.088-2.459-1.088s-1.916.371-2.459 1.088c-.415.549-.52 1.209-.31 1.787a6.92 6.92 0 00-.754.227 10.164 10.164 0 00-1.779.826c-.086-.576.028-1.211.236-1.836.518-1.556 1.642-3.079 2.46-4.05.874-1.245 1.184-2.39 1.25-3.715.062-1.418-.21-4.504 2.12-4.688.082-.009.16-.012.236-.012z"/></svg>
               <p class="text-sm font-semibold text-zec-text">Linux</p>
-              <p class="text-[11px] text-zec-muted">Any distro</p>
             </div>
+            <p class="text-[11px] text-zec-muted mt-1 ml-0">Any distro</p>
           </div>
           <div class="space-y-1.5">
             <a
@@ -120,12 +120,12 @@ const downloads = {
         <!-- Windows -->
         <div data-platform-card="windows" class="border border-zec-border rounded-xl p-4 relative">
           <span data-detected-badge class="hidden absolute top-2.5 right-2.5 text-[10px] font-semibold uppercase tracking-wider text-zec-yellow">Detected</span>
-          <div class="flex items-center gap-2.5 mb-3">
-            <svg class="w-6 h-6 text-zec-text shrink-0" viewBox="0 0 24 24" fill="currentColor"><path d="M3 12V6.75l8-1.25V12H3zm0 .5h8v6.5l-8-1.25V12.5zM11.5 5.34l9.5-1.34v8h-9.5V5.34zM11.5 12.5H21v7.5l-9.5-1.34V12.5z"/></svg>
-            <div>
+          <div class="mb-3">
+            <div class="flex items-center gap-2.5">
+              <svg class="w-6 h-6 text-zec-text shrink-0" viewBox="0 0 24 24" fill="currentColor"><path d="M3 12V6.75l8-1.25V12H3zm0 .5h8v6.5l-8-1.25V12.5zM11.5 5.34l9.5-1.34v8h-9.5V5.34zM11.5 12.5H21v7.5l-9.5-1.34V12.5z"/></svg>
               <p class="text-sm font-semibold text-zec-text">Windows</p>
-              <p class="text-[11px] text-zec-muted">10+ required</p>
             </div>
+            <p class="text-[11px] text-zec-muted mt-1 ml-0">10+ required</p>
           </div>
           <div class="space-y-1.5">
             <a
@@ -149,7 +149,7 @@ const downloads = {
           <span class="text-sm font-semibold text-zec-text">After Download Guide</span>
           <svg class="w-4 h-4 text-zec-muted ml-auto transition-transform details-chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
         </summary>
-        <p class="text-xs text-zec-yellow mt-4 mb-5">Your system may warn you during installation — this is normal for new software that isn't code-signed yet and doesn't mean ZecBox is unsafe. The steps below will help you bypass these warnings. Code signing is coming soon.</p>
+        <p class="text-xs text-zec-yellow mt-4 mb-5">Your system may warn you during installation. This is normal for new software that isn't code-signed yet and doesn't mean ZecBox is unsafe. The steps below will help you bypass these warnings. Code signing is coming soon.</p>
         <div>
 
       <!-- macOS -->
@@ -165,7 +165,7 @@ const downloads = {
           </li>
           <li class="flex gap-3">
             <span class="text-zec-yellow font-bold text-xs mt-0.5 shrink-0">2</span>
-            <span>Open <strong class="text-zec-text">Terminal</strong> — press <kbd class="text-[11px] bg-zec-dark border border-zec-border rounded px-1.5 py-0.5 text-zec-text font-sans">&#8984; Space</kbd>, type "Terminal", and hit Enter</span>
+            <span>Open <strong class="text-zec-text">Terminal</strong>, press <kbd class="text-[11px] bg-zec-dark border border-zec-border rounded px-1.5 py-0.5 text-zec-text font-sans">&#8984; Space</kbd>, type "Terminal", and hit Enter</span>
           </li>
           <li class="flex gap-3">
             <span class="text-zec-yellow font-bold text-xs mt-0.5 shrink-0">3</span>
@@ -198,12 +198,12 @@ const downloads = {
         <ol class="space-y-3 text-sm text-zec-muted list-none m-0 p-0">
           <li class="flex gap-3">
             <span class="text-zec-yellow font-bold text-xs mt-0.5 shrink-0">1</span>
-            <span>Open a <strong class="text-zec-text">terminal</strong> — press <kbd class="text-[11px] bg-zec-dark border border-zec-border rounded px-1.5 py-0.5 text-zec-text font-sans">Ctrl+Alt+T</kbd> on most distros</span>
+            <span>Open a <strong class="text-zec-text">terminal</strong>, press <kbd class="text-[11px] bg-zec-dark border border-zec-border rounded px-1.5 py-0.5 text-zec-text font-sans">Ctrl+Alt+T</kbd> on most distros</span>
           </li>
           <li class="flex gap-3">
             <span class="text-zec-yellow font-bold text-xs mt-0.5 shrink-0">2</span>
             <div class="flex-1 min-w-0">
-              <span>Copy and paste this into the terminal, then press Enter — ZecBox will open automatically:</span>
+              <span>Copy and paste this into the terminal, then press Enter. ZecBox will open automatically:</span>
               <div class="mt-1.5 flex items-center gap-2 bg-zec-dark border border-zec-border rounded-lg px-3 py-2">
                 <code class="text-xs font-mono text-zec-text select-all flex-1 min-w-0" id="linux-appimage-cmd">chmod +x ~/Downloads/zecbox*.AppImage && ~/Downloads/zecbox*.AppImage</code>
                 <button type="button" class="shrink-0 w-8 h-8 flex items-center justify-center rounded-lg border border-zec-border hover:border-zec-muted hover:bg-zec-border/50 transition-all text-zec-muted hover:text-zec-text bg-transparent copy-btn" data-target="linux-appimage-cmd" title="Copy to clipboard">
@@ -227,7 +227,7 @@ const downloads = {
         <ol class="space-y-3 text-sm text-zec-muted list-none m-0 p-0">
           <li class="flex gap-3">
             <span class="text-zec-yellow font-bold text-xs mt-0.5 shrink-0">1</span>
-            <span>Open a <strong class="text-zec-text">terminal</strong> — press <kbd class="text-[11px] bg-zec-dark border border-zec-border rounded px-1.5 py-0.5 text-zec-text font-sans">Ctrl+Alt+T</kbd> on most distros</span>
+            <span>Open a <strong class="text-zec-text">terminal</strong>, press <kbd class="text-[11px] bg-zec-dark border border-zec-border rounded px-1.5 py-0.5 text-zec-text font-sans">Ctrl+Alt+T</kbd> on most distros</span>
           </li>
           <li class="flex gap-3">
             <span class="text-zec-yellow font-bold text-xs mt-0.5 shrink-0">2</span>
@@ -260,15 +260,15 @@ const downloads = {
         <ol class="space-y-3 text-sm text-zec-muted list-none m-0 p-0">
           <li class="flex gap-3">
             <span class="text-zec-yellow font-bold text-xs mt-0.5 shrink-0">1</span>
-            <span>Your browser may warn the file isn't commonly downloaded — click the <strong class="text-zec-text">&#8943;</strong> menu and select <strong class="text-zec-text">Keep</strong></span>
+            <span>Your browser may warn the file isn't commonly downloaded, click the <strong class="text-zec-text">&#8943;</strong> menu and select <strong class="text-zec-text">Keep</strong></span>
           </li>
           <li class="flex gap-3">
             <span class="text-zec-yellow font-bold text-xs mt-0.5 shrink-0">2</span>
-            <span>A second prompt may ask you to confirm — click <strong class="text-zec-text">&#8943;</strong> next to Delete and select <strong class="text-zec-text">Keep anyway</strong></span>
+            <span>A second prompt may ask you to confirm, click <strong class="text-zec-text">&#8943;</strong> next to Delete and select <strong class="text-zec-text">Keep anyway</strong></span>
           </li>
           <li class="flex gap-3">
             <span class="text-zec-yellow font-bold text-xs mt-0.5 shrink-0">3</span>
-            <span>Open the <strong class="text-zec-text">.exe</strong> file — if a blue <strong class="text-zec-text">Windows SmartScreen</strong> popup appears, click <strong class="text-zec-text">More info</strong>, then <strong class="text-zec-text">Run anyway</strong></span>
+            <span>Open the <strong class="text-zec-text">.exe</strong> file. If a blue <strong class="text-zec-text">Windows SmartScreen</strong> popup appears, click <strong class="text-zec-text">More info</strong>, then <strong class="text-zec-text">Run anyway</strong></span>
           </li>
           <li class="flex gap-3">
             <span class="text-zec-yellow font-bold text-xs mt-0.5 shrink-0">4</span>
@@ -297,13 +297,13 @@ const downloads = {
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/></svg>
           </button>
         </div>
-        <p class="text-xs text-zec-yellow mb-4">Your system may warn you during installation — this is normal for new software that isn't code-signed yet and doesn't mean ZecBox is unsafe. Follow these steps to bypass the warning.</p>
+        <p class="text-xs text-zec-yellow mb-4">Your system may warn you during installation. This is normal for new software that isn't code-signed yet and doesn't mean ZecBox is unsafe. Follow these steps to bypass the warning.</p>
         <div id="dl-overlay-content"></div>
       </div>
     </div>
 
     <script>
-      // Platform detection — show primary download button + highlight detected card
+      // Platform detection - show primary download button + highlight detected card
       (function () {
         const data = JSON.parse(document.getElementById('download-data')?.textContent || '{}');
         const ua = navigator.userAgent;
@@ -387,7 +387,7 @@ const downloads = {
         }
       })();
 
-      // Download overlay — show install instructions after clicking a download link
+      // Download overlay - show install instructions after clicking a download link
       (function () {
         const overlay = document.getElementById('dl-overlay');
         const content = document.getElementById('dl-overlay-content');

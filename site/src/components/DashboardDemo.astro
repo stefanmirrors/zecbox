@@ -4,10 +4,10 @@
 <section class="pt-6 sm:pt-10 pb-6 sm:pb-10 px-4 sm:px-6" aria-label="Interactive demo">
   <div class="text-center mb-10">
     <h2 class="text-4xl sm:text-5xl font-black text-zec-text mb-3" style="font-family: 'Montserrat', sans-serif;">See It in Action</h2>
-    <p class="text-zec-muted text-lg leading-relaxed">Click Start Node to watch it boot up</p>
+    <p class="text-zec-muted text-lg leading-relaxed">Click Get Started to begin <span class="text-zec-muted/50 text-sm">(Simulation of real app, no memory is used)</span></p>
   </div>
 
-  <div id="demo-frame" class="max-w-[1100px] mx-auto rounded-xl sm:rounded-2xl border border-zec-border shadow-2xl overflow-hidden bg-zec-dark">
+  <div id="demo-frame" class="relative max-w-[1100px] mx-auto rounded-xl sm:rounded-2xl border border-zec-border shadow-2xl overflow-hidden bg-zec-dark">
     <!-- macOS title bar -->
     <div class="flex items-center h-10 px-4 border-b border-zec-border bg-zec-surface">
       <div class="flex gap-2">
@@ -19,7 +19,116 @@
       <div class="w-[52px]"></div>
     </div>
 
-    <div class="flex bg-zec-dark">
+    <!-- Onboarding -->
+    <div id="demo-onboarding" class="bg-zec-dark flex flex-col" style="min-height: 480px;">
+      <div id="ob-back" class="px-6 pt-4 hidden">
+        <button id="ob-back-btn" class="text-xs text-zec-muted hover:text-zec-text transition-colors flex items-center gap-1">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/></svg>
+          Back
+        </button>
+      </div>
+      <div class="flex-1 flex items-center justify-center py-8">
+        <!-- Step 0: Welcome -->
+        <div id="ob-welcome" class="px-6 w-full">
+          <div class="max-w-sm text-center space-y-10 mx-auto">
+            <div class="space-y-4">
+              <h1 class="text-4xl font-bold text-zec-yellow tracking-tight">zecbox</h1>
+              <p class="text-zec-muted text-xs tracking-widest uppercase">Zcash Full Node</p>
+            </div>
+            <p class="text-zec-muted text-base leading-relaxed">Run your own Zcash node with zero configuration. zecbox downloads, verifies, and syncs the blockchain automatically.</p>
+            <button id="ob-get-started" class="w-full py-3.5 rounded-xl font-semibold bg-zec-yellow text-zec-dark hover:brightness-110 transition-all text-sm">Get Started</button>
+          </div>
+        </div>
+        <!-- Step 1: Storage -->
+        <div id="ob-storage" class="px-6 w-full hidden">
+          <div class="w-full max-w-md space-y-6 mx-auto">
+            <div class="text-center space-y-2">
+              <h2 class="text-2xl font-bold text-zec-text">Storage</h2>
+              <p class="text-sm text-zec-muted">The Zcash blockchain needs about 300 GB of disk space.</p>
+            </div>
+            <div class="space-y-2">
+              <button data-vol="mac" class="ob-vol w-full text-left p-4 rounded-xl border transition-all border-zec-yellow/60 bg-zec-yellow/5">
+                <div class="flex items-center justify-between mb-3">
+                  <div class="flex items-center gap-2">
+                    <span class="font-medium text-sm text-zec-text">Macintosh HD</span>
+                    <span class="text-[10px] px-1.5 py-0.5 rounded-full bg-zec-yellow/10 text-zec-yellow">Recommended</span>
+                  </div>
+                </div>
+                <div class="flex items-center gap-3">
+                  <div class="flex-1 h-1 rounded-full bg-zec-border overflow-hidden"><div class="h-full rounded-full bg-zec-muted/40" style="width: 61%"></div></div>
+                  <span class="text-[11px] text-zec-muted whitespace-nowrap">772 GB free</span>
+                </div>
+              </button>
+              <button data-vol="ext" class="ob-vol w-full text-left p-4 rounded-xl border transition-all border-zec-border hover:bg-zec-surface-hover">
+                <div class="flex items-center justify-between mb-3">
+                  <div class="flex items-center gap-2">
+                    <span class="font-medium text-sm text-zec-text">Backup Drive</span>
+                    <span class="text-[10px] px-1.5 py-0.5 rounded-full bg-zec-border/50 text-zec-muted">External</span>
+                  </div>
+                </div>
+                <div class="flex items-center gap-3">
+                  <div class="flex-1 h-1 rounded-full bg-zec-border overflow-hidden"><div class="h-full rounded-full bg-zec-muted/40" style="width: 76%"></div></div>
+                  <span class="text-[11px] text-zec-muted whitespace-nowrap">120 GB free</span>
+                </div>
+              </button>
+            </div>
+            <button id="ob-storage-continue" class="w-full py-3.5 rounded-xl font-semibold transition-all bg-zec-yellow text-zec-dark hover:brightness-110 text-sm">Continue</button>
+          </div>
+        </div>
+        <!-- Step 2: Privacy -->
+        <div id="ob-shield" class="px-6 w-full hidden">
+          <div class="w-full max-w-sm space-y-5 mx-auto">
+            <div class="text-center space-y-2">
+              <h2 class="text-2xl font-bold text-zec-text">Privacy</h2>
+              <p class="text-sm text-zec-muted">Select a mode to see what it does.</p>
+            </div>
+            <div class="space-y-1.5">
+              <button data-mode="shield" class="ob-mode w-full text-left px-4 py-3 rounded-xl border transition-all border-zec-yellow/60 bg-zec-yellow/5">
+                <div class="flex items-center justify-between">
+                  <div class="flex items-center gap-2 flex-wrap">
+                    <span class="font-medium text-sm text-zec-text">Shield Mode</span>
+                    <span class="text-[10px] px-1.5 py-0.5 rounded-full bg-zec-yellow/10 text-zec-yellow">Tor</span>
+                    <span class="text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-400/10 text-emerald-400">Recommended</span>
+                  </div>
+                  <div data-radio class="w-3.5 h-3.5 rounded-full border-2 border-zec-yellow bg-zec-yellow shrink-0 flex items-center justify-center"><div class="w-1.5 h-1.5 rounded-full bg-zec-dark"></div></div>
+                </div>
+                <p class="text-xs text-zec-muted mt-1">Full privacy, hidden IP, full network participation</p>
+              </button>
+              <button data-mode="standard" class="ob-mode w-full text-left px-4 py-3 rounded-xl border transition-all border-zec-border hover:bg-zec-surface-hover">
+                <div class="flex items-center justify-between">
+                  <div class="flex items-center gap-2">
+                    <span class="font-medium text-sm text-zec-text">Standard</span>
+                  </div>
+                  <div data-radio class="w-3.5 h-3.5 rounded-full border-2 border-zec-border shrink-0"></div>
+                </div>
+                <p class="text-xs text-zec-muted mt-1">Direct connection, no privacy features</p>
+              </button>
+            </div>
+            <div id="ob-shield-detail" class="border border-zec-border/50 rounded-xl p-4 space-y-3 min-h-[120px]"></div>
+            <button id="ob-shield-continue" class="w-full py-3.5 rounded-xl font-semibold transition-all bg-zec-yellow text-zec-dark hover:brightness-110 text-sm">Continue</button>
+          </div>
+        </div>
+        <!-- Step 3: Ready -->
+        <div id="ob-ready" class="px-6 w-full hidden">
+          <div class="max-w-sm w-full text-center space-y-6 mx-auto">
+            <div class="space-y-2">
+              <h2 class="text-2xl font-bold text-zec-text">Ready</h2>
+              <p class="text-sm text-zec-muted">Review your setup before starting.</p>
+            </div>
+            <div id="ob-summary" class="border border-zec-border rounded-xl p-5 text-left space-y-4"></div>
+            <button id="ob-start" class="w-full py-3.5 rounded-xl font-semibold bg-zec-yellow text-zec-dark hover:brightness-110 transition-all text-sm">Start Node</button>
+          </div>
+        </div>
+      </div>
+      <div class="flex justify-center gap-2 pb-6">
+        <button class="ob-dot h-1 rounded-full transition-all duration-300 w-6 bg-zec-yellow"></button>
+        <button class="ob-dot h-1 rounded-full transition-all duration-300 w-2 bg-zec-border cursor-default"></button>
+        <button class="ob-dot h-1 rounded-full transition-all duration-300 w-2 bg-zec-border cursor-default"></button>
+        <button class="ob-dot h-1 rounded-full transition-all duration-300 w-2 bg-zec-border cursor-default"></button>
+      </div>
+    </div>
+
+    <div id="demo-app" class="flex bg-zec-dark hidden">
       <!-- Sidebar: copied from Sidebar.tsx -->
       <aside class="hidden sm:flex flex-col w-48 border-r border-zec-border h-full shrink-0">
         <div class="px-5 pt-6 pb-8">
@@ -53,7 +162,7 @@
           </button>
         </nav>
         <div class="px-5 py-4">
-          <p class="text-[11px] text-zec-muted/40">v0.2.1</p>
+          <p class="text-[11px] text-zec-muted/40">v0.1.0</p>
         </div>
       </aside>
 
@@ -144,7 +253,7 @@
                     <p class="text-2xl font-bold text-zec-text tabular-nums">8</p>
                   </div>
                 </div>
-                <p class="text-xs text-zec-muted">Your node is fully synced — verifying new blocks as they arrive</p>
+                <p class="text-xs text-zec-muted">Your node is fully synced, verifying new blocks as they arrive</p>
                 <div>
                   <p class="text-xs text-zec-muted mb-1 flex items-center gap-1.5">Latest Block <span class="inline-flex"><span class="itip" data-tip="The unique identifier (hash) of the most recent block your node has verified. This changes every time a new block arrives.">?</span></span></p>
                   <p class="text-xs font-mono text-zec-muted/60 truncate">0000000000b84f2c7d35de0e5fb2c0a7d9e06fb81bc2e5a8c3d7b4f1a2e6c9d3</p>
@@ -203,10 +312,10 @@
               </div>
               <div id="demo-log-lines" class="space-y-1">
                 <div class="demo-log-line hidden flex items-start gap-2 px-2 py-0.5 rounded text-[11px] leading-5 text-zec-muted/60"><span class="w-1.5 h-1.5 rounded-full mt-2 shrink-0 bg-emerald-400/50"></span><span class="text-zec-muted/25 shrink-0 font-mono tabular-nums">14:32:01</span><span class="truncate">sync:checkpoint: zebra_consensus::checkpoint: verified checkpoint range block_count=400 current_range=(Excluded(Height(2599600)), Included(Height(2600000)))</span></div>
-                <div class="demo-log-line hidden flex items-start gap-2 px-2 py-0.5 rounded text-[11px] leading-5 text-zec-muted/60"><span class="w-1.5 h-1.5 rounded-full mt-2 shrink-0 bg-emerald-400/50"></span><span class="text-zec-muted/25 shrink-0 font-mono tabular-nums">14:32:04</span><span class="truncate">progress: Sync: 90.909% — block 3,000,000 — 300,000 remaining</span></div>
+                <div class="demo-log-line hidden flex items-start gap-2 px-2 py-0.5 rounded text-[11px] leading-5 text-zec-muted/60"><span class="w-1.5 h-1.5 rounded-full mt-2 shrink-0 bg-emerald-400/50"></span><span class="text-zec-muted/25 shrink-0 font-mono tabular-nums">14:32:04</span><span class="truncate">progress: Sync: 90.909% - block 3,000,000 - 300,000 remaining</span></div>
                 <div class="demo-log-line hidden flex items-start gap-2 px-2 py-0.5 rounded text-[11px] leading-5 text-zec-muted/60"><span class="w-1.5 h-1.5 rounded-full mt-2 shrink-0 bg-emerald-400/50"></span><span class="text-zec-muted/25 shrink-0 font-mono tabular-nums">14:32:06</span><span class="truncate">sync:checkpoint: zebra_consensus::checkpoint: verified checkpoint range block_count=400 current_range=(Excluded(Height(3199600)), Included(Height(3200000)))</span></div>
-                <div class="demo-log-line hidden flex items-start gap-2 px-2 py-0.5 rounded text-[11px] leading-5 text-zec-muted/60"><span class="w-1.5 h-1.5 rounded-full mt-2 shrink-0 bg-emerald-400/50"></span><span class="text-zec-muted/25 shrink-0 font-mono tabular-nums">14:32:07</span><span class="truncate">progress: Sync: 96.970% — block 3,200,000 — 100,000 remaining</span></div>
-                <div class="demo-log-line hidden flex items-start gap-2 px-2 py-0.5 rounded text-[11px] leading-5 text-zec-muted/60"><span class="w-1.5 h-1.5 rounded-full mt-2 shrink-0 bg-emerald-400/50"></span><span class="text-zec-muted/25 shrink-0 font-mono tabular-nums">14:32:09</span><span class="truncate">progress: Sync: 100.000% — block 3,300,000 — 0 remaining</span></div>
+                <div class="demo-log-line hidden flex items-start gap-2 px-2 py-0.5 rounded text-[11px] leading-5 text-zec-muted/60"><span class="w-1.5 h-1.5 rounded-full mt-2 shrink-0 bg-emerald-400/50"></span><span class="text-zec-muted/25 shrink-0 font-mono tabular-nums">14:32:07</span><span class="truncate">progress: Sync: 96.970% - block 3,200,000 - 100,000 remaining</span></div>
+                <div class="demo-log-line hidden flex items-start gap-2 px-2 py-0.5 rounded text-[11px] leading-5 text-zec-muted/60"><span class="w-1.5 h-1.5 rounded-full mt-2 shrink-0 bg-emerald-400/50"></span><span class="text-zec-muted/25 shrink-0 font-mono tabular-nums">14:32:09</span><span class="truncate">progress: Sync: 100.000% - block 3,300,000 - 0 remaining</span></div>
               </div>
             </div>
           </div>
@@ -221,6 +330,17 @@
             </div>
           </div>
         </main>
+      </div>
+    </div>
+
+    <!-- Congrats overlay -->
+    <div id="demo-congrats" class="hidden absolute inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm rounded-xl sm:rounded-2xl">
+      <div class="max-w-md mx-4 bg-zec-dark border border-zec-yellow/30 rounded-2xl p-8 text-center space-y-5 shadow-2xl">
+        <div class="text-5xl">🛡️</div>
+        <h2 class="text-2xl font-bold text-zec-text">Your node is fully synced</h2>
+        <p class="text-sm text-zec-muted leading-relaxed">You're now running a full Zcash node. Every transaction on the network is being verified by your computer, no trust required. You're strengthening the privacy and decentralization of the entire Zcash network.</p>
+        <p class="text-xs text-zec-muted/60 leading-relaxed">Every full node makes the network stronger and more private for everyone.</p>
+        <button id="demo-congrats-close" class="px-6 py-2.5 rounded-lg bg-zec-yellow text-zec-dark font-semibold hover:brightness-110 transition-all text-sm">Let's go</button>
       </div>
     </div>
   </div>
@@ -389,6 +509,7 @@
       dot.className='w-2 h-2 rounded-full bg-emerald-400'; lbl.textContent='Running';
       btn.textContent='Stop'; btn.className='px-4 py-1.5 rounded-lg text-sm font-medium transition-colors border border-zec-border text-zec-muted hover:text-zec-text hover:border-red-400/50'; btn.removeAttribute('disabled');
       synced.classList.remove('hidden'); showLogs(5); updateIndicators();
+      timers.push(window.setTimeout(()=>{if(state==='synced')$('#demo-congrats').classList.remove('hidden');},2000));
     } else if(s==='stopping'){
       dot.className='w-2 h-2 rounded-full bg-zec-yellow animate-pulse'; lbl.textContent='Stopping';
       btn.textContent='Stopping...'; btn.className='px-4 py-1.5 rounded-lg text-sm font-medium transition-colors bg-zec-border/50 text-zec-muted cursor-not-allowed'; btn.setAttribute('disabled','');
@@ -396,6 +517,8 @@
     }
   }
   btn.addEventListener('click',()=>{if(state==='stopped')go('starting');else if(state==='synced'||state==='syncing')go('stopping');});
+  $('#demo-congrats-close').addEventListener('click',()=>{$('#demo-congrats').classList.add('hidden');});
+  $('#demo-congrats').addEventListener('click',(e)=>{if(e.target===$('#demo-congrats'))$('#demo-congrats').classList.add('hidden');});
   function toggleShield(){const wasOn=shieldOn;shieldOn=!shieldOn;[['#demo-shield-knob','#demo-shield-toggle'],['#demo-shield-knob-mobile','#demo-shield-toggle-mobile']].forEach(([ks,ts])=>{const k=document.querySelector(ks) as HTMLElement;const t=document.querySelector(ts) as HTMLElement;if(!k||!t)return;if(shieldOn){k.classList.add('translate-x-3');t.className='relative w-7 h-4 rounded-full transition-colors shrink-0 bg-emerald-400';}else{k.classList.remove('translate-x-3');t.className='relative w-7 h-4 rounded-full transition-colors shrink-0 bg-zec-border hover:bg-zec-muted/20';}});updateIndicators();if(state==='stopped'){btn.textContent=shieldOn?'Start Shielded Node':'Start Node';}else if(wasOn&&!shieldOn&&(state==='syncing'||state==='synced'||state==='starting')){go('stopping');}}
   $('#demo-shield-toggle').addEventListener('click',toggleShield);$('#demo-shield-toggle-mobile').addEventListener('click',toggleShield);
   $$('.demo-nav').forEach(b=>{b.addEventListener('click',()=>{
@@ -405,6 +528,62 @@
     if(v==='dashboard'){dv.classList.remove('hidden');pv.classList.add('hidden');title.textContent='Dashboard';}
     else{dv.classList.add('hidden');pv.classList.remove('hidden');const info=PH[v];if(info){$('#demo-placeholder-title').textContent=info.t;$('#demo-placeholder-desc').textContent=info.d;$('#demo-placeholder-icon').textContent=info.i;title.textContent=info.t;}}
   });});
+  // --- Onboarding ---
+  let obStep=0, obSelectedVol='mac', obShieldMode=true;
+  const obStepIds=['ob-welcome','ob-storage','ob-shield','ob-ready'];
+  const shieldData:{[k:string]:{benefits:string[];tradeoffs:string[]}}={
+    shield:{benefits:['Your IP is hidden from all peers and your ISP','Accept incoming connections via .onion hidden service','Full network participation while staying private','No VPS or extra cost, uses the Tor network directly'],tradeoffs:['Initial sync will be slower due to Tor overhead']},
+    standard:{benefits:['Fastest sync speed','Simplest setup'],tradeoffs:['Your home IP is visible to other Zcash nodes','Cannot accept incoming connections behind NAT']},
+  };
+  function obGoTo(idx:number){
+    obStep=idx;
+    obStepIds.forEach((id,i)=>{document.getElementById(id)!.classList.toggle('hidden',i!==idx);});
+    document.getElementById('ob-back')!.classList.toggle('hidden',idx===0);
+    $$('.ob-dot').forEach((d,i)=>{(d as HTMLElement).className=`ob-dot h-1 rounded-full transition-all duration-300 ${i<=idx?'w-6 bg-zec-yellow':'w-2 bg-zec-border'} ${i<idx?'cursor-pointer hover:brightness-125':'cursor-default'}`;});
+    if(idx===3)obPopulateReady();
+  }
+  function obUpdateShieldDetail(){
+    const d=shieldData[obShieldMode?'shield':'standard'];
+    const panel=document.getElementById('ob-shield-detail')!;
+    panel.innerHTML='<div class="space-y-1.5">'+d.benefits.map(b=>`<div class="flex items-start gap-2"><span class="text-emerald-400 text-xs mt-px shrink-0">+</span><span class="text-xs text-emerald-400/80">${b}</span></div>`).join('')+'</div><div class="space-y-1.5">'+d.tradeoffs.map(t=>`<div class="flex items-start gap-2"><span class="text-zec-muted text-xs mt-px shrink-0">−</span><span class="text-xs text-zec-muted">${t}</span></div>`).join('')+'</div>';
+  }
+  function obPopulateReady(){
+    const isS=obShieldMode;
+    const path=obSelectedVol==='mac'?'/Volumes/Macintosh HD':'/Volumes/Backup Drive';
+    const title=isS?'Shielded Node':'Standard Node';
+    const desc=isS?'All traffic routed through Tor. Your node accepts incoming connections via a .onion hidden service.':'Your node connects directly to the Zcash network with no privacy features enabled.';
+    const details=isS?shieldData.shield.benefits.concat(shieldData.shield.tradeoffs):shieldData.standard.benefits.concat(shieldData.standard.tradeoffs);
+    document.getElementById('ob-summary')!.innerHTML=`<div><h3 class="text-base font-semibold text-zec-text">${title}</h3><p class="text-xs text-zec-muted mt-1.5 leading-relaxed">${desc}</p></div><ul class="space-y-2">${details.map(d=>`<li class="flex items-start gap-2 text-xs text-zec-muted"><span class="text-zec-yellow mt-0.5 shrink-0">−</span><span>${d}</span></li>`).join('')}</ul><div class="border-t border-zec-border/50 pt-3"><span class="text-[10px] text-zec-muted/50 uppercase tracking-wider">Storage</span><p class="text-xs text-zec-text font-mono mt-1">${path}</p></div>`;
+    document.getElementById('ob-start')!.textContent=isS?'Start Shielded Node':'Start Node';
+  }
+  function obComplete(){
+    document.getElementById('demo-onboarding')!.classList.add('hidden');
+    document.getElementById('demo-app')!.classList.remove('hidden');
+    if(obShieldMode!==shieldOn)toggleShield();
+    go('starting');
+  }
+  $('#ob-get-started').addEventListener('click',()=>obGoTo(1));
+  $('#ob-storage-continue').addEventListener('click',()=>obGoTo(2));
+  $('#ob-shield-continue').addEventListener('click',()=>obGoTo(3));
+  $('#ob-start').addEventListener('click',()=>obComplete());
+  $('#ob-back-btn').addEventListener('click',()=>{if(obStep>0)obGoTo(obStep-1);});
+  $$('.ob-dot').forEach((d,i)=>{d.addEventListener('click',()=>{if(i<obStep)obGoTo(i);});});
+  $$('.ob-vol').forEach(b=>{b.addEventListener('click',()=>{
+    obSelectedVol=(b as HTMLElement).dataset.vol!;
+    $$('.ob-vol').forEach(v=>{const sel=(v as HTMLElement).dataset.vol===obSelectedVol;(v as HTMLElement).className=`ob-vol w-full text-left p-4 rounded-xl border transition-all ${sel?'border-zec-yellow/60 bg-zec-yellow/5':'border-zec-border hover:bg-zec-surface-hover'}`;});
+  });});
+  $$('.ob-mode').forEach(b=>{b.addEventListener('click',()=>{
+    obShieldMode=(b as HTMLElement).dataset.mode==='shield';
+    $$('.ob-mode').forEach(m=>{
+      const sel=((m as HTMLElement).dataset.mode==='shield')===obShieldMode;
+      (m as HTMLElement).className=`ob-mode w-full text-left px-4 py-3 rounded-xl border transition-all ${sel?'border-zec-yellow/60 bg-zec-yellow/5':'border-zec-border hover:bg-zec-surface-hover'}`;
+      const radio=(m as HTMLElement).querySelector('[data-radio]') as HTMLElement;
+      if(sel){radio.className='w-3.5 h-3.5 rounded-full border-2 border-zec-yellow bg-zec-yellow shrink-0 flex items-center justify-center';radio.innerHTML='<div class="w-1.5 h-1.5 rounded-full bg-zec-dark"></div>';}
+      else{radio.className='w-3.5 h-3.5 rounded-full border-2 border-zec-border shrink-0';radio.innerHTML='';}
+    });
+    obUpdateShieldDetail();
+  });});
+  obUpdateShieldDetail();
   go('stopped');
 
   // InfoTip click-to-show tooltips (fixed position, appended to body to avoid clipping)
