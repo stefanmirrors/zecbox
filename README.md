@@ -16,6 +16,7 @@ zecbox is built with [Tauri](https://tauri.app/) (Rust backend + native webview)
 - **Real-time dashboard:** Live sync progress, peer count, block height, storage usage, and uptime stats. Updated every two seconds.
 - **Shield Mode:** Route all node traffic through Tor with a single toggle. Your node gets its own .onion address so it can still accept inbound peers and fully participate in the network without ever revealing your IP. Includes a kill switch: if the Tor connection drops, the node stops immediately rather than falling back to clearnet.
 - **Wallet Server:** Enable Zaino to serve light wallets over gRPC (port 9067). Shows the connection endpoint and a QR code for easy pairing.
+- **Serve the Network:** Accept inbound peer connections with automatic UPnP port mapping on port 8233. Shows reachability status, peer counts, and detects CGNAT or other connectivity issues.
 - **System tray:** Closing the window keeps the node running in the background. The tray icon shows current status. "Quit zecbox" stops everything.
 - **Auto-updates:** The app checks for updates to itself and to the bundled binaries (zebrad, Zaino, Arti). Binary updates are verified with SHA256 before swapping.
 - **External drive support:** Store the blockchain on an external drive. If the drive disconnects, the app pauses cleanly and tells you to reconnect.
@@ -46,11 +47,10 @@ Your system may warn you during installation. This is normal for new software th
 
 1. Open the downloaded `.dmg` file and drag zecbox into your Applications folder.
 2. Open **Terminal** (press Cmd+Space, type "Terminal", hit Enter).
-3. Copy and paste this into Terminal, then press Enter:
+3. Copy and paste this into Terminal, then press Enter. zecbox will open automatically:
    ```
-   xattr -cr /Applications/zecbox.app
+   xattr -cr /Applications/zecbox.app && open /Applications/zecbox.app
    ```
-4. Open **zecbox** from your Applications folder.
 
 ### Linux (.deb)
 
@@ -64,16 +64,17 @@ Your system may warn you during installation. This is normal for new software th
 ### Linux (AppImage)
 
 1. Open a terminal (Ctrl+Alt+T on most distros).
-2. Copy and paste this into the terminal, then press Enter:
+2. Copy and paste this into the terminal, then press Enter. zecbox will open automatically:
    ```
    chmod +x ~/Downloads/zecbox*.AppImage && ~/Downloads/zecbox*.AppImage
    ```
 
 ### Windows
 
-1. Open the downloaded `.exe` file to start the installer.
-2. If a blue **Windows SmartScreen** popup appears, click **More info**, then click **Run anyway**.
-3. Once installed, open **zecbox** from the Start menu or desktop shortcut.
+1. Your browser may warn the file isn't commonly downloaded. Click the `...` menu and select **Keep**.
+2. A second prompt may ask you to confirm. Click `...` next to Delete and select **Keep anyway**.
+3. Open the `.exe` file. If a blue **Windows SmartScreen** popup appears, click **More info**, then **Run anyway**.
+4. Once installed, open **zecbox** from the Start menu or desktop shortcut.
 
 ## How It Works
 
