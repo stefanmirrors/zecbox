@@ -76,7 +76,7 @@
                 </div>
                 <div class="flex items-center gap-2 sm:gap-4">
                   <div id="demo-toggles" class="flex items-center gap-2 sm:gap-4">
-                    <!-- MiniToggle Shield: copied from MiniToggle -->
+                    <!-- MiniToggle Shield: desktop inline -->
                     <div class="hidden sm:flex items-center gap-2">
                       <span class="text-xs text-zec-muted flex items-center gap-1">Shield <span class="inline-flex"><span class="itip" data-tip="Route all node traffic through Tor and accept connections via .onion hidden service.">?</span></span></span>
                       <button id="demo-shield-toggle" role="switch" aria-label="Toggle Shield" class="relative w-7 h-4 rounded-full transition-colors shrink-0 bg-zec-border hover:bg-zec-muted/20">
@@ -87,6 +87,13 @@
                   </div>
                   <button id="demo-btn" class="px-3 sm:px-4 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-colors bg-zec-yellow text-zec-dark hover:brightness-110 shrink-0">Start Node</button>
                 </div>
+              </div>
+              <!-- MiniToggle Shield: mobile row -->
+              <div class="flex sm:hidden items-center justify-between mt-3 pt-3 border-t border-zec-border">
+                <span class="text-xs text-zec-muted flex items-center gap-1">Shield Mode <span class="inline-flex"><span class="itip" data-tip="Route all node traffic through Tor and accept connections via .onion hidden service.">?</span></span></span>
+                <button id="demo-shield-toggle-mobile" role="switch" aria-label="Toggle Shield" class="relative w-7 h-4 rounded-full transition-colors shrink-0 bg-zec-border hover:bg-zec-muted/20">
+                  <span id="demo-shield-knob-mobile" class="absolute top-0.5 left-0.5 w-3 h-3 rounded-full bg-white transition-transform duration-200"></span>
+                </button>
               </div>
 
               <!-- UnifiedProgress: copied from UnifiedProgress -->
@@ -389,7 +396,8 @@
     }
   }
   btn.addEventListener('click',()=>{if(state==='stopped')go('starting');else if(state==='synced'||state==='syncing')go('stopping');});
-  $('#demo-shield-toggle').addEventListener('click',()=>{const wasOn=shieldOn;shieldOn=!shieldOn;const k=$('#demo-shield-knob'),t=$('#demo-shield-toggle');if(shieldOn){k.classList.add('translate-x-3');t.className='relative w-7 h-4 rounded-full transition-colors shrink-0 bg-emerald-400';}else{k.classList.remove('translate-x-3');t.className='relative w-7 h-4 rounded-full transition-colors shrink-0 bg-zec-border hover:bg-zec-muted/20';}updateIndicators();if(state==='stopped'){btn.textContent=shieldOn?'Start Shielded Node':'Start Node';}else if(wasOn&&!shieldOn&&(state==='syncing'||state==='synced'||state==='starting')){go('stopping');}});
+  function toggleShield(){const wasOn=shieldOn;shieldOn=!shieldOn;[['#demo-shield-knob','#demo-shield-toggle'],['#demo-shield-knob-mobile','#demo-shield-toggle-mobile']].forEach(([ks,ts])=>{const k=document.querySelector(ks) as HTMLElement;const t=document.querySelector(ts) as HTMLElement;if(!k||!t)return;if(shieldOn){k.classList.add('translate-x-3');t.className='relative w-7 h-4 rounded-full transition-colors shrink-0 bg-emerald-400';}else{k.classList.remove('translate-x-3');t.className='relative w-7 h-4 rounded-full transition-colors shrink-0 bg-zec-border hover:bg-zec-muted/20';}});updateIndicators();if(state==='stopped'){btn.textContent=shieldOn?'Start Shielded Node':'Start Node';}else if(wasOn&&!shieldOn&&(state==='syncing'||state==='synced'||state==='starting')){go('stopping');}}
+  $('#demo-shield-toggle').addEventListener('click',toggleShield);$('#demo-shield-toggle-mobile').addEventListener('click',toggleShield);
   $$('.demo-nav').forEach(b=>{b.addEventListener('click',()=>{
     const v=(b as HTMLElement).dataset.nav!;
     $$('.demo-nav').forEach(x=>{const a=(x as HTMLElement).dataset.nav===v;(x as HTMLElement).className=`demo-nav relative w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13px] font-medium transition-colors ${a?'text-zec-yellow':'text-zec-muted hover:text-zec-text'}`;const ind=(x as HTMLElement).querySelector('.demo-indicator') as HTMLElement;if(ind)ind.classList.toggle('hidden',!a);});
