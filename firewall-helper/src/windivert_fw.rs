@@ -318,6 +318,7 @@ fn run_divert_thread(
     stop_rx: std::sync::mpsc::Receiver<()>,
 ) -> Result<(), String> {
     use windivert::prelude::*;
+    use windivert_sys::ChecksumFlags;
 
     let filter = format!("outbound and tcp.DstPort == {}", ZCASH_PORT);
     let handle = WinDivert::network(
