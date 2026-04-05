@@ -96,6 +96,14 @@ async fn handle_enable(state: &mut DaemonState) -> Response {
         return Response::success();
     }
 
+    // SAFETY FIRST: Add Windows Firewall block rules BEFORE starting WinDivert.
+    // These rules persist in the kernel even if our process crashes, ensuring
+    // zebrad can never reach clearnet on port 8233 without going through Tor.
+    // This is the Windows equivalent of PF's "block out proto tcp ... port 8233".
+    if let Err(e) = windivert_fw::add_block_rules() {
+        return Response::error(format!("Failed to add firewall block rules: {}", e));
+    }
+
     let (shutdown_tx, shutdown_rx) = watch::channel(false);
     let socks_addr = SOCKS_ADDR.to_string();
     let redirector = Arc::clone(&state.redirector);
@@ -116,7 +124,7 @@ async fn handle_enable(state: &mut DaemonState) -> Response {
     state.shutdown_tx = Some(shutdown_tx);
     state.redirector_handle = Some(handle);
 
-    log::info!("Shield firewall enabled (WinDivert)");
+    log::info!("Shield firewall enabled (WinDivert + Windows Firewall block rules)");
     Response::success()
 }
 
@@ -125,6 +133,7 @@ async fn handle_disable(state: &mut DaemonState) -> Response {
         return Response::success();
     }
 
+    // Stop WinDivert first
     state.redirector.set_enabled(false);
 
     if let Some(tx) = state.shutdown_tx.take() {
@@ -134,8 +143,13 @@ async fn handle_disable(state: &mut DaemonState) -> Response {
         handle.abort();
     }
 
+    // Remove Windows Firewall block rules AFTER stopping WinDivert
+    if let Err(e) = windivert_fw::remove_block_rules() {
+        log::error!("Failed to remove firewall block rules: {}", e);
+    }
+
     state.enabled = false;
-    log::info!("Shield firewall disabled (WinDivert)");
+    log::info!("Shield firewall disabled (WinDivert + block rules removed)");
     Response::success()
 }
 
@@ -146,7 +160,94 @@ fn handle_status(state: &DaemonState) -> Response {
         .map(|h| !h.is_finished())
         .unwrap_or(false);
 
-    Response::status(state.enabled, redirector_running)
+    // Report enabled based on both WinDivert AND block rules being active.
+    // The block rules are the ground truth — they persist even if WinDivert dies.
+    let block_rules_active = windivert_fw::are_block_rules_active();
+    Response::status(state.enabled && block_rules_active, redirector_running)
+}
+
+/// Create a named pipe with a security descriptor that restricts access
+/// to BUILTIN\Administrators and NT AUTHORITY\SYSTEM only.
+///
+/// This prevents unprivileged local processes from connecting to the pipe
+/// and sending commands like "disable" to drop the shield.
+///
+/// SDDL string: D:(A;;GA;;;BA)(A;;GA;;;SY)
+///   D:          = DACL
+///   (A;;GA;;;BA) = Allow Generic All to BUILTIN\Administrators
+///   (A;;GA;;;SY) = Allow Generic All to NT AUTHORITY\SYSTEM
+fn create_secure_pipe() -> Result<tokio::net::windows::named_pipe::NamedPipeServer, std::io::Error> {
+    use std::os::windows::io::{FromRawHandle, RawHandle};
+    use windows_sys::Win32::Foundation::{INVALID_HANDLE_VALUE, CloseHandle};
+    use windows_sys::Win32::Security::{
+        ConvertStringSecurityDescriptorToSecurityDescriptorW,
+        PSECURITY_DESCRIPTOR, SECURITY_ATTRIBUTES,
+    };
+    use windows_sys::Win32::Storage::FileSystem::{
+        CreateFileW, FILE_FLAG_OVERLAPPED, FILE_FLAG_FIRST_PIPE_INSTANCE,
+        PIPE_ACCESS_DUPLEX, OPEN_EXISTING,
+    };
+    use windows_sys::Win32::System::Pipes::{
+        CreateNamedPipeW, PIPE_TYPE_BYTE, PIPE_READMODE_BYTE, PIPE_WAIT,
+        PIPE_UNLIMITED_INSTANCES,
+    };
+
+    // SDDL: allow Administrators and SYSTEM only
+    let sddl: Vec<u16> = "D:(A;;GA;;;BA)(A;;GA;;;SY)\0"
+        .encode_utf16()
+        .collect();
+
+    let mut sd: PSECURITY_DESCRIPTOR = std::ptr::null_mut();
+    let ok = unsafe {
+        ConvertStringSecurityDescriptorToSecurityDescriptorW(
+            sddl.as_ptr(),
+            1, // SDDL_REVISION_1
+            &mut sd,
+            std::ptr::null_mut(),
+        )
+    };
+
+    if ok == 0 {
+        return Err(std::io::Error::last_os_error());
+    }
+
+    let sa = SECURITY_ATTRIBUTES {
+        nLength: std::mem::size_of::<SECURITY_ATTRIBUTES>() as u32,
+        lpSecurityDescriptor: sd as *mut _,
+        bInheritHandle: 0,
+    };
+
+    let pipe_name: Vec<u16> = PIPE_NAME
+        .encode_utf16()
+        .chain(std::iter::once(0))
+        .collect();
+
+    let handle = unsafe {
+        CreateNamedPipeW(
+            pipe_name.as_ptr(),
+            PIPE_ACCESS_DUPLEX | FILE_FLAG_OVERLAPPED,
+            PIPE_TYPE_BYTE | PIPE_READMODE_BYTE | PIPE_WAIT,
+            PIPE_UNLIMITED_INSTANCES,
+            4096,  // out buffer
+            4096,  // in buffer
+            0,     // default timeout
+            &sa as *const SECURITY_ATTRIBUTES,
+        )
+    };
+
+    // Free the security descriptor
+    unsafe { windows_sys::Win32::Foundation::LocalFree(sd as _) };
+
+    if handle == INVALID_HANDLE_VALUE {
+        return Err(std::io::Error::last_os_error());
+    }
+
+    // Wrap in tokio's NamedPipeServer
+    unsafe {
+        Ok(tokio::net::windows::named_pipe::NamedPipeServer::from_raw_handle(
+            handle as RawHandle,
+        ))
+    }
 }
 
 /// Run the named pipe server. This is the main loop for the Windows service.
@@ -155,18 +256,14 @@ fn handle_status(state: &DaemonState) -> Response {
 /// and manages the WinDivert redirector lifecycle.
 pub async fn run_pipe_server(mut service_stop: watch::Receiver<bool>) {
     use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
-    use tokio::net::windows::named_pipe::ServerOptions;
 
     let state = Arc::new(Mutex::new(DaemonState::new()));
 
-    log::info!("Named pipe server starting on {}", PIPE_NAME);
+    log::info!("Named pipe server starting on {} (restricted to Administrators)", PIPE_NAME);
 
     loop {
-        // Create a new pipe instance for each client
-        let server = match ServerOptions::new()
-            .first_pipe_instance(false)
-            .create(PIPE_NAME)
-        {
+        // Create a new pipe instance with restricted security descriptor
+        let server = match create_secure_pipe() {
             Ok(s) => s,
             Err(e) => {
                 log::error!("Failed to create named pipe {}: {}", PIPE_NAME, e);

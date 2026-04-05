@@ -569,10 +569,20 @@ sc.exe start '{svc_name}' | Out-Null
         svc_name = SERVICE_NAME,
     );
 
+    // Write to a random filename in the app's local data dir (not %TEMP% which is
+    // world-readable). This prevents TOCTOU attacks where a local attacker swaps
+    // the script between write and elevated execution.
+    let app_data = std::env::var("LOCALAPPDATA")
+        .unwrap_or_else(|_| std::env::temp_dir().display().to_string());
+    let install_dir = format!(r"{}\ZecBox", app_data);
+    let _ = std::fs::create_dir_all(&install_dir);
+    let random_id: u64 = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_nanos() as u64;
     let script_tmp = format!(
-        r"{}\com.zecbox.install.{}.ps1",
-        std::env::temp_dir().display(),
-        std::process::id()
+        r"{}\install_{:x}_{}.ps1",
+        install_dir, random_id, std::process::id()
     );
     std::fs::write(&script_tmp, &script)
         .map_err(|e| format!("Failed to write install script: {}", e))?;

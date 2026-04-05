@@ -60,21 +60,104 @@ impl WinDivertRedirector {
     }
 }
 
-/// Enable WinDivert interception. Returns Ok(()) if the filter was loaded.
+const BLOCK_RULE_NAME: &str = "ZecBox Shield";
+const ALLOW_LOCALHOST_RULE_NAME: &str = "ZecBox Shield Allow Localhost";
+
+/// Add Windows Firewall block rules as a fail-closed safety net.
 ///
-/// This function is called from the service command handler.
-/// The actual packet capture runs in a separate thread spawned by the caller.
-pub fn enable() -> Result<(), String> {
-    // WinDivert handle is opened when the divert thread starts.
-    // This function just validates that WinDivert is available.
-    // The actual interception lifecycle is managed by run_divert_and_redirect().
+/// These rules persist in the Windows Firewall kernel service independently
+/// of the helper process. If the helper crashes and WinDivert dies, these
+/// rules ensure zebrad's port 8233 traffic is BLOCKED, not leaked to clearnet.
+///
+/// This is the Windows equivalent of PF's `block out proto tcp from any to any port 8233`
+/// and iptables' catch-all DROP rule.
+pub fn add_block_rules() -> Result<(), String> {
+    use std::process::Command;
+
+    // Remove any stale rules first
+    let _ = remove_block_rules();
+
+    // Block all outbound TCP to port 8233
+    let output = Command::new("netsh")
+        .args([
+            "advfirewall", "firewall", "add", "rule",
+            &format!("name={}", BLOCK_RULE_NAME),
+            "dir=out", "protocol=tcp",
+            &format!("remoteport={}", ZCASH_PORT),
+            "action=block",
+        ])
+        .output()
+        .map_err(|e| format!("Failed to run netsh: {}", e))?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        return Err(format!("Failed to add firewall block rule: {}", stderr.trim()));
+    }
+
+    // Allow outbound TCP to port 8233 on localhost only (for WinDivert redirect)
+    let output = Command::new("netsh")
+        .args([
+            "advfirewall", "firewall", "add", "rule",
+            &format!("name={}", ALLOW_LOCALHOST_RULE_NAME),
+            "dir=out", "protocol=tcp",
+            "remoteip=127.0.0.1",
+            &format!("remoteport={}", ZCASH_PORT),
+            "action=allow",
+        ])
+        .output()
+        .map_err(|e| format!("Failed to run netsh: {}", e))?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        // Roll back the block rule
+        let _ = remove_block_rules();
+        return Err(format!("Failed to add firewall allow-localhost rule: {}", stderr.trim()));
+    }
+
+    log::info!("Windows Firewall block rules added for port {}", ZCASH_PORT);
     Ok(())
 }
 
-/// Disable WinDivert interception.
-pub fn disable() -> Result<(), String> {
-    // Signaled via shutdown channel in run_divert_and_redirect().
+/// Remove the Windows Firewall block rules.
+pub fn remove_block_rules() -> Result<(), String> {
+    use std::process::Command;
+
+    let _ = Command::new("netsh")
+        .args([
+            "advfirewall", "firewall", "delete", "rule",
+            &format!("name={}", BLOCK_RULE_NAME),
+        ])
+        .output();
+
+    let _ = Command::new("netsh")
+        .args([
+            "advfirewall", "firewall", "delete", "rule",
+            &format!("name={}", ALLOW_LOCALHOST_RULE_NAME),
+        ])
+        .output();
+
+    log::info!("Windows Firewall block rules removed");
     Ok(())
+}
+
+/// Check if the Windows Firewall block rules are active.
+pub fn are_block_rules_active() -> bool {
+    use std::process::Command;
+
+    let output = Command::new("netsh")
+        .args([
+            "advfirewall", "firewall", "show", "rule",
+            &format!("name={}", BLOCK_RULE_NAME),
+        ])
+        .output();
+
+    match output {
+        Ok(out) if out.status.success() => {
+            let stdout = String::from_utf8_lossy(&out.stdout);
+            stdout.contains(BLOCK_RULE_NAME)
+        }
+        _ => false,
+    }
 }
 
 /// Check if WinDivert interception is active.
