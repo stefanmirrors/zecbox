@@ -308,9 +308,9 @@ async fn handle_redirected_connection(
 
 /// Blocking thread that runs WinDivert packet capture.
 ///
-/// Captures outbound TCP SYN packets to port 8233, records the original
+/// Captures outbound TCP packets to port 8233, records the original
 /// destination in the shared map, modifies the packet destination to
-/// 127.0.0.1:{redir_port}, and re-injects it.
+/// 127.0.0.1:{redir_port}, recalculates checksums, and re-injects it.
 fn run_divert_thread(
     redir_port: u16,
     orig_dst_map: Arc<std::sync::Mutex<std::collections::HashMap<u16, SocketAddrV4>>>,
@@ -320,7 +320,7 @@ fn run_divert_thread(
     use windivert::prelude::*;
 
     let filter = format!("outbound and tcp.DstPort == {}", ZCASH_PORT);
-    let mut handle = WinDivert::network(
+    let handle = WinDivert::network(
         &filter,
         0, // priority
         WinDivertFlags::new(),
@@ -329,12 +329,14 @@ fn run_divert_thread(
 
     // Set receive timeout so we can check for stop signal periodically
     handle
-        .set_param(windivert::WinDivertParam::QueueTime, 500)
+        .set_param(WinDivertParam::QueueTime, 500)
         .map_err(|e| format!("Failed to set WinDivert queue time: {}", e))?;
 
     log::info!("WinDivert filter active: {}", filter);
 
     let mut buf = vec![0u8; 65535];
+    let redir_port_be = redir_port.to_be_bytes();
+    let localhost_be: [u8; 4] = [127, 0, 0, 1];
 
     loop {
         // Check stop signal
@@ -347,7 +349,7 @@ fn run_divert_thread(
             break;
         }
 
-        // Receive a packet
+        // Receive a packet (borrows from buf)
         let packet = match handle.recv(Some(&mut buf)) {
             Ok(p) => p,
             Err(e) => {
@@ -361,12 +363,11 @@ fn run_divert_thread(
             }
         };
 
-        // Parse the IP packet to extract destination
-        let parsed = match etherparse::SlicedPacket::from_ip(packet.data) {
+        // Parse the IP packet to extract src/dst info
+        let parsed = match etherparse::SlicedPacket::from_ip(&packet.data) {
             Ok(p) => p,
             Err(e) => {
                 log::debug!("Failed to parse packet: {}", e);
-                // Re-inject unmodified
                 let _ = handle.send(&packet);
                 continue;
             }
@@ -407,77 +408,40 @@ fn run_divert_thread(
             map.insert(src_port, SocketAddrV4::new(dst_ip, dst_port));
         }
 
-        // Modify the packet: change destination to 127.0.0.1:{redir_port}
-        // We need to work with the raw packet bytes
-        let mut modified = packet.data.to_vec();
-        if let Ok(mut headers) = etherparse::PacketHeaders::from_ip_slice(&modified) {
-            // Update IPv4 destination
-            if let Some(ref mut net) = headers.net {
-                match net {
-                    etherparse::NetHeaders::Ipv4(ref mut ipv4, _) => {
-                        ipv4.destination = [127, 0, 0, 1];
-                        // Recalculate IPv4 checksum
-                        ipv4.header_checksum = ipv4.calc_header_checksum();
-                    }
-                    _ => {}
-                }
+        // Convert to owned so we can modify the packet data in place
+        let mut owned = packet.into_owned();
+
+        // Modify the packet bytes directly:
+        // IPv4 header: destination IP is at bytes 16..20
+        // TCP header: destination port is at bytes ihl*4+2..ihl*4+4
+        //
+        // We modify dest IP to 127.0.0.1 and dest port to redir_port,
+        // then let WinDivert recalculate all checksums.
+        let data = owned.data.to_mut();
+        if data.len() >= 20 {
+            // Get IHL (Internet Header Length) from first byte
+            let ihl = ((data[0] & 0x0F) as usize) * 4;
+
+            // Set destination IP to 127.0.0.1 (bytes 16..20)
+            if data.len() >= 20 {
+                data[16..20].copy_from_slice(&localhost_be);
             }
 
-            // Update TCP destination port and recalculate checksum
-            if let Some(ref mut transport) = headers.transport {
-                match transport {
-                    etherparse::TransportHeader::Tcp(ref mut tcp) => {
-                        tcp.destination_port = redir_port;
-                        // TCP checksum will be recalculated below
-                    }
-                    _ => {}
-                }
+            // Set TCP destination port (bytes ihl+2..ihl+4)
+            if data.len() >= ihl + 4 {
+                data[ihl + 2..ihl + 4].copy_from_slice(&redir_port_be);
             }
-
-            // Re-serialize the modified packet
-            let mut new_packet = Vec::with_capacity(modified.len());
-            if let Some(ref net) = headers.net {
-                match net {
-                    etherparse::NetHeaders::Ipv4(ipv4, exts) => {
-                        ipv4.write(&mut new_packet).ok();
-                        exts.write(&mut new_packet, ipv4.protocol).ok();
-                    }
-                    _ => {}
-                }
-            }
-            if let Some(ref transport) = headers.transport {
-                match transport {
-                    etherparse::TransportHeader::Tcp(tcp) => {
-                        // Calculate TCP checksum over pseudo-header + payload
-                        let payload = &headers.payload.slice();
-                        let checksum = tcp.calc_checksum_ipv4_raw(
-                            [127, 0, 0, 1],   // src (doesn't change)
-                            [127, 0, 0, 1],    // dst (modified)
-                            payload,
-                        ).unwrap_or(0);
-                        let mut tcp_clone = tcp.clone();
-                        tcp_clone.checksum = checksum;
-                        tcp_clone.write(&mut new_packet).ok();
-                        new_packet.extend_from_slice(payload);
-                    }
-                    _ => {}
-                }
-            }
-
-            // Re-inject modified packet
-            // Create a new WinDivertPacket with modified data but same address
-            modified = new_packet;
         }
 
-        // Re-inject the modified packet using the raw send
-        // We need to construct a proper packet for re-injection
-        let _ = handle.send(&windivert::packet::WinDivertPacket {
-            address: packet.address.clone(),
-            data: &modified,
-        });
+        // Let WinDivert recalculate IP and TCP checksums
+        // Flag 0 = recalculate all checksums
+        owned.recalculate_checksums(0);
+
+        // Re-inject the modified packet
+        let _ = handle.send(&owned);
     }
 
-    handle.close(windivert::CloseAction::Nothing)
+    handle.close(CloseAction::Nothing)
         .map_err(|e| format!("Failed to close WinDivert handle: {}", e))?;
 
     log::info!("WinDivert thread stopped");

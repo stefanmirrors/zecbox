@@ -6,6 +6,9 @@
 //!
 //! Named pipe: \\.\pipe\com.zecbox.firewall
 //! Protocol: same JSON-over-newline as the Unix socket version
+//!
+//! Security: The named pipe is created with a DACL that restricts access
+//! to BUILTIN\Administrators and NT AUTHORITY\SYSTEM only.
 
 use std::sync::Arc;
 
@@ -13,7 +16,8 @@ use tokio::sync::{watch, Mutex};
 use tokio::task::JoinHandle;
 
 use crate::windivert_fw::{self, WinDivertRedirector};
-use crate::socks5;
+
+use windows_service::{define_windows_service, service_dispatcher};
 
 const PIPE_NAME: &str = r"\\.\pipe\com.zecbox.firewall";
 const HELPER_VERSION: &str = "2";
@@ -177,18 +181,12 @@ fn handle_status(state: &DaemonState) -> Response {
 ///   (A;;GA;;;BA) = Allow Generic All to BUILTIN\Administrators
 ///   (A;;GA;;;SY) = Allow Generic All to NT AUTHORITY\SYSTEM
 fn create_secure_pipe() -> Result<tokio::net::windows::named_pipe::NamedPipeServer, std::io::Error> {
-    use std::os::windows::io::{FromRawHandle, RawHandle};
-    use windows_sys::Win32::Foundation::{INVALID_HANDLE_VALUE, CloseHandle};
-    use windows_sys::Win32::Security::{
-        ConvertStringSecurityDescriptorToSecurityDescriptorW,
-        PSECURITY_DESCRIPTOR, SECURITY_ATTRIBUTES,
-    };
-    use windows_sys::Win32::Storage::FileSystem::{
-        CreateFileW, FILE_FLAG_OVERLAPPED, FILE_FLAG_FIRST_PIPE_INSTANCE,
-        PIPE_ACCESS_DUPLEX, OPEN_EXISTING,
-    };
+    use std::os::windows::io::RawHandle;
+    use windows_sys::Win32::Foundation::INVALID_HANDLE_VALUE;
+    use windows_sys::Win32::Security::SECURITY_ATTRIBUTES;
+    use windows_sys::Win32::Security::Authorization::ConvertStringSecurityDescriptorToSecurityDescriptorW;
     use windows_sys::Win32::System::Pipes::{
-        CreateNamedPipeW, PIPE_TYPE_BYTE, PIPE_READMODE_BYTE, PIPE_WAIT,
+        CreateNamedPipeW, PIPE_ACCESS_DUPLEX, PIPE_TYPE_BYTE, PIPE_READMODE_BYTE, PIPE_WAIT,
         PIPE_UNLIMITED_INSTANCES,
     };
 
@@ -197,7 +195,7 @@ fn create_secure_pipe() -> Result<tokio::net::windows::named_pipe::NamedPipeServ
         .encode_utf16()
         .collect();
 
-    let mut sd: PSECURITY_DESCRIPTOR = std::ptr::null_mut();
+    let mut sd: *mut std::ffi::c_void = std::ptr::null_mut();
     let ok = unsafe {
         ConvertStringSecurityDescriptorToSecurityDescriptorW(
             sddl.as_ptr(),
@@ -213,7 +211,7 @@ fn create_secure_pipe() -> Result<tokio::net::windows::named_pipe::NamedPipeServ
 
     let sa = SECURITY_ATTRIBUTES {
         nLength: std::mem::size_of::<SECURITY_ATTRIBUTES>() as u32,
-        lpSecurityDescriptor: sd as *mut _,
+        lpSecurityDescriptor: sd,
         bInheritHandle: 0,
     };
 
@@ -221,6 +219,9 @@ fn create_secure_pipe() -> Result<tokio::net::windows::named_pipe::NamedPipeServ
         .encode_utf16()
         .chain(std::iter::once(0))
         .collect();
+
+    // FILE_FLAG_OVERLAPPED = 0x40000000 (required for async tokio I/O)
+    const FILE_FLAG_OVERLAPPED: u32 = 0x40000000;
 
     let handle = unsafe {
         CreateNamedPipeW(
@@ -236,17 +237,17 @@ fn create_secure_pipe() -> Result<tokio::net::windows::named_pipe::NamedPipeServ
     };
 
     // Free the security descriptor
-    unsafe { windows_sys::Win32::Foundation::LocalFree(sd as _) };
+    unsafe { windows_sys::Win32::Foundation::LocalFree(sd as isize) };
 
     if handle == INVALID_HANDLE_VALUE {
         return Err(std::io::Error::last_os_error());
     }
 
-    // Wrap in tokio's NamedPipeServer
+    // Wrap in tokio's NamedPipeServer (inherent unsafe method, returns Result)
     unsafe {
-        Ok(tokio::net::windows::named_pipe::NamedPipeServer::from_raw_handle(
+        tokio::net::windows::named_pipe::NamedPipeServer::from_raw_handle(
             handle as RawHandle,
-        ))
+        )
     }
 }
 
@@ -321,83 +322,82 @@ pub async fn run_pipe_server(mut service_stop: watch::Receiver<bool>) {
     log::info!("Named pipe server stopped");
 }
 
-/// Windows Service entry point.
-///
-/// Registers the service with the Windows Service Control Manager,
-/// handles start/stop events, and runs the named pipe server.
-pub fn service_main() {
+// Generate the FFI entry point required by windows-service.
+// This macro creates an extern "system" fn that the Windows SCM can call.
+define_windows_service!(ffi_service_main, run_service);
+
+/// The actual service logic, called by the FFI entry point.
+fn run_service(_arguments: Vec<std::ffi::OsString>) {
     use windows_service::service::{
         ServiceControl, ServiceControlAccept, ServiceExitCode, ServiceState, ServiceStatus,
         ServiceType,
     };
     use windows_service::service_control_handler::{self, ServiceControlHandlerResult};
-    use windows_service::service_dispatcher;
 
-    // The service dispatcher requires a function with this exact signature
-    fn run_service(_arguments: Vec<std::ffi::OsString>) {
-        env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).init();
+    env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).init();
 
-        log::info!("ZecBox Firewall Helper service starting");
+    log::info!("ZecBox Firewall Helper service starting");
 
-        let (stop_tx, stop_rx) = watch::channel(false);
+    let (stop_tx, stop_rx) = watch::channel(false);
 
-        // Register the service control handler
-        let stop_tx_clone = stop_tx.clone();
-        let event_handler = move |control_event| -> ServiceControlHandlerResult {
-            match control_event {
-                ServiceControl::Stop | ServiceControl::Shutdown => {
-                    log::info!("Service received stop/shutdown control");
-                    let _ = stop_tx_clone.send(true);
-                    ServiceControlHandlerResult::NoError
-                }
-                ServiceControl::Interrogate => ServiceControlHandlerResult::NoError,
-                _ => ServiceControlHandlerResult::NotImplemented,
+    // Register the service control handler
+    let stop_tx_clone = stop_tx.clone();
+    let event_handler = move |control_event| -> ServiceControlHandlerResult {
+        match control_event {
+            ServiceControl::Stop | ServiceControl::Shutdown => {
+                log::info!("Service received stop/shutdown control");
+                let _ = stop_tx_clone.send(true);
+                ServiceControlHandlerResult::NoError
             }
-        };
+            ServiceControl::Interrogate => ServiceControlHandlerResult::NoError,
+            _ => ServiceControlHandlerResult::NotImplemented,
+        }
+    };
 
-        let status_handle = match service_control_handler::register(SERVICE_NAME, event_handler) {
-            Ok(h) => h,
-            Err(e) => {
-                log::error!("Failed to register service control handler: {}", e);
-                return;
-            }
-        };
+    let status_handle = match service_control_handler::register(SERVICE_NAME, event_handler) {
+        Ok(h) => h,
+        Err(e) => {
+            log::error!("Failed to register service control handler: {}", e);
+            return;
+        }
+    };
 
-        // Report running status
-        let _ = status_handle.set_service_status(ServiceStatus {
-            service_type: ServiceType::OWN_PROCESS,
-            current_state: ServiceState::Running,
-            controls_accepted: ServiceControlAccept::STOP | ServiceControlAccept::SHUTDOWN,
-            exit_code: ServiceExitCode::Win32(0),
-            checkpoint: 0,
-            wait_hint: std::time::Duration::default(),
-            process_id: None,
-        });
+    // Report running status
+    let _ = status_handle.set_service_status(ServiceStatus {
+        service_type: ServiceType::OWN_PROCESS,
+        current_state: ServiceState::Running,
+        controls_accepted: ServiceControlAccept::STOP | ServiceControlAccept::SHUTDOWN,
+        exit_code: ServiceExitCode::Win32(0),
+        checkpoint: 0,
+        wait_hint: std::time::Duration::default(),
+        process_id: None,
+    });
 
-        // Run the async pipe server
-        let rt = tokio::runtime::Runtime::new().unwrap();
-        rt.block_on(run_pipe_server(stop_rx));
+    // Run the async pipe server
+    let rt = tokio::runtime::Runtime::new().unwrap();
+    rt.block_on(run_pipe_server(stop_rx));
 
-        // Report stopped
-        let _ = status_handle.set_service_status(ServiceStatus {
-            service_type: ServiceType::OWN_PROCESS,
-            current_state: ServiceState::Stopped,
-            controls_accepted: ServiceControlAccept::empty(),
-            exit_code: ServiceExitCode::Win32(0),
-            checkpoint: 0,
-            wait_hint: std::time::Duration::default(),
-            process_id: None,
-        });
+    // Report stopped
+    let _ = status_handle.set_service_status(ServiceStatus {
+        service_type: ServiceType::OWN_PROCESS,
+        current_state: ServiceState::Stopped,
+        controls_accepted: ServiceControlAccept::empty(),
+        exit_code: ServiceExitCode::Win32(0),
+        checkpoint: 0,
+        wait_hint: std::time::Duration::default(),
+        process_id: None,
+    });
 
-        log::info!("ZecBox Firewall Helper service stopped");
-    }
+    log::info!("ZecBox Firewall Helper service stopped");
+}
 
-    // Register the service main function
-    if let Err(e) =
-        service_dispatcher::start(SERVICE_NAME, move |args| run_service(args))
-    {
-        // If we can't start as a service, we might be running from command line for testing.
-        // In that case, run the pipe server directly.
+/// Windows Service entry point.
+///
+/// Registers with the Windows Service Control Manager via the FFI entry point.
+/// If not started by SCM (e.g. running from command line), falls back to
+/// console mode for testing.
+pub fn service_main() {
+    if let Err(e) = service_dispatcher::start(SERVICE_NAME, ffi_service_main) {
         let err_str = format!("{}", e);
         if err_str.contains("1063") {
             // ERROR_FAILED_SERVICE_CONTROLLER_CONNECT: not started by SCM
@@ -405,10 +405,10 @@ pub fn service_main() {
             env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info"))
                 .init();
             let rt = tokio::runtime::Runtime::new().unwrap();
-            let (_stop_tx, stop_rx) = watch::channel(false);
+            let (stop_tx, stop_rx) = watch::channel(false);
 
             // Handle Ctrl+C for console mode
-            let stop_tx_clone = _stop_tx.clone();
+            let stop_tx_clone = stop_tx.clone();
             rt.spawn(async move {
                 let _ = tokio::signal::ctrl_c().await;
                 log::info!("Ctrl+C received, shutting down");
