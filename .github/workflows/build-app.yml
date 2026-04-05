@@ -294,17 +294,31 @@ jobs:
         shell: bash
         run: TARGET_TRIPLE=${{ matrix.triple }} bash scripts/fetch-binaries.sh
 
-      - name: Create firewall-helper stub
+      - name: Download WinDivert SDK
         shell: pwsh
         run: |
-          $StubSrc = "$env:TEMP/fw-stub.rs"
-          @"
-          fn main() {
-              eprintln!("Shield Mode firewall helper is not available on Windows.");
-              std::process::exit(1);
+          $WinDivertVersion = "2.2.2"
+          $Url = "https://reqrypt.org/download/WinDivert-${WinDivertVersion}-A.zip"
+          $ZipPath = "$env:TEMP/WinDivert.zip"
+          $ExtractPath = "vendor/WinDivert"
+          Invoke-WebRequest -Uri $Url -OutFile $ZipPath
+          Expand-Archive -Path $ZipPath -DestinationPath "$env:TEMP/WinDivert-extract" -Force
+          New-Item -ItemType Directory -Force -Path $ExtractPath | Out-Null
+          $Inner = Get-ChildItem "$env:TEMP/WinDivert-extract" -Directory | Select-Object -First 1
+          Copy-Item "$($Inner.FullName)/*" $ExtractPath -Recurse -Force
+
+      - name: Build firewall helper
+        shell: pwsh
+        run: |
+          $env:WINDIVERT_PATH = "$(Get-Location)/vendor/WinDivert"
+          cargo build -p firewall-helper --release --target ${{ matrix.triple }}
+          Copy-Item "target/${{ matrix.triple }}/release/zecbox-firewall-helper.exe" "src-tauri/binaries/zecbox-firewall-helper-${{ matrix.triple }}.exe"
+          # Bundle WinDivert DLL and driver alongside sidecars
+          $WdDir = "vendor/WinDivert"
+          if (Test-Path "$WdDir/x64/WinDivert.dll") {
+            Copy-Item "$WdDir/x64/WinDivert.dll" "src-tauri/binaries/"
+            Copy-Item "$WdDir/x64/WinDivert64.sys" "src-tauri/binaries/"
           }
-          "@ | Set-Content $StubSrc
-          rustc $StubSrc -o "src-tauri/binaries/zecbox-firewall-helper-${{ matrix.triple }}.exe"
 
       - name: Build app
         env:

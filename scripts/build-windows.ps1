@@ -22,23 +22,39 @@ foreach ($binary in @("zebrad", "arti", "zaino")) {
     }
 }
 
-# Create a no-op firewall helper stub for Windows
-# (Shield Mode is not yet supported on Windows, but Tauri requires the externalBin to exist)
+# Build the firewall helper (Shield Mode on Windows uses WinDivert)
 $HelperPath = Join-Path $BinariesDir "zecbox-firewall-helper-${TargetTriple}.exe"
 if (-not (Test-Path $HelperPath)) {
-    Write-Host "Building firewall-helper stub..."
-    # The firewall-helper crate is Unix-only; create a minimal stub
-    $StubDir = Join-Path $env:TEMP "zecbox-fw-stub"
-    New-Item -ItemType Directory -Force -Path $StubDir | Out-Null
-    @"
-fn main() {
-    eprintln!("Shield Mode firewall helper is not available on Windows.");
-    std::process::exit(1);
-}
-"@ | Set-Content (Join-Path $StubDir "main.rs")
-    rustc (Join-Path $StubDir "main.rs") -o $HelperPath
-    if ($LASTEXITCODE -ne 0) { throw "Failed to build firewall-helper stub" }
-    Remove-Item -Recurse -Force $StubDir
+    Write-Host "Building firewall-helper..."
+
+    # WinDivert SDK must be available. Set WINDIVERT_PATH if not already set.
+    if (-not $env:WINDIVERT_PATH) {
+        $WinDivertDir = Join-Path $ProjectDir "vendor" "WinDivert"
+        if (Test-Path $WinDivertDir) {
+            $env:WINDIVERT_PATH = $WinDivertDir
+        } else {
+            Write-Host "WARNING: WINDIVERT_PATH not set and vendor/WinDivert not found."
+            Write-Host "Download WinDivert from https://reqrypt.org/windivert.html"
+            Write-Host "and extract to vendor/WinDivert or set WINDIVERT_PATH."
+            throw "WinDivert SDK not found"
+        }
+    }
+
+    cargo build -p firewall-helper --release --manifest-path (Join-Path $ProjectDir "Cargo.toml")
+    if ($LASTEXITCODE -ne 0) { throw "Failed to build firewall-helper" }
+    Copy-Item (Join-Path $ProjectDir "target" "release" "zecbox-firewall-helper.exe") $HelperPath
+
+    # Copy WinDivert DLL and driver alongside the helper binary
+    $WinDivertDll = Join-Path $env:WINDIVERT_PATH "WinDivert.dll"
+    $WinDivertSys = Join-Path $env:WINDIVERT_PATH "WinDivert64.sys"
+    if (Test-Path $WinDivertDll) {
+        Copy-Item $WinDivertDll $BinariesDir
+    }
+    if (Test-Path $WinDivertSys) {
+        Copy-Item $WinDivertSys $BinariesDir
+    }
+} else {
+    Write-Host "Using existing firewall-helper binary at ${HelperPath}"
 }
 
 # Install frontend dependencies if needed

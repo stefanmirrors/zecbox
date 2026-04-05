@@ -14,34 +14,56 @@
 mod pf;
 #[cfg(target_os = "linux")]
 mod iptables;
+#[cfg(not(target_os = "windows"))]
 mod redirector;
 mod socks5;
+#[cfg(target_os = "windows")]
+mod windivert_fw;
+#[cfg(target_os = "windows")]
+mod service;
 
+#[cfg(not(target_os = "windows"))]
 use std::fs;
+#[cfg(not(target_os = "windows"))]
 use std::os::unix::fs::PermissionsExt;
+#[cfg(not(target_os = "windows"))]
 use std::os::unix::io::AsRawFd;
+#[cfg(not(target_os = "windows"))]
 use std::path::Path;
+#[cfg(not(target_os = "windows"))]
 use std::sync::Arc;
 
+#[cfg(not(target_os = "windows"))]
 use serde::{Deserialize, Serialize};
+#[cfg(not(target_os = "windows"))]
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
+#[cfg(not(target_os = "windows"))]
 use tokio::net::UnixListener;
+#[cfg(not(target_os = "windows"))]
 use tokio::sync::{watch, Mutex};
+#[cfg(not(target_os = "windows"))]
 use tokio::task::JoinHandle;
 
+#[cfg(not(target_os = "windows"))]
 const SOCKET_PATH: &str = "/var/run/com.zecbox.firewall.sock";
+#[cfg(not(target_os = "windows"))]
 /// Bump this whenever the helper protocol or behavior changes.
 /// The app checks this to detect outdated helpers and prompt for reinstallation.
 const HELPER_VERSION: &str = "2";
+#[cfg(not(target_os = "windows"))]
 const REDIR_LISTEN: &str = "127.0.0.1:9040";
+#[cfg(not(target_os = "windows"))]
 const REDIR_PORT: u16 = 9040;
+#[cfg(not(target_os = "windows"))]
 const SOCKS_ADDR: &str = "127.0.0.1:9150";
 
+#[cfg(not(target_os = "windows"))]
 #[derive(Debug, Deserialize)]
 struct Command {
     cmd: String,
 }
 
+#[cfg(not(target_os = "windows"))]
 #[derive(Debug, Serialize)]
 struct Response {
     ok: bool,
@@ -55,6 +77,7 @@ struct Response {
     version: Option<String>,
 }
 
+#[cfg(not(target_os = "windows"))]
 impl Response {
     fn success() -> Self {
         Response {
@@ -87,12 +110,14 @@ impl Response {
     }
 }
 
+#[cfg(not(target_os = "windows"))]
 struct DaemonState {
     enabled: bool,
     shutdown_tx: Option<watch::Sender<bool>>,
     redirector_handle: Option<JoinHandle<()>>,
 }
 
+#[cfg(not(target_os = "windows"))]
 impl DaemonState {
     fn new() -> Self {
         DaemonState {
@@ -103,6 +128,7 @@ impl DaemonState {
     }
 }
 
+#[cfg(not(target_os = "windows"))]
 async fn handle_enable(state: &mut DaemonState) -> Response {
     if state.enabled {
         return Response::success();
@@ -142,6 +168,7 @@ async fn handle_enable(state: &mut DaemonState) -> Response {
     Response::success()
 }
 
+#[cfg(not(target_os = "windows"))]
 async fn handle_disable(state: &mut DaemonState) -> Response {
     if !state.enabled {
         return Response::success();
@@ -170,6 +197,7 @@ async fn handle_disable(state: &mut DaemonState) -> Response {
     Response::success()
 }
 
+#[cfg(not(target_os = "windows"))]
 fn handle_status(state: &DaemonState) -> Response {
     let redirector_running = state
         .redirector_handle
@@ -180,6 +208,12 @@ fn handle_status(state: &DaemonState) -> Response {
     Response::status(state.enabled, redirector_running)
 }
 
+#[cfg(target_os = "windows")]
+fn main() {
+    service::service_main();
+}
+
+#[cfg(not(target_os = "windows"))]
 #[tokio::main]
 async fn main() {
     env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info"))
@@ -269,8 +303,9 @@ async fn main() {
     }
 }
 
-// --- Platform-specific group and credential functions ---
+// --- Platform-specific group and credential functions (Unix only) ---
 
+#[cfg(not(target_os = "windows"))]
 /// Get the GID of the group that app users belong to.
 fn get_app_group_gid() -> u32 {
     #[cfg(target_os = "macos")]
@@ -287,6 +322,7 @@ fn get_app_group_gid() -> u32 {
     }
 }
 
+#[cfg(not(target_os = "windows"))]
 fn resolve_group_gid(name: &str) -> Option<u32> {
     unsafe {
         let c_name = std::ffi::CString::new(name).ok()?;
@@ -299,6 +335,7 @@ fn resolve_group_gid(name: &str) -> Option<u32> {
     }
 }
 
+#[cfg(not(target_os = "windows"))]
 /// Verify the connecting peer is root or a member of the app group.
 fn verify_peer_credentials(stream: &tokio::net::UnixStream) -> Result<(), String> {
     let raw_fd = stream.as_raw_fd();
@@ -355,6 +392,7 @@ fn verify_peer_credentials(stream: &tokio::net::UnixStream) -> Result<(), String
     ))
 }
 
+#[cfg(not(target_os = "windows"))]
 fn is_uid_in_group(uid: libc::uid_t, target_gid: libc::gid_t) -> bool {
     unsafe {
         let pw = libc::getpwuid(uid);

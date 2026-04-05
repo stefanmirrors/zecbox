@@ -81,6 +81,20 @@ pub fn is_helper_installed() -> bool {
 
 #[cfg(windows)]
 pub fn is_helper_installed() -> bool {
+    if let Ok(response) = windows_send_command_raw("status") {
+        if response.contains("\"ok\":true") {
+            if let Ok(v) = serde_json::from_str::<serde_json::Value>(&response) {
+                let version = v["version"].as_str().unwrap_or("1");
+                if version == REQUIRED_HELPER_VERSION_WIN {
+                    return true;
+                }
+                log::info!(
+                    "Firewall helper version mismatch: got {}, need {}",
+                    version, REQUIRED_HELPER_VERSION_WIN
+                );
+            }
+        }
+    }
     false
 }
 
@@ -113,8 +127,26 @@ pub fn install_helper(app_handle: &AppHandle) -> Result<(), String> {
 }
 
 #[cfg(windows)]
-pub fn install_helper(_app_handle: &AppHandle) -> Result<(), String> {
-    Err("Shield Mode is not yet available on Windows.".into())
+pub fn install_helper(app_handle: &AppHandle) -> Result<(), String> {
+    let helper_src = crate::platform::resolve_sidecar_path(app_handle, HELPER_BIN_NAME_WIN);
+    if !helper_src.exists() {
+        return Err(format!(
+            "Firewall helper binary not found at {:?}",
+            helper_src
+        ));
+    }
+
+    install_helper_windows(&helper_src)?;
+
+    // Wait briefly for service to start
+    std::thread::sleep(std::time::Duration::from_secs(2));
+
+    if !is_helper_installed() {
+        return Err("Helper installed but service not responding. Try restarting.".into());
+    }
+
+    log::info!("Firewall helper installed successfully (Windows Service)");
+    Ok(())
 }
 
 /// Send enable command to the firewall helper.
@@ -125,7 +157,7 @@ pub fn enable_firewall() -> Result<(), String> {
 
 #[cfg(windows)]
 pub fn enable_firewall() -> Result<(), String> {
-    Err("Shield Mode is not yet available on Windows.".into())
+    windows_send_command("enable")
 }
 
 /// Send disable command to the firewall helper.
@@ -136,7 +168,7 @@ pub fn disable_firewall() -> Result<(), String> {
 
 #[cfg(windows)]
 pub fn disable_firewall() -> Result<(), String> {
-    Ok(()) // No-op: nothing to disable
+    windows_send_command("disable")
 }
 
 /// Query firewall status from the helper.
@@ -153,7 +185,13 @@ pub fn firewall_status() -> Result<(bool, bool), String> {
 
 #[cfg(windows)]
 pub fn firewall_status() -> Result<(bool, bool), String> {
-    Ok((false, false))
+    let response = windows_send_command_raw("status")?;
+    let v: serde_json::Value =
+        serde_json::from_str(&response).map_err(|e| format!("Invalid status response: {}", e))?;
+
+    let enabled = v["enabled"].as_bool().unwrap_or(false);
+    let redirector = v["redirector_running"].as_bool().unwrap_or(false);
+    Ok((enabled, redirector))
 }
 
 // ===== Unix-only internals =====
@@ -415,6 +453,157 @@ fn generate_systemd_service() -> String {
          WantedBy=multi-user.target\n",
         HELPER_INSTALL_PATH
     )
+}
+
+// ===== Windows-only internals =====
+
+#[cfg(target_os = "windows")]
+const PIPE_NAME: &str = r"\\.\pipe\com.zecbox.firewall";
+#[cfg(target_os = "windows")]
+const REQUIRED_HELPER_VERSION_WIN: &str = "2";
+#[cfg(target_os = "windows")]
+const HELPER_BIN_NAME_WIN: &str = "zecbox-firewall-helper";
+#[cfg(target_os = "windows")]
+const HELPER_INSTALL_DIR: &str = r"C:\Program Files\ZecBox";
+#[cfg(target_os = "windows")]
+const SERVICE_NAME: &str = "ZecBoxFirewall";
+
+#[cfg(target_os = "windows")]
+fn windows_send_command(cmd: &str) -> Result<(), String> {
+    let response = windows_send_command_raw(cmd)?;
+    let v: serde_json::Value = serde_json::from_str(&response)
+        .map_err(|_| "Firewall helper returned an unexpected response. Try restarting zecbox.".to_string())?;
+
+    if v["ok"].as_bool() == Some(true) {
+        Ok(())
+    } else {
+        let err = v["error"]
+            .as_str()
+            .unwrap_or("Unknown error")
+            .to_string();
+        Err(err)
+    }
+}
+
+#[cfg(target_os = "windows")]
+fn windows_send_command_raw(cmd: &str) -> Result<String, String> {
+    use std::fs::OpenOptions;
+    use std::io::{BufRead, BufReader, Write};
+    use std::time::Duration;
+
+    let mut file = OpenOptions::new()
+        .read(true)
+        .write(true)
+        .open(PIPE_NAME)
+        .map_err(|e| format!("Cannot connect to firewall helper at {}: {}", PIPE_NAME, e))?;
+
+    let msg = format!("{{\"cmd\":\"{}\"}}\n", cmd);
+    file.write_all(msg.as_bytes())
+        .map_err(|e| format!("Failed to send command to firewall helper: {}", e))?;
+    file.flush()
+        .map_err(|e| format!("Failed to flush command: {}", e))?;
+
+    let mut reader = BufReader::new(&file);
+    let mut line = String::new();
+    reader
+        .read_line(&mut line)
+        .map_err(|e| format!("Failed to read response from firewall helper: {}", e))?;
+
+    if line.is_empty() {
+        return Err("Firewall helper returned empty response. It may need to be reinstalled.".into());
+    }
+
+    Ok(line)
+}
+
+#[cfg(target_os = "windows")]
+fn install_helper_windows(helper_src: &std::path::Path) -> Result<(), String> {
+    use std::process::Command;
+
+    let helper_dst = format!(r"{}\zecbox-firewall-helper.exe", HELPER_INSTALL_DIR);
+
+    // Build a PowerShell script that:
+    // 1. Creates the install directory
+    // 2. Copies the helper binary
+    // 3. Stops the old service if it exists
+    // 4. Removes the old service if it exists
+    // 5. Creates and starts the new service
+    // WinDivert DLL and driver should be next to the helper binary
+    let helper_dir = helper_src.parent().unwrap_or(std::path::Path::new("."));
+    let windivert_dll = helper_dir.join("WinDivert.dll");
+    let windivert_sys = helper_dir.join("WinDivert64.sys");
+
+    let mut copy_windivert = String::new();
+    if windivert_dll.exists() {
+        copy_windivert.push_str(&format!(
+            "Copy-Item -Force '{}' '{install_dir}\\WinDivert.dll'\n",
+            windivert_dll.display(),
+            install_dir = HELPER_INSTALL_DIR,
+        ));
+    }
+    if windivert_sys.exists() {
+        copy_windivert.push_str(&format!(
+            "Copy-Item -Force '{}' '{install_dir}\\WinDivert64.sys'\n",
+            windivert_sys.display(),
+            install_dir = HELPER_INSTALL_DIR,
+        ));
+    }
+
+    let script = format!(
+        r#"
+New-Item -ItemType Directory -Force -Path '{install_dir}' | Out-Null
+Copy-Item -Force '{src}' '{dst}'
+{copy_wd}$svc = Get-Service -Name '{svc_name}' -ErrorAction SilentlyContinue
+if ($svc) {{
+    Stop-Service -Name '{svc_name}' -Force -ErrorAction SilentlyContinue
+    sc.exe delete '{svc_name}' | Out-Null
+    Start-Sleep -Seconds 1
+}}
+sc.exe create '{svc_name}' binPath= '{dst}' DisplayName= 'ZecBox Firewall Helper' start= demand | Out-Null
+sc.exe start '{svc_name}' | Out-Null
+"#,
+        install_dir = HELPER_INSTALL_DIR,
+        src = helper_src.display(),
+        dst = helper_dst,
+        copy_wd = copy_windivert,
+        svc_name = SERVICE_NAME,
+    );
+
+    let script_tmp = format!(
+        r"{}\com.zecbox.install.{}.ps1",
+        std::env::temp_dir().display(),
+        std::process::id()
+    );
+    std::fs::write(&script_tmp, &script)
+        .map_err(|e| format!("Failed to write install script: {}", e))?;
+
+    // Elevate via PowerShell Start-Process with -Verb RunAs (triggers UAC)
+    let output = Command::new("powershell")
+        .args([
+            "-NoProfile",
+            "-Command",
+            &format!(
+                "Start-Process powershell -ArgumentList '-NoProfile','-ExecutionPolicy','Bypass','-File','{}' -Verb RunAs -Wait",
+                script_tmp.replace('\'', "''")
+            ),
+        ])
+        .output()
+        .map_err(|e| format!("Failed to run installer: {}", e))?;
+
+    let _ = std::fs::remove_file(&script_tmp);
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        if stderr.contains("canceled") || stderr.contains("elevation") {
+            return Err("Installation canceled by user".into());
+        }
+        return Err(format!(
+            "System helper installation failed. You may need to grant administrator access. Details: {}",
+            stderr.lines().next().unwrap_or("Unknown error")
+        ));
+    }
+
+    Ok(())
 }
 
 #[cfg(test)]
