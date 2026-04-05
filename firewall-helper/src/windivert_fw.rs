@@ -435,7 +435,7 @@ fn run_divert_thread(
 
         // Let WinDivert recalculate IP and TCP checksums
         // Flag 0 = recalculate all checksums
-        owned.recalculate_checksums(0);
+        owned.recalculate_checksums(ChecksumFlags::new());
 
         // Re-inject the modified packet
         let _ = handle.send(&owned);

@@ -185,8 +185,9 @@ fn create_secure_pipe() -> Result<tokio::net::windows::named_pipe::NamedPipeServ
     use windows_sys::Win32::Foundation::INVALID_HANDLE_VALUE;
     use windows_sys::Win32::Security::SECURITY_ATTRIBUTES;
     use windows_sys::Win32::Security::Authorization::ConvertStringSecurityDescriptorToSecurityDescriptorW;
+    use windows_sys::Win32::Storage::FileSystem::PIPE_ACCESS_DUPLEX;
     use windows_sys::Win32::System::Pipes::{
-        CreateNamedPipeW, PIPE_ACCESS_DUPLEX, PIPE_TYPE_BYTE, PIPE_READMODE_BYTE, PIPE_WAIT,
+        CreateNamedPipeW, PIPE_TYPE_BYTE, PIPE_READMODE_BYTE, PIPE_WAIT,
         PIPE_UNLIMITED_INSTANCES,
     };
 
@@ -237,7 +238,7 @@ fn create_secure_pipe() -> Result<tokio::net::windows::named_pipe::NamedPipeServ
     };
 
     // Free the security descriptor
-    unsafe { windows_sys::Win32::Foundation::LocalFree(sd as isize) };
+    unsafe { windows_sys::Win32::Foundation::LocalFree(sd) };
 
     if handle == INVALID_HANDLE_VALUE {
         return Err(std::io::Error::last_os_error());
