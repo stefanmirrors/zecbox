@@ -321,7 +321,7 @@ fn run_divert_thread(
     use windivert_sys::ChecksumFlags;
 
     let filter = format!("outbound and tcp.DstPort == {}", ZCASH_PORT);
-    let handle = WinDivert::network(
+    let mut handle = WinDivert::network(
         &filter,
         0, // priority
         WinDivertFlags::new(),
