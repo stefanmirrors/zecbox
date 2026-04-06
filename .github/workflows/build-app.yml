@@ -310,14 +310,14 @@ jobs:
       - name: Build firewall helper
         shell: pwsh
         run: |
-          $env:WINDIVERT_PATH = "$(Get-Location)/vendor/WinDivert"
+          $env:WINDIVERT_PATH = "$(Get-Location)/vendor/WinDivert/x64"
           cargo build -p firewall-helper --release --target ${{ matrix.triple }}
           Copy-Item "target/${{ matrix.triple }}/release/zecbox-firewall-helper.exe" "src-tauri/binaries/zecbox-firewall-helper-${{ matrix.triple }}.exe"
           # Bundle WinDivert DLL and driver alongside sidecars
-          $WdDir = "vendor/WinDivert"
-          if (Test-Path "$WdDir/x64/WinDivert.dll") {
-            Copy-Item "$WdDir/x64/WinDivert.dll" "src-tauri/binaries/"
-            Copy-Item "$WdDir/x64/WinDivert64.sys" "src-tauri/binaries/"
+          $WdDir = "vendor/WinDivert/x64"
+          if (Test-Path "$WdDir/WinDivert.dll") {
+            Copy-Item "$WdDir/WinDivert.dll" "src-tauri/binaries/"
+            Copy-Item "$WdDir/WinDivert64.sys" "src-tauri/binaries/"
           }
 
       - name: Build app
