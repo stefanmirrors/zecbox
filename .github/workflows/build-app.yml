@@ -94,6 +94,9 @@ jobs:
             fi
           done
 
+      - name: Create WinDivert placeholders
+        run: touch src-tauri/binaries/WinDivert.dll src-tauri/binaries/WinDivert64.sys
+
       - name: Build app
         env:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
@@ -232,6 +235,9 @@ jobs:
           cargo build -p firewall-helper --release --target ${{ matrix.triple }}
           cp target/${{ matrix.triple }}/release/zecbox-firewall-helper src-tauri/binaries/zecbox-firewall-helper-${{ matrix.triple }}
           chmod +x src-tauri/binaries/zecbox-firewall-helper-${{ matrix.triple }}
+
+      - name: Create WinDivert placeholders
+        run: touch src-tauri/binaries/WinDivert.dll src-tauri/binaries/WinDivert64.sys
 
       - name: Build app
         env:

@@ -1111,6 +1111,7 @@ dependencies = [
  "serde_json",
  "tokio",
  "windivert",
+ "windivert-sys",
  "windows-service",
  "windows-sys 0.59.0",
 ]

@@ -192,7 +192,7 @@ fn create_secure_pipe() -> Result<tokio::net::windows::named_pipe::NamedPipeServ
     };
 
     // SDDL: allow Administrators and SYSTEM only
-    let sddl: Vec<u16> = "D:(A;;GA;;;BA)(A;;GA;;;SY)\0"
+    let sddl: Vec<u16> = "D:(A;;GRGW;;;BU)(A;;GA;;;BA)(A;;GA;;;SY)\0"
         .encode_utf16()
         .collect();
 
