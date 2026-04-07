@@ -138,10 +138,16 @@ pub fn install_helper(app_handle: &AppHandle) -> Result<(), String> {
 
     install_helper_windows(&helper_src)?;
 
-    // Wait briefly for service to start
-    std::thread::sleep(std::time::Duration::from_secs(2));
-
-    if !is_helper_installed() {
+    // Poll for service readiness (sc.exe start is async — service may take several seconds)
+    let mut ready = false;
+    for _ in 0..20 {
+        std::thread::sleep(std::time::Duration::from_millis(500));
+        if is_helper_installed() {
+            ready = true;
+            break;
+        }
+    }
+    if !ready {
         return Err("Helper installed but service not responding. Try restarting.".into());
     }
 
@@ -518,6 +524,7 @@ fn windows_send_command_raw(cmd: &str) -> Result<String, String> {
 
 #[cfg(target_os = "windows")]
 fn install_helper_windows(helper_src: &std::path::Path) -> Result<(), String> {
+    use std::os::windows::process::CommandExt;
     use std::process::Command;
 
     let helper_dst = format!(r"{}\zecbox-firewall-helper.exe", HELPER_INSTALL_DIR);
@@ -599,15 +606,19 @@ sc.exe start '{svc_name}' | Out-Null
         .map_err(|e| format!("Failed to write install script: {}", e))?;
 
     // Elevate via PowerShell Start-Process with -Verb RunAs (triggers UAC)
+    // CREATE_NO_WINDOW (0x08000000) prevents the outer console from flashing.
+    // -WindowStyle Hidden on both powershell invocations hides the inner windows.
     let output = Command::new("powershell")
         .args([
             "-NoProfile",
+            "-WindowStyle", "Hidden",
             "-Command",
             &format!(
-                "Start-Process powershell -ArgumentList '-NoProfile','-ExecutionPolicy','Bypass','-File','{}' -Verb RunAs -Wait",
+                "Start-Process powershell -ArgumentList '-NoProfile','-WindowStyle','Hidden','-ExecutionPolicy','Bypass','-File','{}' -Verb RunAs -Wait -WindowStyle Hidden",
                 script_tmp.replace('\'', "''")
             ),
         ])
+        .creation_flags(0x08000000)
         .output()
         .map_err(|e| format!("Failed to run installer: {}", e))?;
 
