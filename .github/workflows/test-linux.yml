@@ -53,6 +53,9 @@ jobs:
           cp target/release/zecbox-firewall-helper "src-tauri/binaries/zecbox-firewall-helper-${TRIPLE}"
           chmod +x "src-tauri/binaries/zecbox-firewall-helper-${TRIPLE}"
 
+      - name: Create WinDivert placeholders
+        run: touch src-tauri/binaries/WinDivert.dll src-tauri/binaries/WinDivert64.sys
+
       # Step 2: Compile checks (sidecar binaries must exist for Tauri build.rs)
       - name: Check main app compiles
         run: cargo check -p zecbox

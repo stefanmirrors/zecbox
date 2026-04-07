@@ -157,7 +157,7 @@ jobs:
             SRC="src-tauri/binaries/${binary}-${{ matrix.triple }}"
             if [ -f "$SRC" ]; then
               cp "$SRC" "target/${{ matrix.triple }}/release/bundle/sidecars/"
-              (cd "target/${{ matrix.triple }}/release/bundle/sidecars" && shasum -a 256 "${binary}-${{ matrix.triple }}" >> SHA256SUMS)
+              (cd "target/${{ matrix.triple }}/release/bundle/sidecars" && shasum -a 256 "${binary}-${{ matrix.triple }}" >> SHA256SUMS-sidecars-${{ matrix.arch }})
             fi
           done
 
