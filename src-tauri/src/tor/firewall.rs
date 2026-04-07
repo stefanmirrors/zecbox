@@ -528,10 +528,21 @@ fn install_helper_windows(helper_src: &std::path::Path) -> Result<(), String> {
     // 3. Stops the old service if it exists
     // 4. Removes the old service if it exists
     // 5. Creates and starts the new service
-    // WinDivert DLL and driver should be next to the helper binary
+    // WinDivert DLL and driver are bundled as Tauri resources.
+    // Tauri places resources in a "binaries/" subdirectory on Windows NSIS.
+    // Check both next to the helper exe and in the binaries/ subdirectory.
     let helper_dir = helper_src.parent().unwrap_or(std::path::Path::new("."));
-    let windivert_dll = helper_dir.join("WinDivert.dll");
-    let windivert_sys = helper_dir.join("WinDivert64.sys");
+    let binaries_dir = helper_dir.join("binaries");
+    let windivert_dll = if binaries_dir.join("WinDivert.dll").exists() {
+        binaries_dir.join("WinDivert.dll")
+    } else {
+        helper_dir.join("WinDivert.dll")
+    };
+    let windivert_sys = if binaries_dir.join("WinDivert64.sys").exists() {
+        binaries_dir.join("WinDivert64.sys")
+    } else {
+        helper_dir.join("WinDivert64.sys")
+    };
 
     let mut copy_windivert = String::new();
     if windivert_dll.exists() {
