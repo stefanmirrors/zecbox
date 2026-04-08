@@ -136,17 +136,18 @@ jobs:
       - name: Upload metadata
         shell: bash
         run: |
-          mkdir -p /tmp/meta
+          META_DIR="${RUNNER_TEMP}/meta"
+          mkdir -p "$META_DIR"
           SHA="${{ steps.hash-macos.outputs.sha256 }}${{ steps.hash-linux.outputs.sha256 }}${{ steps.hash-windows.outputs.sha256 }}"
           SIZE="${{ steps.hash-macos.outputs.size }}${{ steps.hash-linux.outputs.size }}${{ steps.hash-windows.outputs.size }}"
-          echo "$SHA" > /tmp/meta/sha256
-          echo "$SIZE" > /tmp/meta/size
+          echo "$SHA" > "$META_DIR/sha256"
+          echo "$SIZE" > "$META_DIR/size"
 
       - name: Upload metadata artifact
         uses: actions/upload-artifact@v4
         with:
           name: meta-${{ inputs.binary }}-${{ matrix.triple }}
-          path: /tmp/meta/
+          path: ${{ runner.temp }}/meta/
 
   publish:
     needs: build-sidecar
