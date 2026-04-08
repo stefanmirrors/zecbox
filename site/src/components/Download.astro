@@ -201,7 +201,7 @@ const downloads = {
             <div class="flex-1 min-w-0">
               <span>Copy and paste this into the terminal, then press Enter. ZecBox will open automatically:</span>
               <div class="mt-1.5 flex items-center gap-2 bg-zec-dark border border-zec-border rounded-lg px-3 py-2">
-                <code class="text-xs font-mono text-zec-text select-all flex-1 min-w-0" id="linux-appimage-cmd">chmod +x ~/Downloads/zecbox*.AppImage && ~/Downloads/zecbox*.AppImage</code>
+                <code class="text-xs font-mono text-zec-text select-all flex-1 min-w-0" id="linux-appimage-cmd">chmod +x ~/Downloads/<span class="dl-filename">zecbox-linux-x86_64.AppImage</span> && ~/Downloads/<span class="dl-filename">zecbox-linux-x86_64.AppImage</span></code>
                 <button type="button" class="shrink-0 w-8 h-8 flex items-center justify-center rounded-lg border border-zec-border hover:border-zec-muted hover:bg-zec-border/50 transition-all text-zec-muted hover:text-zec-text bg-transparent copy-btn" data-target="linux-appimage-cmd" title="Copy to clipboard">
                   <svg class="w-4 h-4 copy-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" stroke-width="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" stroke-width="2"/></svg>
                   <svg class="w-4 h-4 check-icon hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
@@ -230,7 +230,7 @@ const downloads = {
             <div class="flex-1 min-w-0">
               <span>Copy and paste this into the terminal, then press Enter (it will ask for your password):</span>
               <div class="mt-1.5 flex items-center gap-2 bg-zec-dark border border-zec-border rounded-lg px-3 py-2">
-                <code class="text-xs font-mono text-zec-text select-all flex-1 min-w-0" id="linux-deb-cmd">sudo dpkg -i ~/Downloads/zecbox*.deb</code>
+                <code class="text-xs font-mono text-zec-text select-all flex-1 min-w-0" id="linux-deb-cmd">sudo dpkg -i ~/Downloads/<span class="dl-filename">zecbox-linux-x86_64.deb</span></code>
                 <button type="button" class="shrink-0 w-8 h-8 flex items-center justify-center rounded-lg border border-zec-border hover:border-zec-muted hover:bg-zec-border/50 transition-all text-zec-muted hover:text-zec-text bg-transparent copy-btn" data-target="linux-deb-cmd" title="Copy to clipboard">
                   <svg class="w-4 h-4 copy-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" stroke-width="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" stroke-width="2"/></svg>
                   <svg class="w-4 h-4 check-icon hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
@@ -333,6 +333,13 @@ const downloads = {
 
         if (!dl) return;
 
+        // Update Linux filenames in install commands to match detected architecture
+        if (os === 'linux' && arch === 'arm64') {
+          document.querySelectorAll<HTMLElement>('.dl-filename').forEach(el => {
+            el.textContent = (el.textContent || '').replace('x86_64', 'aarch64');
+          });
+        }
+
         // Highlight detected platform card with badge + border
         const card = document.querySelector(`[data-platform-card="${os}"]`) as HTMLElement;
         if (card) {
@@ -401,6 +408,9 @@ const downloads = {
             const source = document.querySelector<HTMLElement>(`[data-platform="${platform}"]`);
             if (!source) return;
             content!.innerHTML = source.innerHTML;
+            // Update filenames in commands to match the actual downloaded file
+            const dlFilename = link.href.split('/').pop() || '';
+            content!.querySelectorAll('.dl-filename').forEach(el => { el.textContent = dlFilename; });
             // Re-wire copy buttons inside the overlay
             content!.querySelectorAll('.copy-btn').forEach(btn => {
               btn.addEventListener('click', async () => {
