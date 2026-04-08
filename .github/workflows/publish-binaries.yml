@@ -13,7 +13,7 @@ on:
         required: true
         type: string
       release_tag:
-        description: "GitHub Release tag to attach assets to (e.g. binaries-2026-03)"
+        description: "GitHub Release tag to attach assets to (e.g. binaries-2026-04)"
         required: true
         type: string
 
@@ -28,9 +28,23 @@ jobs:
           - runner: macos-14
             arch: aarch64
             triple: aarch64-apple-darwin
+            os: macos
           - runner: macos-14
             arch: x86_64
             triple: x86_64-apple-darwin
+            os: macos
+          - runner: ubuntu-22.04
+            arch: x86_64
+            triple: x86_64-unknown-linux-gnu
+            os: linux
+          - runner: ubuntu-24.04-arm
+            arch: aarch64
+            triple: aarch64-unknown-linux-gnu
+            os: linux
+          - runner: windows-latest
+            arch: x86_64
+            triple: x86_64-pc-windows-msvc
+            os: windows
     runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@v4
@@ -44,13 +58,13 @@ jobs:
           workspaces: src-tauri
 
       - name: Build sidecar binary
+        shell: bash
         run: |
           chmod +x scripts/fetch-binaries.sh
-          # Only build the requested binary by checking if it already exists
           TARGET_TRIPLE=${{ matrix.triple }} scripts/fetch-binaries.sh
 
       - name: Import Apple signing certificate
-        if: env.APPLE_CERTIFICATE != ''
+        if: matrix.os == 'macos' && env.APPLE_CERTIFICATE != ''
         env:
           APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
           APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
@@ -71,7 +85,7 @@ jobs:
           rm -f $RUNNER_TEMP/certificate.p12
 
       - name: Sign binary
-        if: env.APPLE_SIGNING_IDENTITY != ''
+        if: matrix.os == 'macos' && env.APPLE_SIGNING_IDENTITY != ''
         env:
           APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
         run: |
@@ -82,8 +96,9 @@ jobs:
               --sign "$APPLE_SIGNING_IDENTITY" "$BINARY_PATH"
           fi
 
-      - name: Compute SHA256 and size
-        id: hash
+      - name: Compute SHA256 and size (macOS)
+        if: matrix.os == 'macos'
+        id: hash-macos
         run: |
           BINARY_PATH="src-tauri/binaries/${{ inputs.binary }}-${{ matrix.triple }}"
           SHA=$(shasum -a 256 "$BINARY_PATH" | awk '{print $1}')
@@ -91,17 +106,41 @@ jobs:
           echo "sha256=$SHA" >> "$GITHUB_OUTPUT"
           echo "size=$SIZE" >> "$GITHUB_OUTPUT"
 
+      - name: Compute SHA256 and size (Linux)
+        if: matrix.os == 'linux'
+        id: hash-linux
+        run: |
+          BINARY_PATH="src-tauri/binaries/${{ inputs.binary }}-${{ matrix.triple }}"
+          SHA=$(sha256sum "$BINARY_PATH" | awk '{print $1}')
+          SIZE=$(stat -c%s "$BINARY_PATH")
+          echo "sha256=$SHA" >> "$GITHUB_OUTPUT"
+          echo "size=$SIZE" >> "$GITHUB_OUTPUT"
+
+      - name: Compute SHA256 and size (Windows)
+        if: matrix.os == 'windows'
+        id: hash-windows
+        shell: pwsh
+        run: |
+          $BinaryPath = "src-tauri/binaries/${{ inputs.binary }}-${{ matrix.triple }}.exe"
+          $SHA = (Get-FileHash -Algorithm SHA256 $BinaryPath).Hash.ToLower()
+          $SIZE = (Get-Item $BinaryPath).Length
+          echo "sha256=$SHA" >> $env:GITHUB_OUTPUT
+          echo "size=$SIZE" >> $env:GITHUB_OUTPUT
+
       - name: Upload binary artifact
         uses: actions/upload-artifact@v4
         with:
           name: ${{ inputs.binary }}-${{ matrix.triple }}
-          path: src-tauri/binaries/${{ inputs.binary }}-${{ matrix.triple }}
+          path: src-tauri/binaries/${{ inputs.binary }}-${{ matrix.triple }}${{ matrix.os == 'windows' && '.exe' || '' }}
 
       - name: Upload metadata
+        shell: bash
         run: |
           mkdir -p /tmp/meta
-          echo "${{ steps.hash.outputs.sha256 }}" > /tmp/meta/sha256
-          echo "${{ steps.hash.outputs.size }}" > /tmp/meta/size
+          SHA="${{ steps.hash-macos.outputs.sha256 }}${{ steps.hash-linux.outputs.sha256 }}${{ steps.hash-windows.outputs.sha256 }}"
+          SIZE="${{ steps.hash-macos.outputs.size }}${{ steps.hash-linux.outputs.size }}${{ steps.hash-windows.outputs.size }}"
+          echo "$SHA" > /tmp/meta/sha256
+          echo "$SIZE" > /tmp/meta/size
 
       - name: Upload metadata artifact
         uses: actions/upload-artifact@v4
@@ -131,8 +170,12 @@ jobs:
           gh release view "${{ inputs.release_tag }}" || \
             gh release create "${{ inputs.release_tag }}" --title "Binary Updates" --notes "Sidecar binary updates" --draft
 
-          for triple in aarch64-apple-darwin x86_64-apple-darwin; do
+          for triple in aarch64-apple-darwin x86_64-apple-darwin x86_64-unknown-linux-gnu aarch64-unknown-linux-gnu x86_64-pc-windows-msvc; do
             BINARY="artifacts/${{ inputs.binary }}-${triple}/${{ inputs.binary }}-${triple}"
+            # Check for Windows .exe variant too
+            if [ -f "${BINARY}.exe" ]; then
+              BINARY="${BINARY}.exe"
+            fi
             if [ -f "$BINARY" ]; then
               gh release upload "${{ inputs.release_tag }}" "$BINARY" --clobber
             fi
@@ -147,13 +190,16 @@ jobs:
 
           ARGS="--app-version $APP_VERSION --output site/public/updates/manifest.json"
 
-          for triple in aarch64-apple-darwin x86_64-apple-darwin; do
-            SHA=$(cat "artifacts/meta-${{ inputs.binary }}-${triple}/sha256")
-            SIZE=$(cat "artifacts/meta-${{ inputs.binary }}-${triple}/size")
-            ARGS="$ARGS --binary ${{ inputs.binary }} --version ${{ inputs.version }}"
-            ARGS="$ARGS --platform ${triple}"
-            ARGS="$ARGS --url ${REPO_URL}/${{ inputs.binary }}-${triple}"
-            ARGS="$ARGS --sha256 ${SHA} --size ${SIZE}"
+          for triple in aarch64-apple-darwin x86_64-apple-darwin x86_64-unknown-linux-gnu aarch64-unknown-linux-gnu x86_64-pc-windows-msvc; do
+            META_DIR="artifacts/meta-${{ inputs.binary }}-${triple}"
+            if [ -d "$META_DIR" ]; then
+              SHA=$(cat "${META_DIR}/sha256")
+              SIZE=$(cat "${META_DIR}/size")
+              ARGS="$ARGS --binary ${{ inputs.binary }} --version ${{ inputs.version }}"
+              ARGS="$ARGS --platform ${triple}"
+              ARGS="$ARGS --url ${REPO_URL}/${{ inputs.binary }}-${triple}"
+              ARGS="$ARGS --sha256 ${SHA} --size ${SIZE}"
+            fi
           done
 
           chmod +x scripts/generate-manifest.sh
