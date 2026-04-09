@@ -2,37 +2,45 @@
   "appVersion": "0.1.0",
   "binaries": [
     {
-      "downloadUrl": "https://github.com/stefanmirrors/zecbox/releases/download/binaries-2026-04/zebrad-aarch64-apple-darwin",
       "name": "zebrad",
+      "version": "4.3.0",
       "platform": "aarch64-apple-darwin",
-      "sha256": "463af533edb803a2074888990f75b8c4d3f3bb44583dd03e5a60c24967093a4a",
-      "sizeBytes": 84629800,
-      "version": "4.3.0"
+      "downloadUrl": "https://github.com/stefanmirrors/zecbox/releases/download/binaries-2026-04/zebrad-aarch64-apple-darwin",
+      "sha256": "7e7f269fdbac00ad6ff394fcd70b0af8a1087e8a5ffd8166a00d5b505f1e884e",
+      "sizeBytes": 84629800
     },
     {
-      "downloadUrl": "https://github.com/stefanmirrors/zecbox/releases/download/binaries-2026-04/zebrad-x86_64-apple-darwin",
       "name": "zebrad",
+      "version": "4.3.0",
       "platform": "x86_64-apple-darwin",
-      "sha256": "5c9f1e2e546c46152078bb30ab5cb68b01531d3ba6ec6ac5cb3b9c926bd3350f",
-      "sizeBytes": 87700200,
-      "version": "4.3.0"
+      "downloadUrl": "https://github.com/stefanmirrors/zecbox/releases/download/binaries-2026-04/zebrad-x86_64-apple-darwin",
+      "sha256": "6b6c71df9831b094a4d02aa7fda22af7417ef5f5bedef6cb273c3efd248a758b",
+      "sizeBytes": 87700200
     },
     {
-      "downloadUrl": "https://github.com/stefanmirrors/zecbox/releases/download/binaries-2026-04/zebrad-x86_64-unknown-linux-gnu",
       "name": "zebrad",
+      "version": "4.3.0",
       "platform": "x86_64-unknown-linux-gnu",
+      "downloadUrl": "https://github.com/stefanmirrors/zecbox/releases/download/binaries-2026-04/zebrad-x86_64-unknown-linux-gnu",
       "sha256": "1a8b7aaf5d42e40717b4e97a7451012acc881a2b373f0f19cbae0ec4e2c7bb77",
-      "sizeBytes": 156410176,
-      "version": "4.3.0"
+      "sizeBytes": 156410176
     },
     {
-      "downloadUrl": "https://github.com/stefanmirrors/zecbox/releases/download/binaries-2026-04/zebrad-aarch64-unknown-linux-gnu",
       "name": "zebrad",
+      "version": "4.3.0",
       "platform": "aarch64-unknown-linux-gnu",
+      "downloadUrl": "https://github.com/stefanmirrors/zecbox/releases/download/binaries-2026-04/zebrad-aarch64-unknown-linux-gnu",
       "sha256": "245b3a21ea281027824e6b46810ae34c26bc63d66f6994f93069d9ae2132dc2b",
-      "sizeBytes": 156644344,
-      "version": "4.3.0"
+      "sizeBytes": 156644344
+    },
+    {
+      "name": "zebrad",
+      "version": "4.3.0",
+      "platform": "x86_64-pc-windows-msvc",
+      "downloadUrl": "https://github.com/stefanmirrors/zecbox/releases/download/binaries-2026-04/zebrad-x86_64-pc-windows-msvc",
+      "sha256": "ab54b791c6c66b3e54d96dd701d7fadebad1f0f701b9a258d604b1e0027a58c9",
+      "sizeBytes": 78662144
     }
   ],
-  "signature": "c3d1b13a130ae722b664af4eb782910dfcbd3881496c75e74174b78795be546326f64799f7ca5236998ac5f75f09f1c23ec13afaa75d8a7c6057a33724734400"
+  "signature": "6ef415f9891d0895e7abe9df1948bc45933a5c2c803ce5e20024d2652e809ab470b290d45ce3f5f8800faf8174e812a2685329f914ddc7ade5e8e560d2be5f01"
 }
