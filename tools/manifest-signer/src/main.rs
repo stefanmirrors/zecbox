@@ -46,12 +46,25 @@ enum Command {
     },
 }
 
+/// Binary entry — field order MUST match BinaryManifestEntry in src-tauri/src/updates/mod.rs
+/// so that canonical JSON serialization is identical for signature verification.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct BinaryEntry {
+    name: String,
+    version: String,
+    platform: String,
+    download_url: String,
+    sha256: String,
+    size_bytes: u64,
+}
+
 /// Unsigned manifest payload (what gets signed).
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct ManifestPayload {
     app_version: String,
-    binaries: Vec<serde_json::Value>,
+    binaries: Vec<BinaryEntry>,
 }
 
 /// Full signed manifest (with optional signature).
@@ -59,7 +72,7 @@ struct ManifestPayload {
 #[serde(rename_all = "camelCase")]
 struct SignedManifest {
     app_version: String,
-    binaries: Vec<serde_json::Value>,
+    binaries: Vec<BinaryEntry>,
     #[serde(skip_serializing_if = "Option::is_none")]
     signature: Option<String>,
 }
