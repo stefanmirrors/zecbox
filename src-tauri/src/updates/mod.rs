@@ -69,9 +69,9 @@ pub struct BinaryVersions {
 impl Default for BinaryVersions {
     fn default() -> Self {
         Self {
-            zebrad: "0.0.0".into(),
-            zaino: "0.0.0".into(),
-            arti: "0.0.0".into(),
+            zebrad: "4.3.0".into(),
+            zaino: "0.2.0-rc.6".into(),
+            arti: "0.1.0".into(),
         }
     }
 }
