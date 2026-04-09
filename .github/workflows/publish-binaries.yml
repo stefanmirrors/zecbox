@@ -212,4 +212,10 @@ jobs:
           git config user.email "stefanmirrors@users.noreply.github.com"
           git add site/public/updates/manifest.json
           git diff --cached --quiet || git commit -m "Update binary manifest: ${{ inputs.binary }} ${{ inputs.version }}"
+          git pull --rebase origin main
           git push
+
+      - name: Trigger site deploy
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh workflow run "Deploy Site"
