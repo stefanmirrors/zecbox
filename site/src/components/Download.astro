@@ -414,8 +414,8 @@ const downloads = {
             // Re-wire copy buttons inside the overlay
             content!.querySelectorAll('.copy-btn').forEach(btn => {
               btn.addEventListener('click', async () => {
-                const targetId = btn.getAttribute('data-target');
-                const cmd = document.getElementById(targetId ?? '')?.textContent ?? '';
+                const codeEl = btn.closest('.flex')?.querySelector('code');
+                const cmd = codeEl?.textContent ?? '';
                 await navigator.clipboard.writeText(cmd);
                 const copyIcon = btn.querySelector('.copy-icon');
                 const checkIcon = btn.querySelector('.check-icon');
