@@ -216,6 +216,7 @@ jobs:
           git push
 
       - name: Trigger site deploy
+        continue-on-error: true
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: gh workflow run "Deploy Site"
