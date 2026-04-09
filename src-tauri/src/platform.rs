@@ -39,6 +39,17 @@ pub fn resolve_sidecar_path(app_handle: &AppHandle, name: &str) -> PathBuf {
         vec![name_with_triple.clone(), name.to_string()]
     };
 
+    // Check updates directory first (user-writable, takes priority over bundled)
+    if let Ok(data_dir) = app_handle.path().app_data_dir() {
+        let updates_dir = data_dir.join("updates");
+        for candidate in &candidates {
+            let path = updates_dir.join(candidate);
+            if path.exists() {
+                return path;
+            }
+        }
+    }
+
     // In dev mode, look in src-tauri/binaries/
     if cfg!(debug_assertions) {
         let bin_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("binaries");

@@ -198,7 +198,9 @@ jobs:
               SIZE=$(cat "${META_DIR}/size")
               ARGS="$ARGS --binary ${{ inputs.binary }} --version ${{ inputs.version }}"
               ARGS="$ARGS --platform ${triple}"
-              ARGS="$ARGS --url ${REPO_URL}/${{ inputs.binary }}-${triple}"
+              BINARY_URL="${REPO_URL}/${{ inputs.binary }}-${triple}"
+              if [[ "$triple" == *"windows"* ]]; then BINARY_URL="${BINARY_URL}.exe"; fi
+              ARGS="$ARGS --url ${BINARY_URL}"
               ARGS="$ARGS --sha256 ${SHA} --size ${SIZE}"
             fi
           done

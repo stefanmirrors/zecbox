@@ -137,7 +137,17 @@ pub fn resolve_binary_dir(app_handle: &AppHandle) -> PathBuf {
         }
     }
 
-    // Production: Tauri bundles externalBin in Contents/MacOS/
+    // On Linux, the exe directory is typically read-only (AppImage FUSE mount, /usr/bin for .deb).
+    // Use a writable directory in app data for binary updates.
+    if cfg!(target_os = "linux") {
+        if let Ok(data_dir) = app_handle.path().app_data_dir() {
+            let updates_dir = data_dir.join("updates");
+            let _ = std::fs::create_dir_all(&updates_dir);
+            return updates_dir;
+        }
+    }
+
+    // macOS/Windows: Tauri bundles externalBin in Contents/MacOS/ or alongside exe
     let exe_dir = std::env::current_exe()
         .ok()
         .and_then(|p| p.parent().map(|p| p.to_path_buf()));
