@@ -1,4 +1,8 @@
 ---
+// Set to true to hide downloads during a security-update build window.
+// Flip back to false and redeploy after the new release is published.
+const DOWNLOADS_PAUSED = true;
+
 let version = "0.1.0";
 try {
   const res = await fetch("https://api.github.com/repos/stefanmirrors/zecbox/releases/latest");
@@ -30,11 +34,22 @@ const downloads = {
       <p class="text-zec-muted">v{version} · ~300 GB disk space required for the full blockchain</p>
     </div>
 
+    {DOWNLOADS_PAUSED && (
+      <div class="max-w-xl mx-auto mb-6 rounded-xl border border-zec-yellow/40 bg-zec-yellow/5 p-5 text-center">
+        <div class="flex items-center justify-center gap-2 mb-2">
+          <svg class="w-5 h-5 text-zec-yellow" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+          <p class="text-sm font-semibold text-zec-text">Security update in progress</p>
+        </div>
+        <p class="text-xs text-zec-muted leading-relaxed">We're publishing a critical security update. Downloads are paused for the next ~1 hour to make sure you don't install an older version. Check back soon.</p>
+        <p class="text-[11px] text-zec-muted/70 mt-3">Existing users: open ZecBox → Settings → Check for updates.</p>
+      </div>
+    )}
+
     <!-- Download data for client-side detection -->
     <script id="download-data" type="application/json" set:html={JSON.stringify(downloads)} />
 
     <!-- All downloads grid -->
-    <div id="all-downloads">
+    <div id="all-downloads" class:list={[DOWNLOADS_PAUSED && 'hidden']}>
       <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <!-- macOS -->
         <div data-platform-card="macos" class="border border-zec-border rounded-xl p-4 relative">
@@ -142,7 +157,7 @@ const downloads = {
     </div>
 
     <!-- Layer C: Post-install instructions -->
-    <div class="mt-6 bg-zec-surface border border-zec-border rounded-xl p-5">
+    <div class:list={['mt-6 bg-zec-surface border border-zec-border rounded-xl p-5', DOWNLOADS_PAUSED && 'hidden']}>
       <details id="install-instructions" open>
         <summary class="flex items-center gap-2 cursor-pointer list-none [&::-webkit-details-marker]:hidden">
           <svg class="w-5 h-5 text-zec-yellow shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
