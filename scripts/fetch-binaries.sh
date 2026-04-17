@@ -10,7 +10,7 @@ PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 BINARIES_DIR="$PROJECT_DIR/src-tauri/binaries"
 TARGET_TRIPLE="${TARGET_TRIPLE:-aarch64-apple-darwin}"
 
-ZEBRAD_VERSION="${ZEBRAD_VERSION:-4.3.0}"
+ZEBRAD_VERSION="${ZEBRAD_VERSION:-4.3.1}"
 ZAINO_VERSION="${ZAINO_VERSION:-0.2.0-rc.6}"
 
 # Detect Windows target for .exe suffix
@@ -39,7 +39,10 @@ if [ ! -f "$ZEBRAD_PATH" ]; then
     # cargo install doesn't support --target well, so we clone and build
     ZEBRAD_TMP="$PROJECT_DIR/target/zebrad-build"
     if [ ! -d "$ZEBRAD_TMP" ]; then
-        git clone --depth 1 --branch "v${ZEBRAD_VERSION}" https://github.com/ZcashFoundation/zebra.git "$ZEBRAD_TMP"
+        # ZCF's tag convention changed at 4.3.1: earlier releases used `v<ver>`, newer ones are bare `<ver>`.
+        if ! git clone --depth 1 --branch "v${ZEBRAD_VERSION}" https://github.com/ZcashFoundation/zebra.git "$ZEBRAD_TMP" 2>/dev/null; then
+            git clone --depth 1 --branch "${ZEBRAD_VERSION}" https://github.com/ZcashFoundation/zebra.git "$ZEBRAD_TMP"
+        fi
     fi
     cargo build --release --manifest-path "$ZEBRAD_TMP/Cargo.toml" -p zebrad $CROSS_ARGS
     cp "$ZEBRAD_TMP/target/$CROSS_DIR/zebrad${EXE_SUFFIX}" "$ZEBRAD_PATH"
