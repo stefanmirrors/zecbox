@@ -1,3 +1,5 @@
+import { useUpdates } from "../../hooks/useUpdates";
+
 export type View = "dashboard" | "shield" | "wallet" | "logs" | "settings";
 
 interface NavItem {
@@ -68,6 +70,7 @@ const navItems: NavItem[] = [
 ];
 
 export function Sidebar({ activeView, onNavigate }: Props) {
+  const { versions } = useUpdates();
   return (
     <aside className="flex flex-col w-48 border-r border-zec-border h-screen shrink-0">
       <div className="px-5 pt-6 pb-8">
@@ -101,7 +104,9 @@ export function Sidebar({ activeView, onNavigate }: Props) {
       </nav>
 
       <div className="px-5 py-4">
-        <p className="text-[11px] text-zec-muted/40">v{__APP_VERSION__}</p>
+        {versions?.app && (
+          <p className="text-[11px] text-zec-muted/40">v{versions.app}</p>
+        )}
       </div>
     </aside>
   );
