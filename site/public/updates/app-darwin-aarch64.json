@@ -1,10 +1,10 @@
 {
-  "version": "0.1.1",
-  "notes": "ZecBox 0.1.1",
-  "pub_date": "2026-04-17T23:55:21Z",
+  "version": "0.1.2",
+  "notes": "ZecBox 0.1.2",
+  "pub_date": "2026-05-02T05:42:55Z",
   "platforms": {
     "darwin-aarch64": {
-      "url": "https://github.com/stefanmirrors/zecbox/releases/download/v0.1.1/zecbox_0.1.1_aarch64.dmg",
+      "url": "https://github.com/stefanmirrors/zecbox/releases/download/v0.1.2/zecbox_0.1.2_aarch64.dmg",
       "signature": ""
     }
   }
