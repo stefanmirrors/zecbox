@@ -10,7 +10,7 @@ PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 BINARIES_DIR="$PROJECT_DIR/src-tauri/binaries"
 TARGET_TRIPLE="${TARGET_TRIPLE:-aarch64-apple-darwin}"
 
-ZEBRAD_VERSION="${ZEBRAD_VERSION:-4.3.1}"
+ZEBRAD_VERSION="${ZEBRAD_VERSION:-4.4.0}"
 ZAINO_VERSION="${ZAINO_VERSION:-0.2.0-rc.6}"
 
 # Detect Windows target for .exe suffix
