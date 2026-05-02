@@ -298,6 +298,38 @@ const downloads = {
       </details>
     </div>
 
+    <!-- Troubleshooting -->
+    <div id="troubleshooting" class="mt-4 bg-zec-surface border border-zec-border rounded-xl p-5 scroll-mt-11">
+      <details>
+        <summary class="flex items-center gap-2 cursor-pointer list-none [&::-webkit-details-marker]:hidden">
+          <svg class="w-5 h-5 text-zec-yellow shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+          <span class="text-sm font-semibold text-zec-text">Troubleshooting</span>
+          <svg class="w-4 h-4 text-zec-muted ml-auto transition-transform details-chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+        </summary>
+
+        <div id="port-in-use" class="mt-5 scroll-mt-11">
+          <p class="text-sm font-semibold text-zec-text mb-2">"Port already in use" / node won't start</p>
+          <p class="text-xs text-zec-muted leading-relaxed mb-3">Usually caused by an old <code class="text-zec-text">zebrad</code> process left running after a crash, force-quit, or interrupted update. It's still holding the Zcash port so the new node can't bind. Your chain data is safe — this only kills the stuck process.</p>
+          <p class="text-xs text-zec-muted leading-relaxed mb-2">Open <strong class="text-zec-text">Terminal</strong> (macOS / Linux) and run:</p>
+          <div class="flex items-center gap-2 bg-zec-dark border border-zec-border rounded-lg px-3 py-2 mb-3">
+            <code class="text-xs font-mono text-zec-text select-all flex-1 min-w-0" id="pkill-cmd">pkill -f zebrad</code>
+            <button type="button" class="shrink-0 w-8 h-8 flex items-center justify-center rounded-lg border border-zec-border hover:border-zec-muted hover:bg-zec-border/50 transition-all text-zec-muted hover:text-zec-text bg-transparent copy-btn" data-target="pkill-cmd" title="Copy to clipboard">
+              <svg class="w-4 h-4 copy-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" stroke-width="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" stroke-width="2"/></svg>
+              <svg class="w-4 h-4 check-icon hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+            </button>
+          </div>
+          <p class="text-xs text-zec-muted leading-relaxed mb-2">Then relaunch ZecBox. If the error persists, force-kill it:</p>
+          <div class="flex items-center gap-2 bg-zec-dark border border-zec-border rounded-lg px-3 py-2">
+            <code class="text-xs font-mono text-zec-text select-all flex-1 min-w-0" id="pkill-force-cmd">sudo pkill -9 -f zebrad</code>
+            <button type="button" class="shrink-0 w-8 h-8 flex items-center justify-center rounded-lg border border-zec-border hover:border-zec-muted hover:bg-zec-border/50 transition-all text-zec-muted hover:text-zec-text bg-transparent copy-btn" data-target="pkill-force-cmd" title="Copy to clipboard">
+              <svg class="w-4 h-4 copy-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" stroke-width="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" stroke-width="2"/></svg>
+              <svg class="w-4 h-4 check-icon hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+            </button>
+          </div>
+        </div>
+      </details>
+    </div>
+
     <!-- Download overlay -->
     <div id="dl-overlay" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
       <div id="dl-overlay-backdrop" class="absolute inset-0 bg-black/70"></div>
@@ -466,7 +498,7 @@ const downloads = {
       });
     </script>
     <style>
-      #install-instructions[open] .details-chevron { transform: rotate(180deg); }
+      details[open] > summary .details-chevron { transform: rotate(180deg); }
     </style>
   </div>
 </section>
