@@ -307,7 +307,33 @@ const downloads = {
           <svg class="w-4 h-4 text-zec-muted ml-auto transition-transform details-chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
         </summary>
 
-        <div id="port-in-use" class="mt-5 scroll-mt-11">
+        <div id="update-node" class="mt-5 scroll-mt-11">
+          <p class="text-sm font-semibold text-zec-text mb-2">How to update your node version</p>
+          <p class="text-xs text-zec-muted leading-relaxed mb-3">ZecBox checks for new <code class="text-zec-text">zebrad</code> releases automatically every 24 hours, but you can also check manually any time. Updates apply in seconds — your chain data stays untouched and the node restarts on the new version automatically.</p>
+          <ol class="space-y-3 text-sm text-zec-muted list-none m-0 p-0 mb-4">
+            <li class="flex gap-3">
+              <span class="text-zec-yellow font-bold text-xs mt-0.5 shrink-0">1</span>
+              <span>Open <strong class="text-zec-text">ZecBox</strong> and click <strong class="text-zec-text">Settings</strong> in the left sidebar</span>
+            </li>
+            <li class="flex gap-3">
+              <span class="text-zec-yellow font-bold text-xs mt-0.5 shrink-0">2</span>
+              <span>Scroll to the <strong class="text-zec-text">Binaries</strong> section and click <strong class="text-zec-text">Check for Updates</strong> in the top right</span>
+            </li>
+            <li class="flex gap-3">
+              <span class="text-zec-yellow font-bold text-xs mt-0.5 shrink-0">3</span>
+              <span>If an update is available you'll see an <strong class="text-zec-text">Updates Available</strong> banner. Click <strong class="text-zec-text">Update</strong> next to <code class="text-zec-text">zebrad</code> (or <strong class="text-zec-text">Update All</strong> for everything)</span>
+            </li>
+            <li class="flex gap-3">
+              <span class="text-zec-yellow font-bold text-xs mt-0.5 shrink-0">4</span>
+              <span>The download verifies its signature, the node briefly stops, swaps in the new binary, and restarts. The version on the Binaries row updates when it's done.</span>
+            </li>
+          </ol>
+          <p class="text-[11px] text-zec-muted/70">If something goes wrong during the swap, ZecBox automatically rolls back to the previous version. If the node won't start after, see the next section.</p>
+        </div>
+
+        <div class="border-t border-zec-border my-5"></div>
+
+        <div id="port-in-use" class="scroll-mt-11">
           <p class="text-sm font-semibold text-zec-text mb-2">"Port already in use" / node won't start</p>
           <p class="text-xs text-zec-muted leading-relaxed mb-3">Usually caused by an old <code class="text-zec-text">zebrad</code> process left running after a crash, force-quit, or interrupted update. It's still holding the Zcash port so the new node can't bind. Your chain data is safe — this only kills the stuck process.</p>
           <p class="text-xs text-zec-muted leading-relaxed mb-2">Open <strong class="text-zec-text">Terminal</strong> (macOS / Linux) and run:</p>
