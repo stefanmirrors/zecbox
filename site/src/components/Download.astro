@@ -45,6 +45,22 @@ const downloads = {
       </div>
     )}
 
+    {!DOWNLOADS_PAUSED && (
+      <div class="mb-6 rounded-xl border-2 border-zec-yellow bg-zec-yellow/10 p-5">
+        <div class="flex items-start gap-3 mb-3">
+          <svg class="w-6 h-6 text-zec-yellow shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+          <div class="flex-1 min-w-0">
+            <p class="text-base font-bold text-zec-text mb-1">NU6.2 hard-fork update — action may be required</p>
+            <p class="text-sm text-zec-muted leading-relaxed">Zcash activated the <strong class="text-zec-text">NU6.2 network upgrade</strong> on June 3, 2026 at Mainnet block 3,364,600. ZecBox v0.1.6 bundles <code class="text-zec-text">zebrad 5.0.0</code> with the fork. <strong class="text-zec-text">Update immediately</strong> — running an older version after the fork puts your node on a stale chain.</p>
+          </div>
+        </div>
+        <div class="bg-zec-dark/40 rounded-lg p-3 mt-3">
+          <p class="text-xs font-semibold text-zec-text mb-1.5">If your node was running before today:</p>
+          <p class="text-xs text-zec-muted leading-relaxed">After updating, you may need to wipe and resync the chain. In ZecBox: <strong class="text-zec-text">Settings → Rebuild Database</strong>. <a href="#nu62-rebuild" class="text-zec-yellow underline hover:brightness-110">Full instructions ↓</a></p>
+        </div>
+      </div>
+    )}
+
     <!-- Download data for client-side detection -->
     <script id="download-data" type="application/json" set:html={JSON.stringify(downloads)} />
 
@@ -329,6 +345,33 @@ const downloads = {
             </li>
           </ol>
           <p class="text-[11px] text-zec-muted/70">If something goes wrong during the swap, ZecBox automatically rolls back to the previous version. If the node won't start after, see the next section.</p>
+        </div>
+
+        <div class="border-t border-zec-border my-5"></div>
+
+        <div id="nu62-rebuild" class="scroll-mt-11">
+          <p class="text-sm font-semibold text-zec-text mb-2">Sync stuck after the NU6.2 (zebrad 5.0.0) update</p>
+          <p class="text-xs text-zec-muted leading-relaxed mb-3">If your node was running before the NU6.2 activation height (Mainnet block <strong class="text-zec-text">3,364,600</strong>) on an older binary, it may have followed a fork past activation. Updating to <code class="text-zec-text">zebrad 5.0.0</code> swaps the binary but doesn't undo the bad chain history, so sync can stall, peers disconnect, or you see "tip diverged" behavior.</p>
+          <p class="text-xs text-zec-muted leading-relaxed mb-3">Fix by wiping the chain data and resyncing on the canonical NU6.2 chain — your wallet and settings are untouched:</p>
+          <ol class="space-y-3 text-sm text-zec-muted list-none m-0 p-0 mb-3">
+            <li class="flex gap-3">
+              <span class="text-zec-yellow font-bold text-xs mt-0.5 shrink-0">1</span>
+              <span>Open <strong class="text-zec-text">ZecBox</strong> → <strong class="text-zec-text">Settings</strong></span>
+            </li>
+            <li class="flex gap-3">
+              <span class="text-zec-yellow font-bold text-xs mt-0.5 shrink-0">2</span>
+              <span>Scroll to the <strong class="text-zec-text">Advanced</strong> / <strong class="text-zec-text">Troubleshooting</strong> section and click <strong class="text-zec-text">Rebuild Database</strong></span>
+            </li>
+            <li class="flex gap-3">
+              <span class="text-zec-yellow font-bold text-xs mt-0.5 shrink-0">3</span>
+              <span>Confirm. ZecBox stops the node, deletes the on-disk chain, and starts a fresh sync from genesis.</span>
+            </li>
+            <li class="flex gap-3">
+              <span class="text-zec-yellow font-bold text-xs mt-0.5 shrink-0">4</span>
+              <span>Initial resync takes several hours. The dashboard shows live block-height progress.</span>
+            </li>
+          </ol>
+          <p class="text-[11px] text-zec-muted/70">If you have a chain backup from before activation height, you can restore that instead of resyncing from scratch — see the upstream <a href="https://github.com/ZcashFoundation/zebra/releases/tag/v5.0.0" class="underline hover:text-zec-text" target="_blank" rel="noopener">Zebra 5.0.0 release notes</a>.</p>
         </div>
 
         <div class="border-t border-zec-border my-5"></div>
