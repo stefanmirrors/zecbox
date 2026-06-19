@@ -54,6 +54,20 @@ pub fn run() {
                 default_data_dir.clone()
             };
 
+            // If binary_versions.json persists a stale version from an older app
+            // build (e.g. a fresh .dmg install over an existing data dir), bump the
+            // recorded versions up to the bundled defaults so Settings shows the
+            // actually-bundled version. Never downgrades a newer sidecar-updated binary.
+            {
+                let mut versions = updates::BinaryVersions::load(&data_dir);
+                if versions.sync_with_defaults_if_outdated() {
+                    match versions.save(&data_dir) {
+                        Ok(()) => log::info!("Synced binary_versions.json to bundled defaults"),
+                        Err(e) => log::warn!("Failed to sync binary versions: {}", e),
+                    }
+                }
+            }
+
             // Check if data directory mount is available
             let drive_connected = storage::is_mount_available(&data_dir);
             if !drive_connected {

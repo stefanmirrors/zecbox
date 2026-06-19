@@ -69,7 +69,7 @@ pub struct BinaryVersions {
 impl Default for BinaryVersions {
     fn default() -> Self {
         Self {
-            zebrad: "5.0.0".into(),
+            zebrad: "5.2.0".into(),
             zaino: "0.2.0-rc.6".into(),
             arti: "0.1.0".into(),
         }
@@ -124,6 +124,33 @@ impl BinaryVersions {
             "arti" => self.arti = version,
             _ => {}
         }
+    }
+
+    /// If the recorded version of any bundled binary is older than what this app
+    /// bundles (the `Default`), bump the record up to match. Fixes the Settings
+    /// display after a fresh .dmg install over an existing data directory, where
+    /// `binary_versions.json` persists a stale version from a prior app build.
+    /// Never downgrades — a newer sidecar-updated binary keeps its recorded version.
+    /// Returns true if anything changed.
+    pub fn sync_with_defaults_if_outdated(&mut self) -> bool {
+        let defaults = Self::default();
+        let mut changed = false;
+        for name in ["zebrad", "zaino", "arti"] {
+            let default = defaults.get(name).to_string();
+            let recorded = self.get(name).to_string();
+            match (
+                semver::Version::parse(&recorded),
+                semver::Version::parse(&default),
+            ) {
+                (Ok(rec_v), Ok(def_v)) if rec_v < def_v => {
+                    self.set(name, default);
+                    changed = true;
+                }
+                // equal, newer, or unparseable → leave as-is
+                _ => {}
+            }
+        }
+        changed
     }
 }
 
@@ -757,4 +784,53 @@ pub async fn emit_update_status(
     *current = status.clone();
     drop(current);
     let _ = app_handle.emit("update_status_changed", &status);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn syncs_stale_versions_up_to_defaults() {
+        // Simulates a stale binary_versions.json from an older app build.
+        let mut v = BinaryVersions {
+            zebrad: "4.4.0".into(),
+            zaino: "0.0.0".into(),
+            arti: "0.0.0".into(),
+        };
+        assert!(v.sync_with_defaults_if_outdated());
+        let d = BinaryVersions::default();
+        assert_eq!(v.zebrad, d.zebrad);
+        assert_eq!(v.zaino, d.zaino);
+        assert_eq!(v.arti, d.arti);
+    }
+
+    #[test]
+    fn does_not_downgrade_a_newer_recorded_version() {
+        // A binary updated past the bundled default via the sidecar manifest
+        // must keep its recorded (newer) version.
+        let mut v = BinaryVersions {
+            zebrad: "9.9.9".into(),
+            ..BinaryVersions::default()
+        };
+        assert!(!v.sync_with_defaults_if_outdated());
+        assert_eq!(v.zebrad, "9.9.9");
+    }
+
+    #[test]
+    fn leaves_unparseable_versions_untouched() {
+        let mut v = BinaryVersions {
+            zebrad: "not-a-version".into(),
+            ..BinaryVersions::default()
+        };
+        // zaino/arti already equal default → no change; zebrad unparseable → skipped.
+        assert!(!v.sync_with_defaults_if_outdated());
+        assert_eq!(v.zebrad, "not-a-version");
+    }
+
+    #[test]
+    fn no_change_when_all_equal_defaults() {
+        let mut v = BinaryVersions::default();
+        assert!(!v.sync_with_defaults_if_outdated());
+    }
 }

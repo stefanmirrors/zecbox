@@ -1,6 +1,6 @@
 [package]
 name = "zecbox"
-version = "0.1.6"
+version = "0.1.7"
 description = "One-click Zcash full node"
 edition = "2021"
 
@@ -31,6 +31,7 @@ rand = "0.8"
 tauri-plugin-updater = "2"
 chrono = { version = "0.4.44", features = ["serde"] }
 igd-next = { version = "0.17", features = ["aio_tokio"] }
+semver = "1"
 
 [target.'cfg(unix)'.dependencies]
 nix = { version = "0.29", features = ["signal", "process"] }
