@@ -1,7 +1,7 @@
 ---
 // Set to true to hide downloads during a security-update build window.
 // Flip back to false and redeploy after the new release is published.
-const DOWNLOADS_PAUSED = false;
+const DOWNLOADS_PAUSED = true;
 
 let version = "0.1.0";
 try {
@@ -42,22 +42,6 @@ const downloads = {
         </div>
         <p class="text-xs text-zec-muted leading-relaxed">We're publishing a critical security update. Downloads are paused for the next ~1 hour to make sure you don't install an older version. Check back soon.</p>
         <p class="text-[11px] text-zec-muted/70 mt-3">Existing users: open ZecBox → Settings → Check for updates.</p>
-      </div>
-    )}
-
-    {!DOWNLOADS_PAUSED && (
-      <div class="mb-6 rounded-xl border-2 border-zec-yellow bg-zec-yellow/10 p-5">
-        <div class="flex items-start gap-3 mb-3">
-          <svg class="w-6 h-6 text-zec-yellow shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
-          <div class="flex-1 min-w-0">
-            <p class="text-base font-bold text-zec-text mb-1">NU6.2 hard-fork update — action may be required</p>
-            <p class="text-sm text-zec-muted leading-relaxed">Zcash activated the <strong class="text-zec-text">NU6.2 network upgrade</strong> on June 3, 2026 at Mainnet block 3,364,600. ZecBox v0.1.6 bundles <code class="text-zec-text">zebrad 5.0.0</code> with the fork. <strong class="text-zec-text">Update immediately</strong> — running an older version after the fork puts your node on a stale chain.</p>
-          </div>
-        </div>
-        <div class="bg-zec-dark/40 rounded-lg p-3 mt-3">
-          <p class="text-xs font-semibold text-zec-text mb-1.5">If your node was running before today:</p>
-          <p class="text-xs text-zec-muted leading-relaxed">After updating, you may need to wipe and resync the chain. In ZecBox: <strong class="text-zec-text">Settings → Rebuild Database</strong>. <a href="#nu62-rebuild" class="text-zec-yellow underline hover:brightness-110">Full instructions ↓</a></p>
-        </div>
       </div>
     )}
 
